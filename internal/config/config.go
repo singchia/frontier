@@ -10,6 +10,7 @@ import (
 	"k8s.io/klog/v2"
 )
 
+// daemon related
 type RLimit struct {
 	NumFile int `yaml:"nofile"`
 }
@@ -23,7 +24,31 @@ type Daemon struct {
 	PProf  PProf  `yaml:"pprof"`
 }
 
+// listen related
+type CertKey struct {
+	Cert string `yaml:"cert"`
+	Key  string `yaml:"key"`
+}
+
+type TLS struct {
+	MTLS    bool      `yaml:"mtls"`
+	CACerts []string  `yaml:"ca_certs"` // ca certs paths
+	Certs   []CertKey `yaml:"certs"`    // certs paths
+}
+
+type Listen struct {
+	Network   string `yaml:"network"`
+	Addr      string `yaml:"addr"`
+	TLSEnable bool   `yaml:"tls_enable"`
+	TLS       TLS    `yaml:"tls"`
+}
+
 type Clientbound struct {
+	Listen Listen `yaml:"listen"`
+}
+
+type Servicebound struct {
+	Listen Listen `yaml:"listen"`
 }
 
 type Log struct {
@@ -35,7 +60,7 @@ type Log struct {
 	Verbosity        int32  `yaml:"verbosity"`
 	AddDirHeader     bool   `yaml:"add_dir_header"`
 	SkipHeaders      bool   `yaml:"skip_headers"`
-	OneOutput        bool   `yaml:"ont_output"`
+	OneOutput        bool   `yaml:"one_output"`
 	SkipLogHeaders   bool   `yaml:"skip_log_headers"`
 	StderrThreshold  int32  `yaml:"stderrthreshold"`
 }
@@ -44,6 +69,8 @@ type Configuration struct {
 	Daemon Daemon `yaml:"daemon"`
 
 	Clientbound Clientbound `yaml:"clientbound"`
+
+	Servicebound Servicebound `yaml:"servicebound"`
 
 	Log Log `yaml:"log"`
 }
@@ -78,6 +105,12 @@ func ParseFlags() (*Configuration, error) {
 	klogFlags.Set("log_file_max_file", strconv.FormatUint(config.Log.LogFileMaxSizeMB, 10))
 	klogFlags.Set("logtostderr", strconv.FormatBool(config.Log.ToStderr))
 	klogFlags.Set("alsologtostderr", strconv.FormatBool(config.Log.AlsoToStderr))
+	klogFlags.Set("verbosity", strconv.FormatInt(int64(config.Log.Verbosity), 10))
+	klogFlags.Set("add_dir_header", strconv.FormatBool(config.Log.AddDirHeader))
+	klogFlags.Set("skip_headers", strconv.FormatBool(config.Log.SkipHeaders))
+	klogFlags.Set("one_output", strconv.FormatBool(config.Log.OneOutput))
+	klogFlags.Set("skip_log_headers", strconv.FormatBool(config.Log.SkipLogHeaders))
+	klogFlags.Set("stderrthreshold", strconv.FormatInt(int64(config.Log.StderrThreshold), 10))
 
 	// sync the glog and klog flags.
 	pflag.CommandLine.VisitAll(func(f1 *pflag.Flag) {
