@@ -11,6 +11,8 @@ import (
 	"github.com/singchia/geminio"
 	"github.com/singchia/geminio/server"
 	"github.com/singchia/go-timer/v2"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 	"k8s.io/klog/v2"
 )
 
@@ -37,19 +39,28 @@ type clientManager struct {
 	// key: clientID; value: geminio.End
 	clients sync.Map
 
+	// database for clients
+	db *gorm.DB
+
 	tmr timer.Timer
 
 	ln net.Listener
 }
 
 func newclientManager(conf *config.Clientbound, tmr timer.Timer) (*clientManager, error) {
+	db, err := gorm.Open(sqlite.Open(":memory:"))
+	if err != nil {
+		klog.Errorf("client manager open sqlite3 err: %s", err)
+		return nil, err
+	}
+
 	cm := &clientManager{
 		tmr: tmr,
+		db:  db,
 	}
 
 	var (
 		ln      net.Listener
-		err     error
 		network string = conf.Listen.Network
 		addr    string = conf.Listen.Addr
 	)
