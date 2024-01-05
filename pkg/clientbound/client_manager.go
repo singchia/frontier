@@ -7,7 +7,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/singchia/frontier/internal/config"
+	"github.com/singchia/frontier/pkg/config"
 	"github.com/singchia/geminio"
 	"github.com/singchia/geminio/server"
 	"github.com/singchia/go-timer/v2"

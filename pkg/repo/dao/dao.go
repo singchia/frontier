@@ -1,7 +1,7 @@
 package dao
 
 import (
-	"github.com/singchia/frontier/internal/repo/model"
+	"github.com/singchia/frontier/pkg/repo/model"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"k8s.io/klog/v2"
