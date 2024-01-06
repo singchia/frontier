@@ -9,7 +9,7 @@ type Client struct {
 	ClientID   uint64 `gorm:"column:client_id;primaryKey"`
 	Meta       string `gorm:"column:meta;index:idx_meta"`
 	Addr       string `gorm:"column:addr;index:idx_addr"`
-	CreateTime int64  `gorm:"column:create_time;index:create_time"`
+	CreateTime int64  `gorm:"column:create_time;index:idx_create_time"`
 }
 
 func (Client) TableName() string {
@@ -19,7 +19,7 @@ func (Client) TableName() string {
 type ClientRPC struct {
 	RPC        string `gorm:"column:rpc;index:idx_rpc"`
 	ClientID   uint64 `gorm:"column:client_id;index:idx_client_id"`
-	CreateTime int64  `gorm:"column:create_time;index:create_time"`
+	CreateTime int64  `gorm:"column:create_time;index:idx_create_time"`
 }
 
 func (ClientRPC) TableName() string {
