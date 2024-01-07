@@ -32,3 +32,7 @@ type ServiceTopic struct {
 	ServiceID  uint64 `gorm:"service_id;index:idx_service_id"`
 	CreateTime int64  `gorm:"column:create_time;index:idx_create_time"`
 }
+
+func (ServiceTopic) TableName() string {
+	return TnServiceTopics
+}
