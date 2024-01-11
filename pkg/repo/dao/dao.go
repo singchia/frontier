@@ -12,13 +12,27 @@ type Dao struct {
 }
 
 func NewDao() (*Dao, error) {
-	db, err := gorm.Open(sqlite.Open(":memory:"))
+	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"))
 	if err != nil {
 		klog.Errorf("client manager open sqlite3 err: %s", err)
 		return nil, err
 	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+	sqlDB.SetMaxOpenConns(1)
+
 	if err = db.AutoMigrate(&model.Client{}); err != nil {
 		return nil, err
 	}
 	return &Dao{db: db}, nil
+}
+
+func (dao *Dao) Close() error {
+	sqlDB, err := dao.db.DB()
+	if err != nil {
+		return err
+	}
+	return sqlDB.Close()
 }
