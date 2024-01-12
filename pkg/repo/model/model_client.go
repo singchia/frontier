@@ -7,8 +7,8 @@ const (
 
 type Client struct {
 	ClientID   uint64 `gorm:"column:client_id;primaryKey"`
-	Meta       string `gorm:"column:meta;index:idx_meta"`
-	Addr       string `gorm:"column:addr;index:idx_addr"`
+	Meta       string `gorm:"column:meta;index:idx_meta;type:text collate nocase"`
+	Addr       string `gorm:"column:addr;index:idx_addr;type:text collate nocase"`
 	CreateTime int64  `gorm:"column:create_time;index:idx_create_time"`
 }
 

@@ -16,7 +16,7 @@ type ClientQuery struct {
 }
 
 func (dao *Dao) ListClients(query *ClientQuery) ([]*model.Client, error) {
-	tx := dao.db.Model(&model.Client{})
+	tx := dao.dbClient.Model(&model.Client{})
 	tx = buildClientQuery(tx, query)
 
 	// pagination
@@ -24,7 +24,7 @@ func (dao *Dao) ListClients(query *ClientQuery) ([]*model.Client, error) {
 		query.Page, query.PageSize = 1, 10
 	}
 	offset := query.PageSize * (query.Page - 1)
-	tx = tx.Offset(offset).Limit(query.Page)
+	tx = tx.Offset(offset).Limit(query.PageSize)
 
 	// order
 	if query.Order == "" {
@@ -44,7 +44,7 @@ func (dao *Dao) ListClients(query *ClientQuery) ([]*model.Client, error) {
 }
 
 func (dao *Dao) CountClients(query *ClientQuery) (int64, error) {
-	tx := dao.db.Model(&model.Client{})
+	tx := dao.dbClient.Model(&model.Client{})
 	tx = buildClientQuery(tx, query)
 
 	// count
@@ -54,7 +54,7 @@ func (dao *Dao) CountClients(query *ClientQuery) (int64, error) {
 }
 
 func (dao *Dao) GetClient(clientID uint64) (*model.Client, error) {
-	tx := dao.db.Model(&model.Client{})
+	tx := dao.dbClient.Model(&model.Client{})
 	tx.Where("client_id = ?", clientID)
 	var client model.Client
 	result := tx.First(&client)
@@ -62,11 +62,11 @@ func (dao *Dao) GetClient(clientID uint64) (*model.Client, error) {
 }
 
 func (dao *Dao) DeleteClient(clientID uint64) error {
-	return dao.db.Where("client_id = ?", clientID).Delete(&model.Client{}).Error
+	return dao.dbClient.Where("client_id = ?", clientID).Delete(&model.Client{}).Error
 }
 
 func (dao *Dao) CreateClient(client *model.Client) error {
-	return dao.db.Create(client).Error
+	return dao.dbClient.Create(client).Error
 }
 
 func buildClientQuery(tx *gorm.DB, query *ClientQuery) *gorm.DB {
@@ -101,14 +101,14 @@ type ClientRPCQuery struct {
 
 // list RPCs doesn't handle order
 func (dao *Dao) ListClientRPCs(query *ClientRPCQuery) ([]string, error) {
-	tx := dao.db.Model(&model.ClientRPC{})
+	tx := dao.dbClient.Model(&model.ClientRPC{})
 	tx = buildClientRPCQuery(tx, query)
 	// pagination
 	if query.Page <= 0 || query.PageSize <= 0 {
 		query.Page, query.PageSize = 1, 10
 	}
 	offset := query.PageSize * (query.Page - 1)
-	tx = tx.Offset(offset).Limit(query.Page)
+	tx = tx.Offset(offset).Limit(query.PageSize)
 
 	rpcs := []string{}
 	result := tx.Distinct("rpc").Find(&rpcs)
@@ -116,7 +116,7 @@ func (dao *Dao) ListClientRPCs(query *ClientRPCQuery) ([]string, error) {
 }
 
 func (dao *Dao) CountClientRPCs(query *ClientRPCQuery) (int64, error) {
-	tx := dao.db.Model(&model.ClientRPC{})
+	tx := dao.dbClient.Model(&model.ClientRPC{})
 	tx = buildClientRPCQuery(tx, query)
 
 	// count
@@ -126,11 +126,11 @@ func (dao *Dao) CountClientRPCs(query *ClientRPCQuery) (int64, error) {
 }
 
 func (dao *Dao) DeleteClientRPCs(clientID uint64) error {
-	return dao.db.Where("client_id = ?", clientID).Delete(&model.ClientRPC{}).Error
+	return dao.dbClient.Where("client_id = ?", clientID).Delete(&model.ClientRPC{}).Error
 }
 
 func (dao *Dao) CreateClientRPC(rpc *model.ClientRPC) error {
-	return dao.db.Create(rpc).Error
+	return dao.dbClient.Create(rpc).Error
 }
 
 func buildClientRPCQuery(tx *gorm.DB, query *ClientRPCQuery) *gorm.DB {
