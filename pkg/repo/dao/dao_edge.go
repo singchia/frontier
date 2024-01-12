@@ -6,18 +6,18 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-type ClientQuery struct {
+type EdgeQuery struct {
 	Query
 	// Condition fields
-	Meta     string
-	Addr     string
-	RPC      string
-	ClientID uint64
+	Meta   string
+	Addr   string
+	RPC    string
+	EdgeID uint64
 }
 
-func (dao *Dao) ListClients(query *ClientQuery) ([]*model.Client, error) {
-	tx := dao.dbClient.Model(&model.Client{})
-	tx = buildClientQuery(tx, query)
+func (dao *Dao) ListEdges(query *EdgeQuery) ([]*model.Edge, error) {
+	tx := dao.dbEdge.Model(&model.Edge{})
+	tx = buildEdgeQuery(tx, query)
 
 	// pagination
 	if query.Page <= 0 || query.PageSize <= 0 {
@@ -38,14 +38,14 @@ func (dao *Dao) ListClients(query *ClientQuery) ([]*model.Client, error) {
 	})
 
 	// find
-	clients := []*model.Client{}
+	clients := []*model.Edge{}
 	result := tx.Find(&clients)
 	return clients, result.Error
 }
 
-func (dao *Dao) CountClients(query *ClientQuery) (int64, error) {
-	tx := dao.dbClient.Model(&model.Client{})
-	tx = buildClientQuery(tx, query)
+func (dao *Dao) CountEdges(query *EdgeQuery) (int64, error) {
+	tx := dao.dbEdge.Model(&model.Edge{})
+	tx = buildEdgeQuery(tx, query)
 
 	// count
 	var count int64
@@ -53,23 +53,23 @@ func (dao *Dao) CountClients(query *ClientQuery) (int64, error) {
 	return count, result.Error
 }
 
-func (dao *Dao) GetClient(clientID uint64) (*model.Client, error) {
-	tx := dao.dbClient.Model(&model.Client{})
+func (dao *Dao) GetEdge(clientID uint64) (*model.Edge, error) {
+	tx := dao.dbEdge.Model(&model.Edge{})
 	tx.Where("client_id = ?", clientID)
-	var client model.Client
+	var client model.Edge
 	result := tx.First(&client)
 	return &client, result.Error
 }
 
-func (dao *Dao) DeleteClient(clientID uint64) error {
-	return dao.dbClient.Where("client_id = ?", clientID).Delete(&model.Client{}).Error
+func (dao *Dao) DeleteEdge(clientID uint64) error {
+	return dao.dbEdge.Where("client_id = ?", clientID).Delete(&model.Edge{}).Error
 }
 
-func (dao *Dao) CreateClient(client *model.Client) error {
-	return dao.dbClient.Create(client).Error
+func (dao *Dao) CreateEdge(client *model.Edge) error {
+	return dao.dbEdge.Create(client).Error
 }
 
-func buildClientQuery(tx *gorm.DB, query *ClientQuery) *gorm.DB {
+func buildEdgeQuery(tx *gorm.DB, query *EdgeQuery) *gorm.DB {
 	// join
 	if query.RPC != "" {
 		tx = tx.InnerJoins("INNER JOIN client_rpcs ON clients.client_id = client_rpcs.client_id AND rpc = ?", query.RPC)
@@ -86,23 +86,23 @@ func buildClientQuery(tx *gorm.DB, query *ClientQuery) *gorm.DB {
 		tx = tx.Where("create_time >= ? AND create_time < ?", query.StartTime, query.EndTime)
 	}
 	// equal
-	if query.ClientID != 0 {
-		tx = tx.Where("client_id = ?", query.ClientID)
+	if query.EdgeID != 0 {
+		tx = tx.Where("client_id = ?", query.EdgeID)
 	}
 	return tx
 }
 
-type ClientRPCQuery struct {
+type EdgeRPCQuery struct {
 	Query
 	// Condition fields
-	Meta     string
-	ClientID uint64
+	Meta   string
+	EdgeID uint64
 }
 
 // list RPCs doesn't handle order
-func (dao *Dao) ListClientRPCs(query *ClientRPCQuery) ([]string, error) {
-	tx := dao.dbClient.Model(&model.ClientRPC{})
-	tx = buildClientRPCQuery(tx, query)
+func (dao *Dao) ListEdgeRPCs(query *EdgeRPCQuery) ([]string, error) {
+	tx := dao.dbEdge.Model(&model.EdgeRPC{})
+	tx = buildEdgeRPCQuery(tx, query)
 	// pagination
 	if query.Page <= 0 || query.PageSize <= 0 {
 		query.Page, query.PageSize = 1, 10
@@ -115,9 +115,9 @@ func (dao *Dao) ListClientRPCs(query *ClientRPCQuery) ([]string, error) {
 	return rpcs, result.Error
 }
 
-func (dao *Dao) CountClientRPCs(query *ClientRPCQuery) (int64, error) {
-	tx := dao.dbClient.Model(&model.ClientRPC{})
-	tx = buildClientRPCQuery(tx, query)
+func (dao *Dao) CountEdgeRPCs(query *EdgeRPCQuery) (int64, error) {
+	tx := dao.dbEdge.Model(&model.EdgeRPC{})
+	tx = buildEdgeRPCQuery(tx, query)
 
 	// count
 	var count int64
@@ -125,15 +125,15 @@ func (dao *Dao) CountClientRPCs(query *ClientRPCQuery) (int64, error) {
 	return count, result.Error
 }
 
-func (dao *Dao) DeleteClientRPCs(clientID uint64) error {
-	return dao.dbClient.Where("client_id = ?", clientID).Delete(&model.ClientRPC{}).Error
+func (dao *Dao) DeleteEdgeRPCs(clientID uint64) error {
+	return dao.dbEdge.Where("client_id = ?", clientID).Delete(&model.EdgeRPC{}).Error
 }
 
-func (dao *Dao) CreateClientRPC(rpc *model.ClientRPC) error {
-	return dao.dbClient.Create(rpc).Error
+func (dao *Dao) CreateEdgeRPC(rpc *model.EdgeRPC) error {
+	return dao.dbEdge.Create(rpc).Error
 }
 
-func buildClientRPCQuery(tx *gorm.DB, query *ClientRPCQuery) *gorm.DB {
+func buildEdgeRPCQuery(tx *gorm.DB, query *EdgeRPCQuery) *gorm.DB {
 	// join
 	if query.Meta != "" {
 		tx = tx.InnerJoins("INNER JOIN clients ON clients.client_id = client_rpcs.client_id AND meta like ?", "%"+query.Meta+"%")
@@ -143,8 +143,8 @@ func buildClientRPCQuery(tx *gorm.DB, query *ClientRPCQuery) *gorm.DB {
 		tx = tx.Where("create_time >= ? AND create_time < ?", query.StartTime, query.EndTime)
 	}
 	// equal
-	if query.ClientID != 0 {
-		tx = tx.Where("client_rpcs.client_id = ?", query.ClientID)
+	if query.EdgeID != 0 {
+		tx = tx.Where("client_rpcs.client_id = ?", query.EdgeID)
 	}
 	return tx
 }

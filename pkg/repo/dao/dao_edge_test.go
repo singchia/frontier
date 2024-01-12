@@ -10,25 +10,25 @@ import (
 	"github.com/singchia/frontier/pkg/repo/model"
 )
 
-func TestCreateClient(t *testing.T) {
+func TestCreateEdge(t *testing.T) {
 	dao, err := NewDao()
 	if err != nil {
 		t.Error(err)
 	}
 	defer dao.Close()
-	client := &model.Client{
-		ClientID:   0,
+	client := &model.Edge{
+		EdgeID:     0,
 		Meta:       "test",
 		Addr:       "192.168.1.100",
 		CreateTime: time.Now().Unix(),
 	}
-	err = dao.CreateClient(client)
+	err = dao.CreateEdge(client)
 	if err != nil {
 		t.Error(err)
 	}
 }
 
-func TestCountClients(t *testing.T) {
+func TestCountEdges(t *testing.T) {
 	dao, err := NewDao()
 	if err != nil {
 		t.Error(err)
@@ -40,20 +40,20 @@ func TestCountClients(t *testing.T) {
 	count := 10000
 	for i := 0; i < count; i++ {
 		new := atomic.AddUint64(&index, 1)
-		client := &model.Client{
-			ClientID:   new,
+		client := &model.Edge{
+			EdgeID:     new,
 			Meta:       "test",
 			Addr:       "192.168.1.100",
 			CreateTime: now,
 		}
-		err := dao.CreateClient(client)
+		err := dao.CreateEdge(client)
 		if err != nil {
 			t.Error(err)
 			return
 		}
 	}
 
-	c, err := dao.CountClients(&ClientQuery{
+	c, err := dao.CountEdges(&EdgeQuery{
 		Meta: "test",
 	})
 	if err != nil {
@@ -65,7 +65,7 @@ func TestCountClients(t *testing.T) {
 }
 
 // go test -v -bench=. -benchmem
-func BenchmarkCreateClient(b *testing.B) {
+func BenchmarkCreateEdge(b *testing.B) {
 	dao, err := NewDao()
 	if err != nil {
 		b.Error(err)
@@ -79,13 +79,13 @@ func BenchmarkCreateClient(b *testing.B) {
 	b.RunParallel(func(p *testing.PB) {
 		for p.Next() {
 			new := atomic.AddUint64(&index, 1)
-			client := &model.Client{
-				ClientID:   new,
+			client := &model.Edge{
+				EdgeID:     new,
 				Meta:       "test",
 				Addr:       "192.168.1.100",
 				CreateTime: now,
 			}
-			err := dao.CreateClient(client)
+			err := dao.CreateEdge(client)
 			if err != nil {
 				b.Error(err)
 				return
@@ -94,7 +94,7 @@ func BenchmarkCreateClient(b *testing.B) {
 	})
 }
 
-func BenchmarkGetClient(b *testing.B) {
+func BenchmarkGetEdge(b *testing.B) {
 	dao, err := NewDao()
 	if err != nil {
 		b.Error(err)
@@ -106,13 +106,13 @@ func BenchmarkGetClient(b *testing.B) {
 	now := time.Now().Unix()
 	for i := 0; i < b.N; i++ {
 		new := atomic.AddUint64(&index, 1)
-		client := &model.Client{
-			ClientID:   new,
+		client := &model.Edge{
+			EdgeID:     new,
 			Meta:       "test",
 			Addr:       "192.168.1.100",
 			CreateTime: now,
 		}
-		err := dao.CreateClient(client)
+		err := dao.CreateEdge(client)
 		if err != nil {
 			b.Error(err)
 			return
@@ -124,7 +124,7 @@ func BenchmarkGetClient(b *testing.B) {
 	b.RunParallel(func(p *testing.PB) {
 		for p.Next() {
 			new := atomic.AddUint64(&index, 1)
-			_, err := dao.GetClient(new)
+			_, err := dao.GetEdge(new)
 			if err != nil {
 				b.Error(err)
 				return
@@ -133,7 +133,7 @@ func BenchmarkGetClient(b *testing.B) {
 	})
 }
 
-func BenchmarkListClients(b *testing.B) {
+func BenchmarkListEdges(b *testing.B) {
 	dao, err := NewDao()
 	if err != nil {
 		b.Error(err)
@@ -146,13 +146,13 @@ func BenchmarkListClients(b *testing.B) {
 	count := 100000
 	for i := 0; i < count; i++ {
 		new := atomic.AddUint64(&index, 1)
-		client := &model.Client{
-			ClientID:   new,
+		client := &model.Edge{
+			EdgeID:     new,
 			Meta:       "test",
 			Addr:       "192.168.1.100",
 			CreateTime: now,
 		}
-		err := dao.CreateClient(client)
+		err := dao.CreateEdge(client)
 		if err != nil {
 			b.Error(err)
 			return
@@ -160,7 +160,7 @@ func BenchmarkListClients(b *testing.B) {
 	}
 	result := map[string]interface{}{}
 	// explain first
-	tx := dao.dbClient.
+	tx := dao.dbEdge.
 		Raw(`EXPLAIN QUERY PLAN SELECT * FROM clients WHERE meta LIKE "test%" ORDER BY create_time DESC LIMIT 10 OFFSET 570`).
 		Scan(&result)
 	if tx.Error != nil {
@@ -176,7 +176,7 @@ func BenchmarkListClients(b *testing.B) {
 		for p.Next() {
 			pageSize := 10
 			page := rand.Intn(count/pageSize) + 1
-			clients, err := dao.ListClients(&ClientQuery{
+			clients, err := dao.ListEdges(&EdgeQuery{
 				Meta: "test",
 				Query: Query{
 					PageSize: pageSize,
@@ -194,7 +194,7 @@ func BenchmarkListClients(b *testing.B) {
 	})
 }
 
-func BenchmarkDeleteClient(b *testing.B) {
+func BenchmarkDeleteEdge(b *testing.B) {
 	dao, err := NewDao()
 	if err != nil {
 		b.Error(err)
@@ -206,13 +206,13 @@ func BenchmarkDeleteClient(b *testing.B) {
 	now := time.Now().Unix()
 	for i := 0; i < b.N; i++ {
 		new := atomic.AddUint64(&index, 1)
-		client := &model.Client{
-			ClientID:   new,
+		client := &model.Edge{
+			EdgeID:     new,
 			Meta:       "test",
 			Addr:       "192.168.1.100",
 			CreateTime: now,
 		}
-		err := dao.CreateClient(client)
+		err := dao.CreateEdge(client)
 		if err != nil {
 			b.Error(err)
 			return
@@ -224,7 +224,7 @@ func BenchmarkDeleteClient(b *testing.B) {
 	b.RunParallel(func(p *testing.PB) {
 		for p.Next() {
 			new := atomic.AddUint64(&index, 1)
-			err := dao.DeleteClient(new)
+			err := dao.DeleteEdge(new)
 			if err != nil {
 				b.Error(err)
 				return

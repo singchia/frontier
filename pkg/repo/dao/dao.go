@@ -8,18 +8,18 @@ import (
 )
 
 type Dao struct {
-	dbClient, dbService *gorm.DB
+	dbEdge, dbService *gorm.DB
 }
 
 func NewDao() (*Dao, error) {
 	// we split client and service sqlite3 memory databases, since the concurrent
 	// writes perform bad, see https://github.com/mattn/go-sqlite3/issues/274
-	dbClient, err := gorm.Open(sqlite.Open("file:client?mode=memory&cache=shared"))
+	dbEdge, err := gorm.Open(sqlite.Open("file:client?mode=memory&cache=shared"))
 	if err != nil {
 		klog.Errorf("dao open client sqlite3 err: %s", err)
 		return nil, err
 	}
-	sqlDB, err := dbClient.DB()
+	sqlDB, err := dbEdge.DB()
 	if err != nil {
 		klog.Errorf("get client DB err: %s", err)
 		return nil, err
@@ -38,14 +38,14 @@ func NewDao() (*Dao, error) {
 	}
 	sqlDB.SetMaxOpenConns(1)
 
-	if err = dbClient.AutoMigrate(&model.Client{}); err != nil {
+	if err = dbEdge.AutoMigrate(&model.Edge{}); err != nil {
 		return nil, err
 	}
-	return &Dao{dbClient: dbClient}, nil
+	return &Dao{dbEdge: dbEdge}, nil
 }
 
 func (dao *Dao) Close() error {
-	sqlDB, err := dao.dbClient.DB()
+	sqlDB, err := dao.dbEdge.DB()
 	if err != nil {
 		return err
 	}
