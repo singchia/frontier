@@ -17,6 +17,9 @@ type EdgeQuery struct {
 
 func (dao *Dao) ListEdges(query *EdgeQuery) ([]*model.Edge, error) {
 	tx := dao.dbEdge.Model(&model.Edge{})
+	if dao.config.Log.Verbosity >= 4 {
+		tx = tx.Debug()
+	}
 	tx = buildEdgeQuery(tx, query)
 
 	// pagination
@@ -29,7 +32,7 @@ func (dao *Dao) ListEdges(query *EdgeQuery) ([]*model.Edge, error) {
 	// order
 	if query.Order == "" {
 		// desc by create_time by default
-		query.Order = "create_time"
+		query.Order = "edges.create_time"
 		query.Desc = true
 	}
 	tx = tx.Order(clause.OrderByColumn{
@@ -38,41 +41,55 @@ func (dao *Dao) ListEdges(query *EdgeQuery) ([]*model.Edge, error) {
 	})
 
 	// find
-	clients := []*model.Edge{}
-	result := tx.Find(&clients)
-	return clients, result.Error
+	edges := []*model.Edge{}
+	tx = tx.Find(&edges)
+	return edges, tx.Error
 }
 
 func (dao *Dao) CountEdges(query *EdgeQuery) (int64, error) {
 	tx := dao.dbEdge.Model(&model.Edge{})
+	if dao.config.Log.Verbosity >= 4 {
+		tx = tx.Debug()
+	}
 	tx = buildEdgeQuery(tx, query)
 
-	// count
 	var count int64
-	result := tx.Count(&count)
-	return count, result.Error
+	tx = tx.Count(&count)
+	return count, tx.Error
 }
 
-func (dao *Dao) GetEdge(clientID uint64) (*model.Edge, error) {
+func (dao *Dao) GetEdge(edgeID uint64) (*model.Edge, error) {
 	tx := dao.dbEdge.Model(&model.Edge{})
-	tx.Where("client_id = ?", clientID)
-	var client model.Edge
-	result := tx.First(&client)
-	return &client, result.Error
+	if dao.config.Log.Verbosity >= 4 {
+		tx = tx.Debug()
+	}
+	tx = tx.Where("edge_id = ?", edgeID)
+
+	var edge model.Edge
+	tx = tx.First(&edge)
+	return &edge, tx.Error
 }
 
-func (dao *Dao) DeleteEdge(clientID uint64) error {
-	return dao.dbEdge.Where("client_id = ?", clientID).Delete(&model.Edge{}).Error
+func (dao *Dao) DeleteEdge(edgeID uint64) error {
+	tx := dao.dbEdge.Where("edge_id = ?", edgeID)
+	if dao.config.Log.Verbosity >= 4 {
+		tx = tx.Debug()
+	}
+	return tx.Delete(&model.Edge{}).Error
 }
 
-func (dao *Dao) CreateEdge(client *model.Edge) error {
-	return dao.dbEdge.Create(client).Error
+func (dao *Dao) CreateEdge(edge *model.Edge) error {
+	tx := dao.dbEdge
+	if dao.config.Log.Verbosity >= 4 {
+		tx = tx.Debug()
+	}
+	return tx.Create(edge).Error
 }
 
 func buildEdgeQuery(tx *gorm.DB, query *EdgeQuery) *gorm.DB {
 	// join
 	if query.RPC != "" {
-		tx = tx.InnerJoins("INNER JOIN client_rpcs ON clients.client_id = client_rpcs.client_id AND rpc = ?", query.RPC)
+		tx = tx.InnerJoins("INNER JOIN edge_rpcs ON edges.edge_id = edge_rpcs.edge_id AND service_rpcs.rpc = ?", query.RPC)
 	}
 	// search
 	if query.Meta != "" {
@@ -87,7 +104,7 @@ func buildEdgeQuery(tx *gorm.DB, query *EdgeQuery) *gorm.DB {
 	}
 	// equal
 	if query.EdgeID != 0 {
-		tx = tx.Where("client_id = ?", query.EdgeID)
+		tx = tx.Where("edge_id = ?", query.EdgeID)
 	}
 	return tx
 }
@@ -102,6 +119,9 @@ type EdgeRPCQuery struct {
 // list RPCs doesn't handle order
 func (dao *Dao) ListEdgeRPCs(query *EdgeRPCQuery) ([]string, error) {
 	tx := dao.dbEdge.Model(&model.EdgeRPC{})
+	if dao.config.Log.Verbosity >= 4 {
+		tx = tx.Debug()
+	}
 	tx = buildEdgeRPCQuery(tx, query)
 	// pagination
 	if query.Page <= 0 || query.PageSize <= 0 {
@@ -111,32 +131,43 @@ func (dao *Dao) ListEdgeRPCs(query *EdgeRPCQuery) ([]string, error) {
 	tx = tx.Offset(offset).Limit(query.PageSize)
 
 	rpcs := []string{}
-	result := tx.Distinct("rpc").Find(&rpcs)
-	return rpcs, result.Error
+	tx = tx.Distinct("rpc").Find(&rpcs)
+	return rpcs, tx.Error
 }
 
 func (dao *Dao) CountEdgeRPCs(query *EdgeRPCQuery) (int64, error) {
 	tx := dao.dbEdge.Model(&model.EdgeRPC{})
+	if dao.config.Log.Verbosity >= 4 {
+		tx = tx.Debug()
+	}
 	tx = buildEdgeRPCQuery(tx, query)
 
 	// count
 	var count int64
-	result := tx.Distinct("rpc").Count(&count)
-	return count, result.Error
+	tx = tx.Distinct("rpc").Count(&count)
+	return count, tx.Error
 }
 
-func (dao *Dao) DeleteEdgeRPCs(clientID uint64) error {
-	return dao.dbEdge.Where("client_id = ?", clientID).Delete(&model.EdgeRPC{}).Error
+func (dao *Dao) DeleteEdgeRPCs(edgeID uint64) error {
+	tx := dao.dbEdge.Where("edge_id = ?", edgeID)
+	if dao.config.Log.Verbosity >= 4 {
+		tx = tx.Debug()
+	}
+	return tx.Delete(&model.EdgeRPC{}).Error
 }
 
 func (dao *Dao) CreateEdgeRPC(rpc *model.EdgeRPC) error {
-	return dao.dbEdge.Create(rpc).Error
+	tx := dao.dbEdge
+	if dao.config.Log.Verbosity >= 4 {
+		tx = tx.Debug()
+	}
+	return tx.Create(rpc).Error
 }
 
 func buildEdgeRPCQuery(tx *gorm.DB, query *EdgeRPCQuery) *gorm.DB {
 	// join
 	if query.Meta != "" {
-		tx = tx.InnerJoins("INNER JOIN clients ON clients.client_id = client_rpcs.client_id AND meta like ?", "%"+query.Meta+"%")
+		tx = tx.InnerJoins("INNER JOIN edges ON edges.edge_id = edge_rpcs.edge_id AND meta like ?", "%"+query.Meta+"%")
 	}
 	// time range
 	if query.StartTime != 0 && query.EndTime != 0 && query.EndTime > query.StartTime {
@@ -144,7 +175,7 @@ func buildEdgeRPCQuery(tx *gorm.DB, query *EdgeRPCQuery) *gorm.DB {
 	}
 	// equal
 	if query.EdgeID != 0 {
-		tx = tx.Where("client_rpcs.client_id = ?", query.EdgeID)
+		tx = tx.Where("edge_rpcs.edge_id = ?", query.EdgeID)
 	}
 	return tx
 }
