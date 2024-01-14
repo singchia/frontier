@@ -70,11 +70,17 @@ func (dao *Dao) GetEdge(edgeID uint64) (*model.Edge, error) {
 	return &edge, tx.Error
 }
 
-func (dao *Dao) DeleteEdge(edgeID uint64) error {
-	tx := dao.dbEdge.Where("edge_id = ?", edgeID)
+type EdgeDelete struct {
+	EdgeID uint64
+	Addr   string
+}
+
+func (dao *Dao) DeleteEdge(delete *EdgeDelete) error {
+	tx := dao.dbEdge
 	if dao.config.Log.Verbosity >= 4 {
 		tx = tx.Debug()
 	}
+	tx = buildEdgeDelete(tx, delete)
 	return tx.Delete(&model.Edge{}).Error
 }
 
@@ -105,6 +111,16 @@ func buildEdgeQuery(tx *gorm.DB, query *EdgeQuery) *gorm.DB {
 	// equal
 	if query.EdgeID != 0 {
 		tx = tx.Where("edge_id = ?", query.EdgeID)
+	}
+	return tx
+}
+
+func buildEdgeDelete(tx *gorm.DB, delete *EdgeDelete) *gorm.DB {
+	if delete.EdgeID != 0 {
+		tx = tx.Where("edge_id = ?", delete.EdgeID)
+	}
+	if delete.Addr != "" {
+		tx = tx.Where("addr = ?", delete.Addr)
 	}
 	return tx
 }
