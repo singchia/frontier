@@ -116,13 +116,13 @@ type EdgeRPCQuery struct {
 	EdgeID uint64
 }
 
-// list RPCs doesn't handle order
 func (dao *Dao) ListEdgeRPCs(query *EdgeRPCQuery) ([]string, error) {
 	tx := dao.dbEdge.Model(&model.EdgeRPC{})
 	if dao.config.Log.Verbosity >= 4 {
 		tx = tx.Debug()
 	}
 	tx = buildEdgeRPCQuery(tx, query)
+
 	// pagination
 	if query.Page <= 0 || query.PageSize <= 0 {
 		query.Page, query.PageSize = 1, 10
@@ -130,6 +130,18 @@ func (dao *Dao) ListEdgeRPCs(query *EdgeRPCQuery) ([]string, error) {
 	offset := query.PageSize * (query.Page - 1)
 	tx = tx.Offset(offset).Limit(query.PageSize)
 
+	// order
+	if query.Order == "" {
+		// desc by create_time by default
+		query.Order = "edge_rpcs.create_time"
+		query.Desc = true
+	}
+	tx = tx.Order(clause.OrderByColumn{
+		Column: clause.Column{Name: query.Order},
+		Desc:   query.Desc,
+	})
+
+	// find
 	rpcs := []string{}
 	tx = tx.Distinct("rpc").Find(&rpcs)
 	return rpcs, tx.Error
@@ -167,7 +179,7 @@ func (dao *Dao) CreateEdgeRPC(rpc *model.EdgeRPC) error {
 func buildEdgeRPCQuery(tx *gorm.DB, query *EdgeRPCQuery) *gorm.DB {
 	// join
 	if query.Meta != "" {
-		tx = tx.InnerJoins("INNER JOIN edges ON edges.edge_id = edge_rpcs.edge_id AND meta like ?", "%"+query.Meta+"%")
+		tx = tx.InnerJoins("INNER JOIN edges ON edges.edge_id = edge_rpcs.edge_id AND meta LIKE ?", "%"+query.Meta+"%")
 	}
 	// time range
 	if query.StartTime != 0 && query.EndTime != 0 && query.EndTime > query.StartTime {
