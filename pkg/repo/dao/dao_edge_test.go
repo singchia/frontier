@@ -231,7 +231,7 @@ func BenchmarkDeleteEdge(b *testing.B) {
 	b.RunParallel(func(p *testing.PB) {
 		for p.Next() {
 			new := atomic.AddUint64(&index, 1)
-			err := dao.DeleteEdge(new)
+			err := dao.DeleteEdge(&EdgeDelete{EdgeID: new})
 			if err != nil {
 				b.Error(err)
 				return

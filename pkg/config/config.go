@@ -43,7 +43,7 @@ type Listen struct {
 	TLS       TLS    `yaml:"tls"`
 }
 
-type Clientbound struct {
+type Edgebound struct {
 	Listen Listen `yaml:"listen"`
 }
 
@@ -68,7 +68,7 @@ type Log struct {
 type Configuration struct {
 	Daemon Daemon `yaml:"daemon"`
 
-	Clientbound Clientbound `yaml:"clientbound"`
+	Edgebound Edgebound `yaml:"edgebound"`
 
 	Servicebound Servicebound `yaml:"servicebound"`
 

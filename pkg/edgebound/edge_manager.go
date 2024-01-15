@@ -1,4 +1,4 @@
-package clientbound
+package edgebound
 
 import (
 	"crypto/tls"
@@ -7,19 +7,20 @@ import (
 	"os"
 	"sync"
 
+	"github.com/jumboframes/armorigo/synchub"
 	"github.com/singchia/frontier/pkg/config"
+	"github.com/singchia/frontier/pkg/repo/dao"
 	"github.com/singchia/geminio"
+	"github.com/singchia/geminio/delegate"
 	"github.com/singchia/geminio/server"
 	"github.com/singchia/go-timer/v2"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 	"k8s.io/klog/v2"
 )
 
 type Clientbound interface {
 	ListClients() []geminio.End
-	GetClientByID(clientID uint64) geminio.End
-	DelClientByID(clientID uint64) error
+	GetClientByID(edgeID uint64) geminio.End
+	DelClientByID(edgeID uint64) error
 }
 
 var (
@@ -35,37 +36,41 @@ var (
 	}
 )
 
-type clientManager struct {
-	// key: clientID; value: geminio.End
-	clients sync.Map
+type edgeManager struct {
+	*delegate.UnimplementedDelegate
+	// cache
+	// key: edgeID; value: geminio.End
+	edges sync.Map
 
-	// database for clients
-	db *gorm.DB
+	shub *synchub.SyncHub
 
+	// dao and repo for edges
+	dao *dao.Dao
+
+	// timer for all edge ends
 	tmr timer.Timer
 
+	// listener for edges
 	ln net.Listener
 }
 
-func newclientManager(conf *config.Clientbound, tmr timer.Timer) (*clientManager, error) {
-	db, err := gorm.Open(sqlite.Open(":memory:"))
-	if err != nil {
-		klog.Errorf("client manager open sqlite3 err: %s", err)
-		return nil, err
-	}
-
-	cm := &clientManager{
-		tmr: tmr,
-		db:  db,
-	}
-
+// support for tls, mtls and tcp listening
+func newedgeManager(conf *config.Configuration, dao *dao.Dao, tmr timer.Timer) (*edgeManager, error) {
 	var (
 		ln      net.Listener
-		network string = conf.Listen.Network
-		addr    string = conf.Listen.Addr
+		network string = conf.Edgebound.Listen.Network
+		addr    string = conf.Edgebound.Listen.Addr
+		err     error
 	)
 
-	if !conf.Listen.TLSEnable {
+	em := &edgeManager{
+		tmr:                   tmr,
+		dao:                   dao,
+		shub:                  synchub.NewSyncHub(synchub.OptionTimer(tmr)),
+		UnimplementedDelegate: &delegate.UnimplementedDelegate{},
+	}
+
+	if !conf.Edgebound.Listen.TLSEnable {
 		if ln, err = net.Listen(network, addr); err != nil {
 			klog.Errorf("net listen err: %s, network: %s, addr: %s", err, network, addr)
 			return nil, err
@@ -74,7 +79,7 @@ func newclientManager(conf *config.Clientbound, tmr timer.Timer) (*clientManager
 	} else {
 		// load all certs to listen
 		certs := []tls.Certificate{}
-		for _, certFile := range conf.Listen.TLS.Certs {
+		for _, certFile := range conf.Edgebound.Listen.TLS.Certs {
 			cert, err := tls.LoadX509KeyPair(certFile.Cert, certFile.Key)
 			if err != nil {
 				klog.Errorf("tls load x509 cert err: %s, cert: %s, key: %s", err, certFile.Cert, certFile.Key)
@@ -83,7 +88,7 @@ func newclientManager(conf *config.Clientbound, tmr timer.Timer) (*clientManager
 			certs = append(certs, cert)
 		}
 
-		if !conf.Listen.TLS.MTLS {
+		if !conf.Edgebound.Listen.TLS.MTLS {
 			// tls
 			if ln, err = tls.Listen(network, addr, &tls.Config{
 				MinVersion:   tls.VersionTLS12,
@@ -95,10 +100,10 @@ func newclientManager(conf *config.Clientbound, tmr timer.Timer) (*clientManager
 			}
 
 		} else {
-			// mtls, require for client cert
+			// mtls, require for edge cert
 			// load all ca certs to pool
 			caPool := x509.NewCertPool()
-			for _, caFile := range conf.Listen.TLS.CACerts {
+			for _, caFile := range conf.Edgebound.Listen.TLS.CACerts {
 				ca, err := os.ReadFile(caFile)
 				if err != nil {
 					klog.Errorf("read ca cert err: %s, file: %s", err, caFile)
@@ -122,25 +127,25 @@ func newclientManager(conf *config.Clientbound, tmr timer.Timer) (*clientManager
 		}
 	}
 
-	cm.ln = ln
-	return cm, nil
+	em.ln = ln
+	return em, nil
 }
 
-func (cm *clientManager) Serve() {
+func (em *edgeManager) Serve() {
 	for {
-		conn, err := cm.ln.Accept()
+		conn, err := em.ln.Accept()
 		if err != nil {
 			klog.Errorf("listener accept err: %s", err)
 			return
 		}
-		go cm.handleConn(conn)
+		go em.handleConn(conn)
 	}
 }
 
-func (cm *clientManager) handleConn(conn net.Conn) error {
+func (em *edgeManager) handleConn(conn net.Conn) error {
 	// options for geminio End
 	opt := server.NewEndOptions()
-	opt.SetTimer(cm.tmr)
+	opt.SetTimer(em.tmr)
 	end, err := server.NewEndWithConn(conn, opt)
 	if err != nil {
 		klog.Errorf("geminio server new end err: %s", err)
@@ -148,30 +153,24 @@ func (cm *clientManager) handleConn(conn net.Conn) error {
 	}
 
 	// handle online event for end
-	if err = cm.online(end); err != nil {
+	if err = em.online(end); err != nil {
 		return err
 	}
-
 	return nil
 }
 
-func (cm *clientManager) ListClients() []geminio.End {
+func (em *edgeManager) ListClients() []geminio.End {
 	ends := []geminio.End{}
-	cm.clients.Range(func(key, value any) bool {
+	em.edges.Range(func(key, value any) bool {
 		ends = append(ends, value.(geminio.End))
 		return true
 	})
 	return ends
 }
 
-// delegations for all ends
-func (cm *clientManager) Online(clientID uint64, meta []byte, addr net.Addr) error {
-	return nil
-}
-
-// Close all clients and manager
-func (cm *clientManager) Close() error {
-	if err := cm.ln.Close(); err != nil {
+// Close all edges and manager
+func (em *edgeManager) Close() error {
+	if err := em.ln.Close(); err != nil {
 		return err
 	}
 	return nil
