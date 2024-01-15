@@ -1,4 +1,4 @@
-package client
+package edge
 
 import (
 	"context"
@@ -40,14 +40,14 @@ type Multiplexer interface {
 	ListStreams() []geminio.Stream
 }
 
-type Client interface {
-	// Client can direct Message or RPC
+type Edge interface {
+	// Edge can direct Message or RPC
 	RPCMessager
 
-	// Client can manage streams from or to a Service
+	// Edge can manage streams from or to a Service
 	Multiplexer
 
-	// Client is a net.Listener
+	// Edge is a net.Listener
 	// The Accept is a wrapper for AccetpStream
 	// The Addr is a wrapper for LocalAddr
 	net.Listener
@@ -55,6 +55,6 @@ type Client interface {
 
 type Dialer func() (net.Conn, error)
 
-func NewClient(dialer Dialer, opts ...ClientOption) (Client, error) {
+func NewEdge(dialer Dialer, opts ...EdgeOption) (Edge, error) {
 	return nil, nil
 }
