@@ -12,24 +12,26 @@ type edgeEnd struct {
 	geminio.End
 }
 
-func newedgeEnd(dialer client.Dialer, opts ...EdgeOption) (*edgeEnd, error) {
+func newEdgeEnd(dialer client.Dialer, opts ...EdgeOption) (*edgeEnd, error) {
 	// options
-	copt := &edgeOption{}
+	eopt := &edgeOption{}
 	for _, opt := range opts {
-		opt(copt)
+		opt(eopt)
 	}
-	eopts := &client.RetryEndOptions{}
-	if copt.tmr != nil {
-		eopts.SetTimer(copt.tmr)
+	eopts := &client.RetryEndOptions{
+		EndOptions: &client.EndOptions{},
 	}
-	if copt.logger != nil {
-		eopts.SetLog(copt.logger)
+	if eopt.tmr != nil {
+		eopts.SetTimer(eopt.tmr)
 	}
-	if copt.edgeID != nil {
-		eopts.SetClientID(*copt.edgeID)
+	if eopt.logger != nil {
+		eopts.SetLog(eopt.logger)
 	}
-	if copt.meta != nil {
-		eopts.SetMeta(copt.meta)
+	if eopt.edgeID != nil {
+		eopts.SetClientID(*eopt.edgeID)
+	}
+	if eopt.meta != nil {
+		eopts.SetMeta(eopt.meta)
 	}
 
 	// new geminio end

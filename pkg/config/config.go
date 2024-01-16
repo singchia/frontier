@@ -45,6 +45,8 @@ type Listen struct {
 
 type Edgebound struct {
 	Listen Listen `yaml:"listen"`
+	// alloc edgeID when no get_id function online
+	EdgeIDAllocWhenNoIDServiceOn bool `yaml:"edgeid_alloc_when_no_idservice_on"`
 }
 
 type Servicebound struct {

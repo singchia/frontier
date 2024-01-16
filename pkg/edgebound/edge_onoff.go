@@ -1,6 +1,7 @@
 package edgebound
 
 import (
+	"errors"
 	"net"
 	"strconv"
 	"time"
@@ -8,6 +9,7 @@ import (
 	"github.com/singchia/frontier/pkg/repo/dao"
 	"github.com/singchia/frontier/pkg/repo/model"
 	"github.com/singchia/geminio"
+	"github.com/singchia/geminio/delegate"
 	"k8s.io/klog/v2"
 )
 
@@ -78,19 +80,39 @@ func (em *edgeManager) offline(edgeID uint64, addr net.Addr) error {
 }
 
 // delegations for all ends, called by geminio
-func (em *edgeManager) ConnOnline(edgeID uint64, meta []byte, addr net.Addr) error {
-	klog.V(4).Infof("edge online, edgeID: %d, meta: %s, addr: %s", edgeID, string(meta), addr.String())
+func (em *edgeManager) ConnOnline(d delegate.ConnDescriber) error {
+	edgeID := d.ClientID()
+	meta := string(d.Meta())
+	addr := d.RemoteAddr()
+	klog.V(4).Infof("edge online, edgeID: %d, meta: %s, addr: %s", edgeID, meta, addr)
+	// notification for others
+	em.informer.EdgeOnline(edgeID, d.Meta(), addr)
+	return nil
+}
+
+func (em *edgeManager) ConnOffline(d delegate.ConnDescriber) error {
+	edgeID := d.ClientID()
+	meta := string(d.Meta())
+	addr := d.RemoteAddr()
+	klog.V(4).Infof("edge offline, edgeID: %d, meta: %s, addr: %s", edgeID, string(meta), addr)
+	// offline the cache
+	err := em.offline(edgeID, addr)
+	if err != nil {
+		klog.Errorf("edge offline, cache or db offline err: %s, edgeID: %d, meta: %s, addr: %s",
+			err, edgeID, string(meta), addr)
+		return err
+	}
+	em.informer.EdgeOffline(edgeID, d.Meta(), addr)
 	// notification for others
 	return nil
 }
 
-func (em *edgeManager) ConnOffline(edgeID uint64, meta []byte, addr net.Addr) error {
-	klog.V(4).Infof("edge offline, edgeID: %d, meta: %s, addr: %s", edgeID, string(meta), addr.String())
-	return nil
-}
-
-func (em *edgeManager) Heartbeat(edgeID uint64, meta []byte, addr net.Addr) error {
-	klog.V(5).Infof("edge heartbeat, edgeID: %d, meta: %s, addr: %s")
+func (em *edgeManager) Heartbeat(d delegate.ConnDescriber) error {
+	edgeID := d.ClientID()
+	meta := string(d.Meta())
+	addr := d.RemoteAddr()
+	klog.V(5).Infof("edge heartbeat, edgeID: %d, meta: %s, addr: %s", edgeID, string(meta), addr)
+	em.informer.EdgeHeartbeat(edgeID, d.Meta(), addr)
 	return nil
 }
 
@@ -110,5 +132,9 @@ func (em *edgeManager) RemoteRegistration(rpc string, edgeID, streamID uint64) {
 }
 
 func (em *edgeManager) GetClientID(meta []byte) (uint64, error) {
-	return 0, nil
+	// TODO
+	if em.conf.Edgebound.EdgeIDAllocWhenNoIDServiceOn {
+		return em.idFactory.GetID(), nil
+	}
+	return 0, errors.New("unable to get an edgeID")
 }
