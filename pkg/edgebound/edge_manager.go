@@ -84,7 +84,7 @@ func newedgeManager(conf *config.Configuration, dao *dao.Dao, informer EdgeInfor
 		informer:  informer,
 	}
 
-	if !conf.Edgebound.Listen.TLSEnable {
+	if !conf.Edgebound.Listen.TLS.Enable {
 		if ln, err = net.Listen(network, addr); err != nil {
 			klog.Errorf("net listen err: %s, network: %s, addr: %s", err, network, addr)
 			return nil, err
