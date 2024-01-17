@@ -12,15 +12,22 @@ import (
 	"github.com/singchia/frontier/pkg/repo/dao"
 	"github.com/singchia/geminio"
 	"github.com/singchia/geminio/delegate"
+	"github.com/singchia/geminio/pkg/id"
 	"github.com/singchia/geminio/server"
 	"github.com/singchia/go-timer/v2"
 	"k8s.io/klog/v2"
 )
 
-type Clientbound interface {
-	ListClients() []geminio.End
-	GetClientByID(edgeID uint64) geminio.End
-	DelClientByID(edgeID uint64) error
+type Edgebound interface {
+	ListEdges() []geminio.End
+	GetEdgeByID(edgeID uint64) geminio.End
+	DelEdgeByID(edgeID uint64) error
+}
+
+type EdgeInformer interface {
+	EdgeOnline(edgeID uint64, meta []byte, addr net.Addr)
+	EdgeOffline(edgeID uint64, meta []byte, addr net.Addr)
+	EdgeHeartbeat(edgeID uint64, meta []byte, addr net.Addr)
 }
 
 var (
@@ -38,24 +45,27 @@ var (
 
 type edgeManager struct {
 	*delegate.UnimplementedDelegate
+
+	informer EdgeInformer
+	conf     *config.Configuration
+	// edgeID allocator
+	idFactory id.IDFactory
+	shub      *synchub.SyncHub
 	// cache
 	// key: edgeID; value: geminio.End
 	edges sync.Map
 
-	shub *synchub.SyncHub
-
 	// dao and repo for edges
 	dao *dao.Dao
+	// listener for edges
+	ln net.Listener
 
 	// timer for all edge ends
 	tmr timer.Timer
-
-	// listener for edges
-	ln net.Listener
 }
 
 // support for tls, mtls and tcp listening
-func newedgeManager(conf *config.Configuration, dao *dao.Dao, tmr timer.Timer) (*edgeManager, error) {
+func newedgeManager(conf *config.Configuration, dao *dao.Dao, informer EdgeInformer, tmr timer.Timer) (*edgeManager, error) {
 	var (
 		ln      net.Listener
 		network string = conf.Edgebound.Listen.Network
@@ -64,10 +74,14 @@ func newedgeManager(conf *config.Configuration, dao *dao.Dao, tmr timer.Timer) (
 	)
 
 	em := &edgeManager{
+		conf:                  conf,
 		tmr:                   tmr,
 		dao:                   dao,
 		shub:                  synchub.NewSyncHub(synchub.OptionTimer(tmr)),
 		UnimplementedDelegate: &delegate.UnimplementedDelegate{},
+		// a simple unix timestamp incemental id factory
+		idFactory: id.DefaultIncIDCounter,
+		informer:  informer,
 	}
 
 	if !conf.Edgebound.Listen.TLSEnable {
@@ -135,7 +149,7 @@ func (em *edgeManager) Serve() {
 	for {
 		conn, err := em.ln.Accept()
 		if err != nil {
-			klog.Errorf("listener accept err: %s", err)
+			klog.V(4).Infof("listener accept err: %s", err)
 			return
 		}
 		go em.handleConn(conn)
@@ -146,6 +160,7 @@ func (em *edgeManager) handleConn(conn net.Conn) error {
 	// options for geminio End
 	opt := server.NewEndOptions()
 	opt.SetTimer(em.tmr)
+	opt.SetDelegate(em)
 	end, err := server.NewEndWithConn(conn, opt)
 	if err != nil {
 		klog.Errorf("geminio server new end err: %s", err)
@@ -159,7 +174,7 @@ func (em *edgeManager) handleConn(conn net.Conn) error {
 	return nil
 }
 
-func (em *edgeManager) ListClients() []geminio.End {
+func (em *edgeManager) ListEdges() []geminio.End {
 	ends := []geminio.End{}
 	em.edges.Range(func(key, value any) bool {
 		ends = append(ends, value.(geminio.End))

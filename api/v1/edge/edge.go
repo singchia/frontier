@@ -5,6 +5,7 @@ import (
 	"net"
 
 	"github.com/singchia/geminio"
+	"github.com/singchia/geminio/client"
 )
 
 // RPCer is method oriented
@@ -56,5 +57,5 @@ type Edge interface {
 type Dialer func() (net.Conn, error)
 
 func NewEdge(dialer Dialer, opts ...EdgeOption) (Edge, error) {
-	return nil, nil
+	return newEdgeEnd(client.Dialer(dialer), opts...)
 }
