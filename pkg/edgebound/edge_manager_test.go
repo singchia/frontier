@@ -35,7 +35,7 @@ func TestEdgeManager(t *testing.T) {
 	}
 	h.wg.Add(2)
 	// edge manager
-	em, err := newedgeManager(conf, dao, h, timer.NewTimer())
+	em, err := newEdgeManager(conf, dao, h, timer.NewTimer())
 	if err != nil {
 		t.Error(err)
 		return

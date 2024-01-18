@@ -33,10 +33,11 @@ type CertKey struct {
 }
 
 type TLS struct {
-	Enable  bool      `yaml:"enable"`
-	MTLS    bool      `yaml:"mtls"`
-	CACerts []string  `yaml:"ca_certs"` // ca certs paths
-	Certs   []CertKey `yaml:"certs"`    // certs paths
+	Enable             bool      `yaml:"enable"`
+	MTLS               bool      `yaml:"mtls"`
+	CACerts            []string  `yaml:"ca_certs"`             // ca certs paths
+	Certs              []CertKey `yaml:"certs"`                // certs paths
+	InsecureSkipVerify bool      `yaml:"insecure_skip_verify"` // for client use
 }
 
 type Listen struct {
@@ -51,7 +52,7 @@ type Bypass struct {
 	Enable  bool   `yaml:"enable"`
 	Network string `yaml:"network"`
 	Addr    string `yaml:"addr"` // addr to dial
-	TLS     TLS    `yaml:"tls"`
+	TLS     TLS    `yaml:"tls"`  // certs to dial or ca to auth
 }
 type Edgebound struct {
 	Listen Listen `yaml:"listen"`
