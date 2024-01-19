@@ -33,6 +33,13 @@ type EdgeInformer interface {
 	EdgeHeartbeat(edgeID uint64, meta []byte, addr net.Addr)
 }
 
+type Exchange interface {
+	// rpc, message and raw io to service
+	ForwardToService(geminio.End)
+	// stream to service
+	StreamToService(geminio.Stream)
+}
+
 var (
 	// safe ciperSuites with DH exchange algorithms.
 	ciperSuites = []uint16{
@@ -50,6 +57,7 @@ type edgeManager struct {
 	*delegate.UnimplementedDelegate
 
 	informer EdgeInformer
+	exchange Exchange
 	conf     *config.Configuration
 	// edgeID allocator
 	idFactory id.IDFactory
@@ -57,6 +65,9 @@ type edgeManager struct {
 	// cache
 	// key: edgeID; value: geminio.End
 	edges sync.Map
+	// key: edgeID-streamID; value: geminio.Stream
+	// we don't store stream info to dao, because they may will be too much.
+	streams sync.Map
 
 	// dao and repo for edges
 	dao *dao.Dao
@@ -70,7 +81,8 @@ type edgeManager struct {
 }
 
 // support for tls, mtls and tcp listening
-func newEdgeManager(conf *config.Configuration, dao *dao.Dao, informer EdgeInformer, tmr timer.Timer) (*edgeManager, error) {
+func newEdgeManager(conf *config.Configuration, dao *dao.Dao, informer EdgeInformer,
+	exchange Exchange, tmr timer.Timer) (*edgeManager, error) {
 	listen := &conf.Edgebound.Listen
 	var (
 		ln      net.Listener
@@ -258,6 +270,9 @@ func (em *edgeManager) handleConn(conn net.Conn) error {
 	opt := server.NewEndOptions()
 	opt.SetTimer(em.tmr)
 	opt.SetDelegate(em)
+	// stream handler
+	opt.SetAcceptStreamFunc(em.acceptStream)
+	opt.SetClosedStreamFunc(em.closedStream)
 	end, err := server.NewEndWithConn(conn, opt)
 	if err != nil {
 		klog.Errorf("geminio server new end err: %s", err)
@@ -268,6 +283,7 @@ func (em *edgeManager) handleConn(conn net.Conn) error {
 	if err = em.online(end); err != nil {
 		return err
 	}
+	// TODO forward and stream up to service
 	return nil
 }
 
