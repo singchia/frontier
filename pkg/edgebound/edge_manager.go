@@ -298,6 +298,11 @@ func (em *edgeManager) ListEdges() []geminio.End {
 	return ends
 }
 
+func (em *edgeManager) ListStreams(edgeID uint64) []geminio.Stream {
+	all := em.streams.MGetAll(edgeID)
+	return slice2streams(all)
+}
+
 // Close all edges and manager
 func (em *edgeManager) Close() error {
 	bypass := &em.conf.Edgebound.Bypass

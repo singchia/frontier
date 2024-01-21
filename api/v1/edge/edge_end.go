@@ -92,3 +92,8 @@ func (end *edgeEnd) AcceptStream() (geminio.Stream, error) {
 func (end *edgeEnd) ListStreams() []geminio.Stream {
 	return end.End.ListStreams()
 }
+
+// Meta
+func (end *edgeEnd) EdgeID() uint64 {
+	return end.End.ClientID()
+}

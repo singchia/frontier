@@ -52,6 +52,9 @@ type Edge interface {
 	// The Accept is a wrapper for AccetpStream
 	// The Addr is a wrapper for LocalAddr
 	net.Listener
+
+	// Meta
+	EdgeID() uint64
 }
 
 type Dialer func() (net.Conn, error)

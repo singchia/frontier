@@ -86,7 +86,9 @@ func (em *edgeManager) ConnOnline(d delegate.ConnDescriber) error {
 	addr := d.RemoteAddr()
 	klog.V(4).Infof("edge online, edgeID: %d, meta: %s, addr: %s", edgeID, meta, addr)
 	// notification for others
-	em.informer.EdgeOnline(edgeID, d.Meta(), addr)
+	if em.informer != nil {
+		em.informer.EdgeOnline(edgeID, d.Meta(), addr)
+	}
 	return nil
 }
 
@@ -102,7 +104,9 @@ func (em *edgeManager) ConnOffline(d delegate.ConnDescriber) error {
 			err, edgeID, string(meta), addr)
 		return err
 	}
-	em.informer.EdgeOffline(edgeID, d.Meta(), addr)
+	if em.informer != nil {
+		em.informer.EdgeOffline(edgeID, d.Meta(), addr)
+	}
 	// notification for others
 	return nil
 }
@@ -112,7 +116,9 @@ func (em *edgeManager) Heartbeat(d delegate.ConnDescriber) error {
 	meta := string(d.Meta())
 	addr := d.RemoteAddr()
 	klog.V(5).Infof("edge heartbeat, edgeID: %d, meta: %s, addr: %s", edgeID, string(meta), addr)
-	em.informer.EdgeHeartbeat(edgeID, d.Meta(), addr)
+	if em.informer != nil {
+		em.informer.EdgeHeartbeat(edgeID, d.Meta(), addr)
+	}
 	return nil
 }
 
