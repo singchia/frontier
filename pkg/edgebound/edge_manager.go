@@ -11,6 +11,7 @@ import (
 	"github.com/jumboframes/armorigo/rproxy"
 	"github.com/jumboframes/armorigo/synchub"
 	"github.com/singchia/frontier/pkg/config"
+	"github.com/singchia/frontier/pkg/mapmap"
 	"github.com/singchia/frontier/pkg/repo/dao"
 	"github.com/singchia/geminio"
 	"github.com/singchia/geminio/delegate"
@@ -67,7 +68,7 @@ type edgeManager struct {
 	edges sync.Map
 	// key: edgeID-streamID; value: geminio.Stream
 	// we don't store stream info to dao, because they may will be too much.
-	streams sync.Map
+	streams *mapmap.MapMap
 
 	// dao and repo for edges
 	dao *dao.Dao
@@ -94,6 +95,7 @@ func newEdgeManager(conf *config.Configuration, dao *dao.Dao, informer EdgeInfor
 	em := &edgeManager{
 		conf:                  conf,
 		tmr:                   tmr,
+		streams:               mapmap.NewMapMap(),
 		dao:                   dao,
 		shub:                  synchub.NewSyncHub(synchub.OptionTimer(tmr)),
 		UnimplementedDelegate: &delegate.UnimplementedDelegate{},
