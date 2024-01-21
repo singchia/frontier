@@ -1,0 +1,56 @@
+daemon:
+  rlimit:
+    nofile: 1024
+  pprof:
+    addr: 0.0.0.0:6060
+edgebound:
+  listen:
+    network: tcp
+    addr: 0.0.0.0:2432
+    tls:
+      enable: true
+      mtls: true
+      ca_certs:
+      - ca1.cert
+      - ca2.cert
+      certs:
+      - cert: edgebound.cert
+        key: edgebound.key
+  bypass:
+    enable: true
+    network: tcp
+    addr: 192.168.1.10:8443
+    tls:
+      enable: true
+      mtls: true
+      ca_certs:
+      - ca1.cert
+      certs:
+      - cert: frontier.cert
+        key: frontier.key
+  edgeid_alloc_when_no_idservice_on: true
+servicebound:
+  listen:
+    network: tcp
+    addr: 0.0.0.0:2431
+    tls:
+      enable: true
+      mtls: true
+      ca_certs:
+      - ca1.cert
+      - ca2.cert
+      certs:
+      - cert: servicebound.cert
+        key: servicebound.key
+log:
+  log_dir: /app/log
+  log_file: frontier.log
+  log_file_max_size: 100
+  logtostderr: false
+  alsologtostderr: false
+  verbosity: 4
+  add_dir_header: true
+  skip_headers: true
+  one_output: true
+  skip_log_headers: true
+  stderrthreshold: 1024

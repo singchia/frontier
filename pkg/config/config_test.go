@@ -1,8 +1,11 @@
 package config
 
 import (
+	"os"
 	"reflect"
 	"testing"
+
+	"gopkg.in/yaml.v2"
 )
 
 func TestParseFlags(t *testing.T) {
@@ -34,5 +37,38 @@ func TestParseFlags(t *testing.T) {
 				t.Errorf("ParseFlags() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestParseFile(t *testing.T) {
+	conf := &Configuration{
+		Daemon: Daemon{
+			RLimit: RLimit{
+				NumFile: 1024,
+			},
+			PProf: PProf{
+				Addr: "0.0.0.0:6060",
+			},
+		},
+		Edgebound:    Edgebound{},
+		Servicebound: Servicebound{},
+		Log:          Log{},
+	}
+	_, err := yaml.Marshal(conf)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+}
+
+func TestGenDefaultConfig(t *testing.T) {
+	file, err := os.OpenFile("./config.yaml", os.O_CREATE|os.O_RDWR, 0666)
+	if err != nil {
+		t.Error(err)
+	}
+	defer file.Close()
+	err = genDefaultConfig(file)
+	if err != nil {
+		t.Error(err)
 	}
 }

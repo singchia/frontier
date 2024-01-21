@@ -2,9 +2,11 @@ package config
 
 import (
 	"flag"
+	"io"
 	"os"
 	"strconv"
 
+	armio "github.com/jumboframes/armorigo/io"
 	"github.com/spf13/pflag"
 	"gopkg.in/yaml.v2"
 	"k8s.io/klog/v2"
@@ -31,24 +33,35 @@ type CertKey struct {
 }
 
 type TLS struct {
-	MTLS    bool      `yaml:"mtls"`
-	CACerts []string  `yaml:"ca_certs"` // ca certs paths
-	Certs   []CertKey `yaml:"certs"`    // certs paths
+	Enable             bool      `yaml:"enable"`
+	MTLS               bool      `yaml:"mtls"`
+	CACerts            []string  `yaml:"ca_certs"`             // ca certs paths
+	Certs              []CertKey `yaml:"certs"`                // certs paths
+	InsecureSkipVerify bool      `yaml:"insecure_skip_verify"` // for client use
 }
 
 type Listen struct {
-	Network   string `yaml:"network"`
-	Addr      string `yaml:"addr"`
-	TLSEnable bool   `yaml:"tls_enable"`
-	TLS       TLS    `yaml:"tls"`
+	Network string `yaml:"network"`
+	Addr    string `yaml:"addr"`
+	TLS     TLS    `yaml:"tls"`
 }
 
+// edgebound
+// Bypass is for the lagecy gateway, this will split
+type Bypass struct {
+	Enable  bool   `yaml:"enable"`
+	Network string `yaml:"network"`
+	Addr    string `yaml:"addr"` // addr to dial
+	TLS     TLS    `yaml:"tls"`  // certs to dial or ca to auth
+}
 type Edgebound struct {
 	Listen Listen `yaml:"listen"`
+	Bypass Bypass `yaml:"bypass"`
 	// alloc edgeID when no get_id function online
 	EdgeIDAllocWhenNoIDServiceOn bool `yaml:"edgeid_alloc_when_no_idservice_on"`
 }
 
+// servicebound
 type Servicebound struct {
 	Listen Listen `yaml:"listen"`
 }
@@ -136,4 +149,98 @@ func ParseFlags() (*Configuration, error) {
 	config.Daemon.RLimit.NumFile = *argDaemonRLimitNofile
 
 	return config, nil
+}
+
+func genDefaultConfig(writer io.Writer) error {
+	conf := &Configuration{
+		Daemon: Daemon{
+			RLimit: RLimit{
+				NumFile: 1024,
+			},
+			PProf: PProf{
+				Addr: "0.0.0.0:6060",
+			},
+		},
+		Edgebound: Edgebound{
+			Listen: Listen{
+				Network: "tcp",
+				Addr:    "0.0.0.0:2432",
+				TLS: TLS{
+					Enable: true,
+					MTLS:   true,
+					CACerts: []string{
+						"ca1.cert",
+						"ca2.cert",
+					},
+					Certs: []CertKey{
+						{
+							Cert: "edgebound.cert",
+							Key:  "edgebound.key",
+						},
+					},
+				},
+			},
+			EdgeIDAllocWhenNoIDServiceOn: true,
+			Bypass: Bypass{
+				Enable:  true,
+				Network: "tcp",
+				Addr:    "192.168.1.10:8443",
+				TLS: TLS{
+					Enable: true,
+					MTLS:   true,
+					CACerts: []string{
+						"ca1.cert",
+					},
+					Certs: []CertKey{
+						{
+							Cert: "frontier.cert",
+							Key:  "frontier.key",
+						},
+					},
+				},
+			},
+		},
+		Servicebound: Servicebound{
+			Listen: Listen{
+				Network: "tcp",
+				Addr:    "0.0.0.0:2431",
+				TLS: TLS{
+					Enable: true,
+					MTLS:   true,
+					CACerts: []string{
+						"ca1.cert",
+						"ca2.cert",
+					},
+					Certs: []CertKey{
+						{
+							Cert: "servicebound.cert",
+							Key:  "servicebound.key",
+						},
+					},
+				},
+			},
+		},
+		Log: Log{
+			LogDir:           "/app/log",
+			LogFile:          "frontier.log",
+			LogFileMaxSizeMB: 100,
+			ToStderr:         false,
+			AlsoToStderr:     false,
+			Verbosity:        4,
+			AddDirHeader:     true,
+			SkipHeaders:      true,
+			OneOutput:        true,
+			SkipLogHeaders:   true,
+			StderrThreshold:  1024,
+		},
+	}
+	data, err := yaml.Marshal(conf)
+	if err != nil {
+		return err
+	}
+	_, err = armio.WriteAll(data, writer)
+	if err != nil {
+		return err
+	}
+	return nil
 }
