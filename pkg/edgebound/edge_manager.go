@@ -285,7 +285,8 @@ func (em *edgeManager) handleConn(conn net.Conn) error {
 	if err = em.online(end); err != nil {
 		return err
 	}
-	// TODO forward and stream up to service
+	// forward and stream up to service
+	em.forward(end)
 	return nil
 }
 
@@ -296,6 +297,10 @@ func (em *edgeManager) ListEdges() []geminio.End {
 		return true
 	})
 	return ends
+}
+
+func (em *edgeManager) CountEdges() int {
+	return 0
 }
 
 func (em *edgeManager) ListStreams(edgeID uint64) []geminio.Stream {

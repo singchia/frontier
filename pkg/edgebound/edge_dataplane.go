@@ -28,3 +28,13 @@ func (em *edgeManager) closedStream(stream geminio.Stream) {
 	em.streams.MDel(edgeID, streamID)
 	// when the stream ends, the exchange can be noticed by functional error, so we don't update exchange
 }
+
+// forward to exchange
+func (em *edgeManager) forward(end geminio.End) {
+	edgeID := end.ClientID()
+	meta := end.Meta()
+	klog.V(5).Infof("edge forward stream, edgeID: %d, meta: %s", edgeID, meta)
+	if em.exchange != nil {
+		em.exchange.ForwardToService(end)
+	}
+}

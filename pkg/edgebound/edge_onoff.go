@@ -55,7 +55,7 @@ func (em *edgeManager) offline(edgeID uint64, addr net.Addr) error {
 			// delete only when the end is old one
 			// and the operation should be atomic
 			em.edges.CompareAndDelete(edgeID, end)
-			klog.Infof("edge offline, edgeID: %d, remote addr: %s", edgeID, end.RemoteAddr().String())
+			klog.V(5).Infof("edge offline, edgeID: %d, remote addr: %s", edgeID, end.RemoteAddr().String())
 		}
 	} else {
 		klog.Warningf("edge offline, edgeID: %d not found in cache", edgeID)
