@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/jumboframes/armorigo/synchub"
 	"github.com/singchia/frontier/pkg/repo/dao"
 	"github.com/singchia/frontier/pkg/repo/model"
 	"github.com/singchia/geminio"
@@ -16,16 +17,23 @@ import (
 func (em *edgeManager) online(end geminio.End) error {
 	// TODO transaction
 	// cache
-	old, ok := em.edges.Swap(end.ClientID(), end)
+	var sync synchub.Sync
+	em.mtx.Lock()
+	old, ok := em.edges[end.ClientID()]
 	if ok {
 		// if the old connection exits, offline it
 		oldend := old.(geminio.End)
 		// we wait the cache and db to clear old end's data
 		syncKey := strconv.FormatUint(oldend.ClientID(), 10) + "-" + oldend.RemoteAddr().String()
-		sync := em.shub.Add(syncKey)
+		sync = em.shub.Add(syncKey)
 		if err := oldend.Close(); err != nil {
 			klog.Warningf("edge online, kick off old end err: %s, edgeID: %d", err, end.ClientID())
 		}
+	}
+	em.edges[end.ClientID()] = end
+	em.mtx.Unlock()
+
+	if sync != nil {
 		<-sync.C()
 	}
 
@@ -47,19 +55,19 @@ func (em *edgeManager) offline(edgeID uint64, addr net.Addr) error {
 	// TODO transaction
 	legacy := false
 	// cache
-	value, ok := em.edges.Load(edgeID)
+	em.mtx.Lock()
+	value, ok := em.edges[edgeID]
 	if ok {
 		end := value.(geminio.End)
 		if end != nil && end.RemoteAddr().String() == addr.String() {
 			legacy = true
-			// delete only when the end is old one
-			// and the operation should be atomic
-			em.edges.CompareAndDelete(edgeID, end)
+			delete(em.edges, edgeID)
 			klog.V(5).Infof("edge offline, edgeID: %d, remote addr: %s", edgeID, end.RemoteAddr().String())
 		}
 	} else {
 		klog.Warningf("edge offline, edgeID: %d not found in cache", edgeID)
 	}
+	em.mtx.Unlock()
 
 	// memdb
 	if err := em.dao.DeleteEdge(&dao.EdgeDelete{

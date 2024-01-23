@@ -54,7 +54,9 @@ type edgeManager struct {
 	shub      *synchub.SyncHub
 	// cache
 	// key: edgeID; value: geminio.End
-	edges sync.Map
+	// edges sync.Map
+	edges map[uint64]geminio.End
+	mtx   sync.RWMutex
 	// key: edgeID; subkey: streamID; value: geminio.Stream
 	// we don't store stream info to dao, because they may will be too much.
 	streams *mapmap.MapMap
@@ -281,10 +283,12 @@ func (em *edgeManager) handleConn(conn net.Conn) error {
 
 func (em *edgeManager) ListEdges() []geminio.End {
 	ends := []geminio.End{}
-	em.edges.Range(func(key, value any) bool {
-		ends = append(ends, value.(geminio.End))
-		return true
-	})
+	em.mtx.RLock()
+	defer em.mtx.RUnlock()
+
+	for _, value := range em.edges {
+		ends = append(ends, value)
+	}
 	return ends
 }
 
