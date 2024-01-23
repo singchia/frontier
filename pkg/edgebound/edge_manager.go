@@ -13,6 +13,7 @@ import (
 	"github.com/singchia/frontier/pkg/config"
 	"github.com/singchia/frontier/pkg/mapmap"
 	"github.com/singchia/frontier/pkg/repo/dao"
+	"github.com/singchia/frontier/pkg/security"
 	"github.com/singchia/geminio"
 	"github.com/singchia/geminio/delegate"
 	"github.com/singchia/geminio/pkg/id"
@@ -24,6 +25,7 @@ import (
 
 type Edgebound interface {
 	ListEdges() []geminio.End
+	// for management
 	GetEdgeByID(edgeID uint64) geminio.End
 	DelEdgeByID(edgeID uint64) error
 }
@@ -41,19 +43,6 @@ type Exchange interface {
 	StreamToService(geminio.Stream)
 }
 
-var (
-	// safe ciperSuites with DH exchange algorithms.
-	ciperSuites = []uint16{
-		tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-		tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-		tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-		tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-		tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
-		tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
-		tls.TLS_FALLBACK_SCSV,
-	}
-)
-
 type edgeManager struct {
 	*delegate.UnimplementedDelegate
 
@@ -66,7 +55,7 @@ type edgeManager struct {
 	// cache
 	// key: edgeID; value: geminio.End
 	edges sync.Map
-	// key: edgeID-streamID; value: geminio.Stream
+	// key: edgeID; subkey: streamID; value: geminio.Stream
 	// we don't store stream info to dao, because they may will be too much.
 	streams *mapmap.MapMap
 
@@ -106,7 +95,7 @@ func newEdgeManager(conf *config.Configuration, dao *dao.Dao, informer EdgeInfor
 
 	if !listen.TLS.Enable {
 		if ln, err = net.Listen(network, addr); err != nil {
-			klog.Errorf("net listen err: %s, network: %s, addr: %s", err, network, addr)
+			klog.Errorf("edge manager net listen err: %s, network: %s, addr: %s", err, network, addr)
 			return nil, err
 		}
 
@@ -116,7 +105,7 @@ func newEdgeManager(conf *config.Configuration, dao *dao.Dao, informer EdgeInfor
 		for _, certFile := range listen.TLS.Certs {
 			cert, err := tls.LoadX509KeyPair(certFile.Cert, certFile.Key)
 			if err != nil {
-				klog.Errorf("tls load x509 cert err: %s, cert: %s, key: %s", err, certFile.Cert, certFile.Key)
+				klog.Errorf("edge manager tls load x509 cert err: %s, cert: %s, key: %s", err, certFile.Cert, certFile.Key)
 				continue
 			}
 			certs = append(certs, cert)
@@ -126,10 +115,10 @@ func newEdgeManager(conf *config.Configuration, dao *dao.Dao, informer EdgeInfor
 			// tls
 			if ln, err = tls.Listen(network, addr, &tls.Config{
 				MinVersion:   tls.VersionTLS12,
-				CipherSuites: ciperSuites,
+				CipherSuites: security.CiperSuites,
 				Certificates: certs,
 			}); err != nil {
-				klog.Errorf("tls listen err: %s, network: %s, addr: %s", err, network, addr)
+				klog.Errorf("edge manager tls listen err: %s, network: %s, addr: %s", err, network, addr)
 				return nil, err
 			}
 
@@ -140,22 +129,22 @@ func newEdgeManager(conf *config.Configuration, dao *dao.Dao, informer EdgeInfor
 			for _, caFile := range listen.TLS.CACerts {
 				ca, err := os.ReadFile(caFile)
 				if err != nil {
-					klog.Errorf("read ca cert err: %s, file: %s", err, caFile)
+					klog.Errorf("edge manager read ca cert err: %s, file: %s", err, caFile)
 					return nil, err
 				}
 				if !caPool.AppendCertsFromPEM(ca) {
-					klog.Warningf("append ca cert to ca pool err: %s, file: %s", err, caFile)
+					klog.Warningf("edge manager append ca cert to ca pool err: %s, file: %s", err, caFile)
 					continue
 				}
 			}
 			if ln, err = tls.Listen(network, addr, &tls.Config{
 				MinVersion:   tls.VersionTLS12,
-				CipherSuites: ciperSuites,
+				CipherSuites: security.CiperSuites,
 				ClientCAs:    caPool,
 				ClientAuth:   tls.RequireAndVerifyClientCert,
 				Certificates: certs,
 			}); err != nil {
-				klog.Errorf("tls listen err: %s, network: %s, addr: %s", err, network, addr)
+				klog.Errorf("edge manager tls listen err: %s, network: %s, addr: %s", err, network, addr)
 				return nil, err
 			}
 		}
@@ -172,7 +161,7 @@ func newEdgeManager(conf *config.Configuration, dao *dao.Dao, informer EdgeInfor
 		anyLn := cm.Match(cmux.Any())
 		rp, err := rproxy.NewRProxy(anyLn, rproxy.OptionRProxyDial(em.bypassDial))
 		if err != nil {
-			klog.Errorf("new rproxy err: %s", err)
+			klog.Errorf("edge manager new rproxy err: %s", err)
 			return nil, err
 		}
 		em.cm = cm
@@ -201,7 +190,7 @@ func (em *edgeManager) bypassDial(_ net.Addr, _ interface{}) (net.Conn, error) {
 		for _, certFile := range bypass.TLS.Certs {
 			cert, err := tls.LoadX509KeyPair(certFile.Cert, certFile.Key)
 			if err != nil {
-				klog.Errorf("tls load x509 cert err: %s, cert: %s, key: %s", err, certFile.Cert, certFile.Key)
+				klog.Errorf("edge manager bypass tls load x509 cert err: %s, cert: %s, key: %s", err, certFile.Cert, certFile.Key)
 				continue
 			}
 			certs = append(certs, cert)
@@ -215,7 +204,7 @@ func (em *edgeManager) bypassDial(_ net.Addr, _ interface{}) (net.Conn, error) {
 				InsecureSkipVerify: bypass.TLS.InsecureSkipVerify,
 			})
 			if err != nil {
-				klog.Errorf("tls dial err: %s, network: %s, addr: %s", err, network, addr)
+				klog.Errorf("edge manager bypass tls dial err: %s, network: %s, addr: %s", err, network, addr)
 				return nil, err
 			}
 			return conn, nil
@@ -226,11 +215,11 @@ func (em *edgeManager) bypassDial(_ net.Addr, _ interface{}) (net.Conn, error) {
 			for _, caFile := range bypass.TLS.CACerts {
 				ca, err := os.ReadFile(caFile)
 				if err != nil {
-					klog.Errorf("read ca cert err: %s, file: %s", err, caFile)
+					klog.Errorf("edge manager bypass read ca cert err: %s, file: %s", err, caFile)
 					return nil, err
 				}
 				if !caPool.AppendCertsFromPEM(ca) {
-					klog.Warningf("append ca cert to ca pool err: %s, file: %s", err, caFile)
+					klog.Warningf("edge manager bypass append ca cert to ca pool err: %s, file: %s", err, caFile)
 					continue
 				}
 			}
@@ -241,7 +230,7 @@ func (em *edgeManager) bypassDial(_ net.Addr, _ interface{}) (net.Conn, error) {
 				RootCAs:            caPool,
 			})
 			if err != nil {
-				klog.Errorf("tls dial err: %s, network: %s, addr: %s", err, network, addr)
+				klog.Errorf("edge manager bypass tls dial err: %s, network: %s, addr: %s", err, network, addr)
 				return nil, err
 			}
 			return conn, nil
@@ -260,7 +249,7 @@ func (em *edgeManager) Serve() {
 	for {
 		conn, err := em.geminioLn.Accept()
 		if err != nil {
-			klog.V(4).Infof("listener accept err: %s", err)
+			klog.V(4).Infof("edge manager listener accept err: %s", err)
 			return
 		}
 		go em.handleConn(conn)
@@ -277,7 +266,7 @@ func (em *edgeManager) handleConn(conn net.Conn) error {
 	opt.SetClosedStreamFunc(em.closedStream)
 	end, err := server.NewEndWithConn(conn, opt)
 	if err != nil {
-		klog.Errorf("geminio server new end err: %s", err)
+		klog.Errorf("edge manager geminio server new end err: %s", err)
 		return err
 	}
 
