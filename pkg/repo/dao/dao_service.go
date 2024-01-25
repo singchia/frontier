@@ -71,11 +71,17 @@ func (dao *Dao) GetService(serviceID uint64) (*model.Service, error) {
 	return &service, tx.Error
 }
 
-func (dao *Dao) DeleteService(serviceID uint64) error {
-	tx := dao.dbService.Where("service_id = ?", serviceID)
+type ServiceDelete struct {
+	ServiceID uint64
+	Addr      string
+}
+
+func (dao *Dao) DeleteService(delete *ServiceDelete) error {
+	tx := dao.dbService
 	if dao.config.Log.Verbosity >= 4 {
 		tx = tx.Debug()
 	}
+	tx = buildServiceDelete(tx, delete)
 	return tx.Delete(&model.Service{}).Error
 }
 
@@ -111,6 +117,16 @@ func buildServiceQuery(tx *gorm.DB, query *ServiceQuery) *gorm.DB {
 	// equal
 	if query.ServiceID != 0 {
 		tx = tx.Where("service_id = ?", query.ServiceID)
+	}
+	return tx
+}
+
+func buildServiceDelete(tx *gorm.DB, delete *ServiceDelete) *gorm.DB {
+	if delete.ServiceID != 0 {
+		tx = tx.Where("service_id = ?", delete.ServiceID)
+	}
+	if delete.Addr != "" {
+		tx = tx.Where("addr = ?", delete.Addr)
 	}
 	return tx
 }
@@ -248,7 +264,7 @@ func (dao *Dao) CountServiceTopics(query *ServiceTopicQuery) (int64, error) {
 	return count, tx.Error
 }
 
-func (dao *Dao) DeleteServiceTopic(serviceID uint64) error {
+func (dao *Dao) DeleteServiceTopics(serviceID uint64) error {
 	tx := dao.dbService.Where("service_id = ?", serviceID)
 	if dao.config.Log.Verbosity >= 4 {
 		tx = tx.Debug()

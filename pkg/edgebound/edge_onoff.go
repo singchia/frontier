@@ -24,7 +24,7 @@ func (em *edgeManager) online(end geminio.End) error {
 		// if the old connection exits, offline it
 		oldend := old.(geminio.End)
 		// we wait the cache and db to clear old end's data
-		syncKey := strconv.FormatUint(oldend.ClientID(), 10) + "-" + oldend.RemoteAddr().String()
+		syncKey := "edge" + "-" + strconv.FormatUint(oldend.ClientID(), 10) + "-" + oldend.RemoteAddr().String()
 		sync = em.shub.Add(syncKey)
 		if err := oldend.Close(); err != nil {
 			klog.Warningf("edge online, kick off old end err: %s, edgeID: %d", err, end.ClientID())
@@ -34,6 +34,7 @@ func (em *edgeManager) online(end geminio.End) error {
 	em.mtx.Unlock()
 
 	if sync != nil {
+		// unlikely here
 		<-sync.C()
 	}
 
@@ -69,6 +70,13 @@ func (em *edgeManager) offline(edgeID uint64, addr net.Addr) error {
 	}
 	em.mtx.Unlock()
 
+	defer func() {
+		if legacy {
+			syncKey := "edge" + "-" + strconv.FormatUint(edgeID, 10) + "-" + addr.String()
+			em.shub.Done(syncKey)
+		}
+	}()
+
 	// memdb
 	if err := em.dao.DeleteEdge(&dao.EdgeDelete{
 		EdgeID: edgeID,
@@ -79,15 +87,12 @@ func (em *edgeManager) offline(edgeID uint64, addr net.Addr) error {
 	}
 	if err := em.dao.DeleteEdgeRPCs(edgeID); err != nil {
 		klog.Errorf("edge offline, dao delete edge rpcs err: %s, edgeID: %d", err, edgeID)
-	}
-	if legacy {
-		syncKey := strconv.FormatUint(edgeID, 10) + "-" + addr.String()
-		em.shub.Done(syncKey)
+		return err
 	}
 	return nil
 }
 
-// delegations for all ends, called by geminio
+// delegations for all ends from edgebound, called by geminio
 func (em *edgeManager) ConnOnline(d delegate.ConnDescriber) error {
 	edgeID := d.ClientID()
 	meta := string(d.Meta())

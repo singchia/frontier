@@ -293,7 +293,9 @@ func (em *edgeManager) ListEdges() []geminio.End {
 }
 
 func (em *edgeManager) CountEdges() int {
-	return 0
+	em.mtx.RLock()
+	defer em.mtx.RUnlock()
+	return len(em.edges)
 }
 
 func (em *edgeManager) ListStreams(edgeID uint64) []geminio.Stream {

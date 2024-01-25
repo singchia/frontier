@@ -1,12 +1,14 @@
 package servicebound
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"net"
 	"os"
 	"sync"
 
+	"github.com/jumboframes/armorigo/synchub"
 	"github.com/singchia/frontier/pkg/config"
 	"github.com/singchia/frontier/pkg/mapmap"
 	"github.com/singchia/frontier/pkg/repo/dao"
@@ -47,9 +49,11 @@ type serviceManager struct {
 	conf     *config.Configuration
 	// serviceID allocator
 	idFactory id.IDFactory
+	shub      *synchub.SyncHub
 	// cache
 	// key: serviceID; value: geminio.End
-	services sync.Map
+	services map[uint64]geminio.End
+	mtx      sync.RWMutex
 	// key: serviceID; subkey: streamID; value: geminio.Stream
 	// we don't store stream info to dao, because they may will be too much.
 	streams *mapmap.MapMap
@@ -77,6 +81,7 @@ func newServiceManager(conf *config.Configuration, dao *dao.Dao, informer Servic
 		tmr:                   tmr,
 		streams:               mapmap.NewMapMap(),
 		dao:                   dao,
+		shub:                  synchub.NewSyncHub(synchub.OptionTimer(tmr)),
 		UnimplementedDelegate: &delegate.UnimplementedDelegate{},
 		// a simple unix timestamp incremental id factory
 		idFactory: id.DefaultIncIDCounter,
@@ -159,5 +164,25 @@ func (sm *serviceManager) handleConn(conn net.Conn) error {
 	opt.SetTimer(sm.tmr)
 	opt.SetDelegate(sm)
 	// stream handler
+	opt.SetAcceptStreamFunc(sm.acceptStream)
+	opt.SetClosedStreamFunc(sm.closedStream)
+	end, err := server.NewEndWithConn(conn, opt)
+	if err != nil {
+		klog.Errorf("service manager geminio server new end err: %s", err)
+		return err
+	}
+
+	// handle online event for end
+	if err = sm.online(end); err != nil {
+		return err
+	}
+
+	// register methods for service
+	if err = end.Register(context.TODO(), "topic_claim", sm.RemoteReceiveClaim); err != nil {
+		return err
+	}
+
+	// forward and stream up to edge
+	sm.forward(end)
 	return nil
 }
