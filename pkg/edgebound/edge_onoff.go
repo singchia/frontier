@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/jumboframes/armorigo/synchub"
 	"github.com/singchia/frontier/pkg/repo/dao"
 	"github.com/singchia/frontier/pkg/repo/model"
 	"github.com/singchia/geminio"
@@ -16,16 +17,24 @@ import (
 func (em *edgeManager) online(end geminio.End) error {
 	// TODO transaction
 	// cache
-	old, ok := em.edges.Swap(end.ClientID(), end)
+	var sync synchub.Sync
+	em.mtx.Lock()
+	old, ok := em.edges[end.ClientID()]
 	if ok {
 		// if the old connection exits, offline it
 		oldend := old.(geminio.End)
 		// we wait the cache and db to clear old end's data
-		syncKey := strconv.FormatUint(oldend.ClientID(), 10) + "-" + oldend.RemoteAddr().String()
-		sync := em.shub.Add(syncKey)
+		syncKey := "edge" + "-" + strconv.FormatUint(oldend.ClientID(), 10) + "-" + oldend.RemoteAddr().String()
+		sync = em.shub.Add(syncKey)
 		if err := oldend.Close(); err != nil {
 			klog.Warningf("edge online, kick off old end err: %s, edgeID: %d", err, end.ClientID())
 		}
+	}
+	em.edges[end.ClientID()] = end
+	em.mtx.Unlock()
+
+	if sync != nil {
+		// unlikely here
 		<-sync.C()
 	}
 
@@ -47,19 +56,26 @@ func (em *edgeManager) offline(edgeID uint64, addr net.Addr) error {
 	// TODO transaction
 	legacy := false
 	// cache
-	value, ok := em.edges.Load(edgeID)
+	em.mtx.Lock()
+	value, ok := em.edges[edgeID]
 	if ok {
 		end := value.(geminio.End)
 		if end != nil && end.RemoteAddr().String() == addr.String() {
 			legacy = true
-			// delete only when the end is old one
-			// and the operation should be atomic
-			em.edges.CompareAndDelete(edgeID, end)
-			klog.Infof("edge offline, edgeID: %d, remote addr: %s", edgeID, end.RemoteAddr().String())
+			delete(em.edges, edgeID)
+			klog.V(5).Infof("edge offline, edgeID: %d, remote addr: %s", edgeID, end.RemoteAddr().String())
 		}
 	} else {
 		klog.Warningf("edge offline, edgeID: %d not found in cache", edgeID)
 	}
+	em.mtx.Unlock()
+
+	defer func() {
+		if legacy {
+			syncKey := "edge" + "-" + strconv.FormatUint(edgeID, 10) + "-" + addr.String()
+			em.shub.Done(syncKey)
+		}
+	}()
 
 	// memdb
 	if err := em.dao.DeleteEdge(&dao.EdgeDelete{
@@ -71,22 +87,21 @@ func (em *edgeManager) offline(edgeID uint64, addr net.Addr) error {
 	}
 	if err := em.dao.DeleteEdgeRPCs(edgeID); err != nil {
 		klog.Errorf("edge offline, dao delete edge rpcs err: %s, edgeID: %d", err, edgeID)
-	}
-	if legacy {
-		syncKey := strconv.FormatUint(edgeID, 10) + "-" + addr.String()
-		em.shub.Done(syncKey)
+		return err
 	}
 	return nil
 }
 
-// delegations for all ends, called by geminio
+// delegations for all ends from edgebound, called by geminio
 func (em *edgeManager) ConnOnline(d delegate.ConnDescriber) error {
 	edgeID := d.ClientID()
 	meta := string(d.Meta())
 	addr := d.RemoteAddr()
 	klog.V(4).Infof("edge online, edgeID: %d, meta: %s, addr: %s", edgeID, meta, addr)
 	// notification for others
-	em.informer.EdgeOnline(edgeID, d.Meta(), addr)
+	if em.informer != nil {
+		em.informer.EdgeOnline(edgeID, d.Meta(), addr)
+	}
 	return nil
 }
 
@@ -102,7 +117,9 @@ func (em *edgeManager) ConnOffline(d delegate.ConnDescriber) error {
 			err, edgeID, string(meta), addr)
 		return err
 	}
-	em.informer.EdgeOffline(edgeID, d.Meta(), addr)
+	if em.informer != nil {
+		em.informer.EdgeOffline(edgeID, d.Meta(), addr)
+	}
 	// notification for others
 	return nil
 }
@@ -112,7 +129,9 @@ func (em *edgeManager) Heartbeat(d delegate.ConnDescriber) error {
 	meta := string(d.Meta())
 	addr := d.RemoteAddr()
 	klog.V(5).Infof("edge heartbeat, edgeID: %d, meta: %s, addr: %s", edgeID, string(meta), addr)
-	em.informer.EdgeHeartbeat(edgeID, d.Meta(), addr)
+	if em.informer != nil {
+		em.informer.EdgeHeartbeat(edgeID, d.Meta(), addr)
+	}
 	return nil
 }
 

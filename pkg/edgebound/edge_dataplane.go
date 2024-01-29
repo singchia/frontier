@@ -12,9 +12,11 @@ func (em *edgeManager) acceptStream(stream geminio.Stream) {
 	klog.V(5).Infof("edge accept stream, edgeID: %d, streamID: %d, meta: %s", edgeID, streamID, meta)
 
 	// cache
-	em.streams.MSet(edgeID, streamID, meta)
+	em.streams.MSet(edgeID, streamID, stream)
 	// exchange to service
-	em.exchange.StreamToService(stream)
+	if em.exchange != nil {
+		em.exchange.StreamToService(stream)
+	}
 }
 
 func (em *edgeManager) closedStream(stream geminio.Stream) {
@@ -25,4 +27,14 @@ func (em *edgeManager) closedStream(stream geminio.Stream) {
 	// cache
 	em.streams.MDel(edgeID, streamID)
 	// when the stream ends, the exchange can be noticed by functional error, so we don't update exchange
+}
+
+// forward to exchange
+func (em *edgeManager) forward(end geminio.End) {
+	edgeID := end.ClientID()
+	meta := end.Meta()
+	klog.V(5).Infof("edge forward stream, edgeID: %d, meta: %s", edgeID, meta)
+	if em.exchange != nil {
+		em.exchange.ForwardToService(end)
+	}
 }
