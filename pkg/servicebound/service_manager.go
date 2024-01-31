@@ -13,6 +13,7 @@ import (
 	"github.com/singchia/frontier/pkg/mapmap"
 	"github.com/singchia/frontier/pkg/repo/dao"
 	"github.com/singchia/frontier/pkg/security"
+	"github.com/singchia/frontier/pkg/utils"
 	"github.com/singchia/geminio"
 	"github.com/singchia/geminio/delegate"
 	"github.com/singchia/geminio/pkg/id"
@@ -184,5 +185,35 @@ func (sm *serviceManager) handleConn(conn net.Conn) error {
 
 	// forward and stream up to edge
 	sm.forward(end)
+	return nil
+}
+
+func (sm *serviceManager) ListService() []geminio.End {
+	ends := []geminio.End{}
+	sm.mtx.RLock()
+	defer sm.mtx.RUnlock()
+
+	for _, value := range sm.services {
+		ends = append(ends, value)
+	}
+	return ends
+}
+
+func (sm *serviceManager) CountServices() int {
+	sm.mtx.RLock()
+	defer sm.mtx.RUnlock()
+	return len(sm.services)
+}
+
+func (sm *serviceManager) ListStreams(serviceID uint64) []geminio.Stream {
+	all := sm.streams.MGetAll(serviceID)
+	return utils.Slice2streams(all)
+}
+
+// close all services
+func (sm *serviceManager) Close() error {
+	if err := sm.ln.Close(); err != nil {
+		return err
+	}
 	return nil
 }

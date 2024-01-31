@@ -14,6 +14,7 @@ import (
 	"github.com/singchia/frontier/pkg/mapmap"
 	"github.com/singchia/frontier/pkg/repo/dao"
 	"github.com/singchia/frontier/pkg/security"
+	"github.com/singchia/frontier/pkg/utils"
 	"github.com/singchia/geminio"
 	"github.com/singchia/geminio/delegate"
 	"github.com/singchia/geminio/pkg/id"
@@ -300,7 +301,7 @@ func (em *edgeManager) CountEdges() int {
 
 func (em *edgeManager) ListStreams(edgeID uint64) []geminio.Stream {
 	all := em.streams.MGetAll(edgeID)
-	return slice2streams(all)
+	return utils.Slice2streams(all)
 }
 
 // Close all edges and manager

@@ -48,13 +48,15 @@ type Edge interface {
 	// Edge can manage streams from or to a Service
 	Multiplexer
 
-	// Edge is a net.Listener
+	// Edge is a net.Listener, actually it's wrapper of Multiplexer
 	// The Accept is a wrapper for AccetpStream
 	// The Addr is a wrapper for LocalAddr
 	net.Listener
 
 	// Meta
 	EdgeID() uint64
+
+	Close() error
 }
 
 type Dialer func() (net.Conn, error)
