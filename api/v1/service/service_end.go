@@ -55,3 +55,7 @@ func (service *serviceEnd) Call(ctx context.Context, edgeID uint64, method strin
 	rsp.SetClientID(edgeID)
 	return rsp, nil
 }
+
+func (service *serviceEnd) CallAsync() (*geminio.Call, error) {
+	return nil, nil
+}
