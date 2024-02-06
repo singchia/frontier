@@ -44,9 +44,9 @@ type EdgeOnline func(edgeID uint64, meta []byte, addr net.Addr) error
 type EdgeOffline func(edgeID uint64, meta []byte, addr net.Addr) error
 
 type ControlRegister interface {
-	RegisterGetEdgeID(getEdgeID GetEdgeID) error
-	RegisterEdgeOnline(edgeOnline EdgeOnline) error
-	RegisterEdgeOnffline(edgeOffline EdgeOffline) error
+	RegisterGetEdgeID(ctx context.Context, getEdgeID GetEdgeID) error
+	RegisterEdgeOnline(ctx context.Context, edgeOnline EdgeOnline) error
+	RegisterEdgeOnffline(ctx context.Context, edgeOffline EdgeOffline) error
 }
 
 type Service interface {
