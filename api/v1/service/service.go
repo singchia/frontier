@@ -5,6 +5,7 @@ import (
 	"net"
 
 	"github.com/singchia/geminio"
+	"github.com/singchia/geminio/client"
 )
 
 // RPCer is edge and it's method oriented
@@ -20,8 +21,8 @@ type RPCer interface {
 type Messager interface {
 	NewMessage(data []byte) geminio.Message
 
-	Publish(ctx context.Context, topic string, msg geminio.Message) error
-	PublishAsync(ctx context.Context, topic string, msg geminio.Message, ch chan *geminio.Publish) (*geminio.Publish, error)
+	Publish(ctx context.Context, edgeID uint64, msg geminio.Message) error
+	PublishAsync(ctx context.Context, edgeID uint64, msg geminio.Message, ch chan *geminio.Publish) (*geminio.Publish, error)
 	Receive(ctx context.Context) (geminio.Message, error)
 }
 
@@ -33,9 +34,9 @@ type RPCMessager interface {
 // Stream multiplexer
 type Multiplexer interface {
 	// Open a stream to specific edgeID
-	OpenStream(edgeID uint64) (geminio.Stream, error)
+	OpenStream(ctx context.Context, edgeID uint64) (geminio.Stream, error)
 	AcceptStream() (geminio.Stream, error)
-	ListStream() []geminio.Stream
+	ListStreams() []geminio.Stream
 }
 
 // controller functions
@@ -46,7 +47,7 @@ type EdgeOffline func(edgeID uint64, meta []byte, addr net.Addr) error
 type ControlRegister interface {
 	RegisterGetEdgeID(ctx context.Context, getEdgeID GetEdgeID) error
 	RegisterEdgeOnline(ctx context.Context, edgeOnline EdgeOnline) error
-	RegisterEdgeOnffline(ctx context.Context, edgeOffline EdgeOffline) error
+	RegisterEdgeOffline(ctx context.Context, edgeOffline EdgeOffline) error
 }
 
 type Service interface {
@@ -70,6 +71,6 @@ type Service interface {
 type Dialer func() (net.Conn, error)
 
 // the service field specific the role for this Service, and then Edge can OpenStream to this service
-func NewService(dialer Dialer, service string, opts ...ServiceOption) (Service, error) {
-	return nil, nil
+func NewService(dialer Dialer, opts ...ServiceOption) (Service, error) {
+	return newServiceEnd(client.Dialer(dialer), opts...)
 }

@@ -4,9 +4,12 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/json"
+	"strconv"
 
+	"github.com/singchia/frontier/pkg/proto"
 	"github.com/singchia/geminio"
 	"github.com/singchia/geminio/client"
+	"github.com/singchia/geminio/options"
 )
 
 type serviceEnd struct {
@@ -27,6 +30,24 @@ func newServiceEnd(dialer client.Dialer, opts ...ServiceOption) (*serviceEnd, er
 	}
 	if sopt.logger != nil {
 		sopts.SetLog(sopt.logger)
+	}
+	// meta
+	meta := &proto.Meta{}
+	if sopt.topics != nil {
+		// we deliver topics in meta
+		meta.Topics = sopt.topics
+	}
+	if sopt.service != "" {
+		meta.Service = sopt.service
+	}
+	data, err := json.Marshal(meta)
+	if err != nil {
+		return nil, err
+	}
+	sopts.SetMeta(data)
+	// delegate
+	if sopt.delegate != nil {
+		sopts.SetDelegate(sopt.delegate)
 	}
 	// new geminio end
 	end, err := client.NewRetryEndWithDialer(dialer, sopts)
@@ -53,7 +74,7 @@ func (service *serviceEnd) RegisterGetEdgeID(ctx context.Context, getEdgeID GetE
 
 func (service *serviceEnd) RegisterEdgeOnline(ctx context.Context, edgeOnline EdgeOnline) error {
 	return service.End.Register(ctx, "edge_online", func(ctx context.Context, req geminio.Request, rsp geminio.Response) {
-		on := &OnEdgeOnline{}
+		on := &proto.OnEdgeOnline{}
 		err := json.Unmarshal(req.Data(), on)
 		if err != nil {
 			// shouldn't be here
@@ -71,7 +92,7 @@ func (service *serviceEnd) RegisterEdgeOnline(ctx context.Context, edgeOnline Ed
 
 func (service *serviceEnd) RegisterEdgeOffline(ctx context.Context, edgeOffline EdgeOffline) error {
 	return service.End.Register(ctx, "edge_offline", func(ctx context.Context, req geminio.Request, rsp geminio.Response) {
-		off := &OnEdgeOffline{}
+		off := &proto.OnEdgeOffline{}
 		err := json.Unmarshal(req.Data(), off)
 		if err != nil {
 			// shouldn't be here
@@ -148,4 +169,81 @@ func (service *serviceEnd) Register(ctx context.Context, method string, rpc gemi
 		return
 	}
 	return service.End.Register(ctx, method, wrap)
+}
+
+// Messager
+func (service *serviceEnd) NewMessage(data []byte) geminio.Message {
+	return service.End.NewMessage(data)
+}
+
+func (service *serviceEnd) Publish(ctx context.Context, edgeID uint64, msg geminio.Message) error {
+	tail := make([]byte, 8)
+	binary.BigEndian.PutUint64(tail, edgeID)
+	custom := msg.Custom()
+	if custom == nil {
+		custom = tail
+	} else {
+		custom = append(custom, tail...)
+	}
+	msg.SetCustom(custom)
+
+	// publish real end
+	err := service.End.Publish(ctx, msg)
+	msg.SetClientID(edgeID)
+	// TODO we need to set EdgeID to let user know
+	return err
+}
+
+func (service *serviceEnd) PublishAsync(ctx context.Context, edgeID uint64, msg geminio.Message, ch chan *geminio.Publish) (*geminio.Publish, error) {
+	tail := make([]byte, 8)
+	binary.BigEndian.PutUint64(tail, edgeID)
+	custom := msg.Custom()
+	if custom == nil {
+		custom = tail
+	} else {
+		custom = append(custom, tail...)
+	}
+	msg.SetCustom(custom)
+
+	// publish async
+	pub, err := service.End.PublishAsync(ctx, msg, ch)
+	// TODO we need to set EdgeID to let user know
+	return pub, err
+}
+
+func (service *serviceEnd) Receive(ctx context.Context) (geminio.Message, error) {
+	msg, err := service.End.Receive(ctx)
+	if err != nil {
+		return nil, err
+	}
+	custom := msg.Custom()
+	if custom == nil || len(custom) < 8 {
+		// shoudn't be here
+		return msg, nil
+	}
+	edgeID := binary.BigEndian.Uint64(custom[len(custom)-8:])
+	custom = custom[:custom[len(custom)-8]]
+	msg.SetClientID(edgeID)
+	msg.SetCustom(custom)
+	return msg, nil
+}
+
+// Multiplexer
+func (service *serviceEnd) OpenStream(ctx context.Context, edgeID uint64) (geminio.Stream, error) {
+	id := strconv.FormatUint(edgeID, 10)
+	opt := options.OpenStream()
+	opt.SetPeer(id)
+	return service.End.OpenStream(opt)
+}
+
+func (service *serviceEnd) AcceptStream() (geminio.Stream, error) {
+	return service.End.AcceptStream()
+}
+
+func (service *serviceEnd) ListStreams() []geminio.Stream {
+	return service.End.ListStreams()
+}
+
+func (service *serviceEnd) Close() error {
+	return service.End.Close()
 }

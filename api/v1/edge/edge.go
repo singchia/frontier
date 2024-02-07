@@ -35,22 +35,22 @@ type RPCMessager interface {
 
 // Stream multiplexer
 type Multiplexer interface {
-	// Open a stream to specific service
-	OpenStream(service string) (geminio.Stream, error)
+	// Open a stream to a specific service
+	OpenStream(serviceName string) (geminio.Stream, error)
 	AcceptStream() (geminio.Stream, error)
 	ListStreams() []geminio.Stream
 }
 
 type Edge interface {
-	// Edge can direct Message or RPC
+	// Edge can directly Publish Message or Call RPC
 	RPCMessager
 
-	// Edge can manage streams from or to a Service
+	// Edge can manage(create, list...) streams from or to a Service
 	Multiplexer
 
 	// Edge is a net.Listener, actually it's wrapper of Multiplexer
-	// The Accept is a wrapper for AccetpStream
-	// The Addr is a wrapper for LocalAddr
+	// The Accept function is a wrapper from AccetpStream
+	// The Addr is a wrapper from LocalAddr
 	net.Listener
 
 	// Meta

@@ -79,9 +79,9 @@ func (end *edgeEnd) Receive(ctx context.Context) (geminio.Message, error) {
 }
 
 // Multiplexer
-func (end *edgeEnd) OpenStream(service string) (geminio.Stream, error) {
+func (end *edgeEnd) OpenStream(serviceName string) (geminio.Stream, error) {
 	opt := options.OpenStream()
-	opt.SetPeer(service)
+	opt.SetPeer(serviceName)
 	return end.End.OpenStream(opt)
 }
 
