@@ -83,6 +83,7 @@ func newServiceManager(conf *config.Configuration, dao *dao.Dao, informer Servic
 		streams:               mapmap.NewMapMap(),
 		dao:                   dao,
 		shub:                  synchub.NewSyncHub(synchub.OptionTimer(tmr)),
+		services:              make(map[uint64]geminio.End),
 		UnimplementedDelegate: &delegate.UnimplementedDelegate{},
 		// a simple unix timestamp incremental id factory
 		idFactory: id.DefaultIncIDCounter,

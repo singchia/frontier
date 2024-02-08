@@ -39,7 +39,7 @@ type Multiplexer interface {
 	ListStreams() []geminio.Stream
 }
 
-// controller functions
+// Controller functions
 type GetEdgeID func(meta []byte) (uint64, error)
 type EdgeOnline func(edgeID uint64, meta []byte, addr net.Addr) error
 type EdgeOffline func(edgeID uint64, meta []byte, addr net.Addr) error
@@ -50,6 +50,7 @@ type ControlRegister interface {
 	RegisterEdgeOffline(ctx context.Context, edgeOffline EdgeOffline) error
 }
 
+// Service
 type Service interface {
 	// Service can direct Message or RPC
 	RPCMessager

@@ -30,12 +30,12 @@ func TestEdgeManager(t *testing.T) {
 		return
 	}
 
-	h := &handler{
+	inf := &informer{
 		wg: new(sync.WaitGroup),
 	}
-	h.wg.Add(2)
+	inf.wg.Add(2)
 	// edge manager
-	em, err := newEdgeManager(conf, dao, h, nil, timer.NewTimer())
+	em, err := newEdgeManager(conf, dao, inf, nil, timer.NewTimer())
 	if err != nil {
 		t.Error(err)
 		return
@@ -53,20 +53,20 @@ func TestEdgeManager(t *testing.T) {
 		return
 	}
 	edge.Close()
-	h.wg.Wait()
+	inf.wg.Wait()
 	// if the test failed, it will timeout
 }
 
-type handler struct {
+type informer struct {
 	wg *sync.WaitGroup
 }
 
-func (h *handler) EdgeOnline(edgeID uint64, meta []byte, addr net.Addr) {
-	h.wg.Done()
+func (inf *informer) EdgeOnline(edgeID uint64, meta []byte, addr net.Addr) {
+	inf.wg.Done()
 }
 
-func (h *handler) EdgeOffline(edgeID uint64, meta []byte, addr net.Addr) {
-	h.wg.Done()
+func (inf *informer) EdgeOffline(edgeID uint64, meta []byte, addr net.Addr) {
+	inf.wg.Done()
 }
 
-func (h *handler) EdgeHeartbeat(edgeID uint64, meta []byte, addr net.Addr) {}
+func (inf *informer) EdgeHeartbeat(edgeID uint64, meta []byte, addr net.Addr) {}
