@@ -1,17 +1,19 @@
 package servicebound
 
 import (
-	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"net"
 	"os"
 	"sync"
 
 	"github.com/jumboframes/armorigo/synchub"
+	"github.com/singchia/frontier/pkg/api"
 	"github.com/singchia/frontier/pkg/config"
 	"github.com/singchia/frontier/pkg/mapmap"
 	"github.com/singchia/frontier/pkg/repo/dao"
+	"github.com/singchia/frontier/pkg/repo/model"
 	"github.com/singchia/frontier/pkg/security"
 	"github.com/singchia/frontier/pkg/utils"
 	"github.com/singchia/geminio"
@@ -22,31 +24,11 @@ import (
 	"k8s.io/klog/v2"
 )
 
-type Servicebound interface {
-	ListService() []geminio.End
-	// for management
-	GetService(service string) geminio.End
-	DelSerivces(service string) error
-}
-
-type ServiceInformer interface {
-	ServiceOnline(serviceID uint64, service string, addr net.Addr)
-	ServiceOffline(serviceID uint64, service string, addr net.Addr)
-	ServiceHeartbeat(serviceID uint64, service string, addr net.Addr)
-}
-
-type Exchange interface {
-	// rpc, message and raw io to edge
-	ForwardToService(geminio.End)
-	// stream to edge
-	StreamToEdge(geminio.Stream)
-}
-
 type serviceManager struct {
 	*delegate.UnimplementedDelegate
 
-	informer ServiceInformer
-	exchange Exchange
+	informer api.ServiceInformer
+	exchange api.Exchange
 	conf     *config.Configuration
 	// serviceID allocator
 	idFactory id.IDFactory
@@ -67,8 +49,8 @@ type serviceManager struct {
 	tmr timer.Timer
 }
 
-func newServiceManager(conf *config.Configuration, dao *dao.Dao, informer ServiceInformer,
-	exchange Exchange, tmr timer.Timer) (*serviceManager, error) {
+func newServiceManager(conf *config.Configuration, dao *dao.Dao, informer api.ServiceInformer,
+	exchange api.Exchange, tmr timer.Timer) (*serviceManager, error) {
 	listen := &conf.Servicebound.Listen
 	var (
 		ln      net.Listener
@@ -173,19 +155,40 @@ func (sm *serviceManager) handleConn(conn net.Conn) error {
 		klog.Errorf("service manager geminio server new end err: %s", err)
 		return err
 	}
-
-	// handle online event for end
-	if err = sm.online(end); err != nil {
+	meta := &api.Meta{}
+	err = json.Unmarshal(end.Meta(), meta)
+	if err != nil {
+		klog.Errorf("handle conn, json unmarshal err: %s", err)
 		return err
 	}
+	// register topics claim of end
+	sm.remoteReceiveClaim(end.ClientID(), meta.Topics)
 
-	// register methods for service
-	if err = end.Register(context.TODO(), "topic_claim", sm.RemoteReceiveClaim); err != nil {
+	// handle online event for end
+	if err = sm.online(end, meta); err != nil {
 		return err
 	}
 
 	// forward and stream up to edge
-	sm.forward(end)
+	sm.forward(meta, end)
+	return nil
+}
+
+func (sm *serviceManager) remoteReceiveClaim(serviceID uint64, topics []string) error {
+	klog.V(5).Infof("service remote receive claim, topics: %v, serviceID: %d", topics, serviceID)
+	var err error
+	// memdb
+	for _, topic := range topics {
+		st := &model.ServiceTopic{
+			Topic:     topic,
+			ServiceID: serviceID,
+		}
+		err = sm.dao.CreateServiceTopic(st)
+		if err != nil {
+			klog.Errorf("service remote receive claim, create service topic: %s, err: %s", topic, err)
+			return err
+		}
+	}
 	return nil
 }
 

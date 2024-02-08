@@ -1,4 +1,4 @@
-package proto
+package api
 
 // frontier -> service
 type OnEdgeOnline struct {
