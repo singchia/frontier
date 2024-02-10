@@ -1,13 +1,12 @@
 package servicebound
 
 import (
-	"context"
-	"encoding/json"
 	"net"
 	"strconv"
 	"time"
 
 	"github.com/jumboframes/armorigo/synchub"
+	"github.com/singchia/frontier/pkg/api"
 	"github.com/singchia/frontier/pkg/repo/dao"
 	"github.com/singchia/frontier/pkg/repo/model"
 	"github.com/singchia/geminio"
@@ -15,7 +14,7 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func (sm *serviceManager) online(end geminio.End) error {
+func (sm *serviceManager) online(end geminio.End, meta *api.Meta) error {
 	// cache
 	var sync synchub.Sync
 	sm.mtx.Lock()
@@ -42,7 +41,7 @@ func (sm *serviceManager) online(end geminio.End) error {
 	// memdb
 	service := &model.Service{
 		ServiceID:  end.ClientID(),
-		Service:    string(end.Meta()),
+		Service:    meta.Service,
 		Addr:       end.RemoteAddr().String(),
 		CreateTime: time.Now().Unix(),
 	}
@@ -154,33 +153,6 @@ func (sm *serviceManager) RemoteRegistration(rpc string, serviceID, streamID uin
 	err := sm.dao.CreateServiceRPC(sr)
 	if err != nil {
 		klog.Errorf("service remote registration, create service rpc: %s, err: %s, serviceID: %d, streamID: %d", err, rpc, serviceID, streamID)
-	}
-}
-
-// RemoteReceiveClaim is called by wrappered RPC
-func (sm *serviceManager) RemoteReceiveClaim(ctx context.Context, req geminio.Request, rsp geminio.Response) {
-	// TODO return err
-	serviceID := req.ClientID()
-
-	claim := &TopicClaim{}
-	err := json.Unmarshal(req.Data(), claim)
-	if err != nil {
-		klog.Errorf("service remote receive claim, err: %s", err)
-		return
-	}
-	klog.V(5).Infof("service remote receive claim, topics: %v, serviceID: %d", claim.Topics, serviceID)
-
-	// memdb
-	for _, topic := range claim.Topics {
-		st := &model.ServiceTopic{
-			Topic:     topic,
-			ServiceID: serviceID,
-		}
-		err = sm.dao.CreateServiceTopic(st)
-		if err != nil {
-			klog.Errorf("service remote receive claim, create service topic: %s, err: %s", topic, err)
-			return
-		}
 	}
 }
 

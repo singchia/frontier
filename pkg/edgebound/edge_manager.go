@@ -10,6 +10,7 @@ import (
 
 	"github.com/jumboframes/armorigo/rproxy"
 	"github.com/jumboframes/armorigo/synchub"
+	"github.com/singchia/frontier/pkg/api"
 	"github.com/singchia/frontier/pkg/config"
 	"github.com/singchia/frontier/pkg/mapmap"
 	"github.com/singchia/frontier/pkg/repo/dao"
@@ -24,31 +25,11 @@ import (
 	"k8s.io/klog/v2"
 )
 
-type Edgebound interface {
-	ListEdges() []geminio.End
-	// for management
-	GetEdgeByID(edgeID uint64) geminio.End
-	DelEdgeByID(edgeID uint64) error
-}
-
-type EdgeInformer interface {
-	EdgeOnline(edgeID uint64, meta []byte, addr net.Addr)
-	EdgeOffline(edgeID uint64, meta []byte, addr net.Addr)
-	EdgeHeartbeat(edgeID uint64, meta []byte, addr net.Addr)
-}
-
-type Exchange interface {
-	// rpc, message and raw io to service
-	ForwardToService(geminio.End)
-	// stream to service
-	StreamToService(geminio.Stream)
-}
-
 type edgeManager struct {
 	*delegate.UnimplementedDelegate
 
-	informer EdgeInformer
-	exchange Exchange
+	informer api.EdgeInformer
+	exchange api.Exchange
 	conf     *config.Configuration
 	// edgeID allocator
 	idFactory id.IDFactory
@@ -74,8 +55,8 @@ type edgeManager struct {
 }
 
 // support for tls, mtls and tcp listening
-func newEdgeManager(conf *config.Configuration, dao *dao.Dao, informer EdgeInformer,
-	exchange Exchange, tmr timer.Timer) (*edgeManager, error) {
+func newEdgeManager(conf *config.Configuration, dao *dao.Dao, informer api.EdgeInformer,
+	exchange api.Exchange, tmr timer.Timer) (*edgeManager, error) {
 	listen := &conf.Edgebound.Listen
 	var (
 		ln      net.Listener

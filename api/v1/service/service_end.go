@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"github.com/singchia/frontier/pkg/proto"
+	"github.com/singchia/frontier/pkg/api"
 	"github.com/singchia/geminio"
 	"github.com/singchia/geminio/client"
 	"github.com/singchia/geminio/options"
@@ -32,7 +32,7 @@ func newServiceEnd(dialer client.Dialer, opts ...ServiceOption) (*serviceEnd, er
 		sopts.SetLog(sopt.logger)
 	}
 	// meta
-	meta := &proto.Meta{}
+	meta := &api.Meta{}
 	if sopt.topics != nil {
 		// we deliver topics in meta
 		meta.Topics = sopt.topics
@@ -74,7 +74,7 @@ func (service *serviceEnd) RegisterGetEdgeID(ctx context.Context, getEdgeID GetE
 
 func (service *serviceEnd) RegisterEdgeOnline(ctx context.Context, edgeOnline EdgeOnline) error {
 	return service.End.Register(ctx, "edge_online", func(ctx context.Context, req geminio.Request, rsp geminio.Response) {
-		on := &proto.OnEdgeOnline{}
+		on := &api.OnEdgeOnline{}
 		err := json.Unmarshal(req.Data(), on)
 		if err != nil {
 			// shouldn't be here
@@ -92,7 +92,7 @@ func (service *serviceEnd) RegisterEdgeOnline(ctx context.Context, edgeOnline Ed
 
 func (service *serviceEnd) RegisterEdgeOffline(ctx context.Context, edgeOffline EdgeOffline) error {
 	return service.End.Register(ctx, "edge_offline", func(ctx context.Context, req geminio.Request, rsp geminio.Response) {
-		off := &proto.OnEdgeOffline{}
+		off := &api.OnEdgeOffline{}
 		err := json.Unmarshal(req.Data(), off)
 		if err != nil {
 			// shouldn't be here
