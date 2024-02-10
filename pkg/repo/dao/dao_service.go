@@ -16,6 +16,7 @@ type ServiceQuery struct {
 	ServiceID uint64
 }
 
+// service
 func (dao *Dao) ListServices(query *ServiceQuery) ([]*model.Service, error) {
 	tx := dao.dbService.Model(&model.Service{})
 	if dao.config.Log.Verbosity >= 4 {
@@ -139,6 +140,18 @@ type ServiceRPCQuery struct {
 	ServiceID uint64
 }
 
+func (dao *Dao) GetServiceRPC(rpc string) (*model.ServiceRPC, error) {
+	tx := dao.dbService.Model(&model.ServiceRPC{})
+	if dao.config.Log.Verbosity >= 4 {
+		tx = tx.Debug()
+	}
+	tx = tx.Where("rpc = ?", rpc)
+
+	var mrpc model.ServiceRPC
+	tx = tx.First(&mrpc)
+	return &mrpc, tx.Error
+}
+
 func (dao *Dao) ListServiceRPCs(query *ServiceRPCQuery) ([]string, error) {
 	tx := dao.dbService.Model(&model.ServiceRPC{})
 	if dao.config.Log.Verbosity >= 4 {
@@ -219,6 +232,18 @@ type ServiceTopicQuery struct {
 	// Condition fields
 	Topic     string
 	ServiceID uint64
+}
+
+func (dao *Dao) GetServiceTopic(topic string) (*model.ServiceTopic, error) {
+	tx := dao.dbService.Model(&model.ServiceTopic{})
+	if dao.config.Log.Verbosity >= 4 {
+		tx = tx.Debug()
+	}
+	tx = tx.Where("topic = ?", topic)
+
+	var mtopic model.ServiceTopic
+	tx = tx.First(&mtopic)
+	return &mtopic, tx.Error
 }
 
 func (dao *Dao) ListServiceTopics(query *ServiceTopicQuery) ([]string, error) {
