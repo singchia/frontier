@@ -263,6 +263,13 @@ func (em *edgeManager) handleConn(conn net.Conn) error {
 	return nil
 }
 
+func (em *edgeManager) GetEdgeByID(edgeID uint64) geminio.End {
+	em.mtx.RLock()
+	defer em.mtx.RUnlock()
+
+	return em.edges[edgeID]
+}
+
 func (em *edgeManager) ListEdges() []geminio.End {
 	ends := []geminio.End{}
 	em.mtx.RLock()

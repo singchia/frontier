@@ -192,6 +192,39 @@ func (sm *serviceManager) remoteReceiveClaim(serviceID uint64, topics []string) 
 	return nil
 }
 
+func (sm *serviceManager) GetServiceByID(serviceID uint64) geminio.End {
+	sm.mtx.RLock()
+	defer sm.mtx.RUnlock()
+
+	return sm.services[serviceID]
+}
+
+func (sm *serviceManager) GetServiceByRPC(rpc string) (geminio.End, error) {
+	mrpc, err := sm.dao.GetServiceRPC(rpc)
+	if err != nil {
+		klog.Errorf("get service by rpc: %s, err: %s", rpc, err)
+		return nil, err
+	}
+
+	sm.mtx.RLock()
+	defer sm.mtx.RUnlock()
+
+	return sm.services[mrpc.ServiceID], nil
+}
+
+func (sm *serviceManager) GetServiceByTopic(topic string) (geminio.End, error) {
+	mtopic, err := sm.dao.GetServiceTopic(topic)
+	if err != nil {
+		klog.Errorf("get service by topic: %s, err: %s", topic, err)
+		return nil, err
+	}
+
+	sm.mtx.RLock()
+	defer sm.mtx.RUnlock()
+
+	return sm.services[mtopic.ServiceID], nil
+}
+
 func (sm *serviceManager) ListService() []geminio.End {
 	ends := []geminio.End{}
 	sm.mtx.RLock()

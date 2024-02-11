@@ -35,7 +35,9 @@ type EdgeInformer interface {
 type Servicebound interface {
 	ListService() []geminio.End
 	// for management
-	GetService(service string) geminio.End
+	GetServiceByName(service string) geminio.End
+	GetServiceByRPC(rpc string) (geminio.End, error)
+	GetServiceByTopic(topic string) (geminio.End, error)
 	DelSerivces(service string) error
 }
 
@@ -43,4 +45,28 @@ type ServiceInformer interface {
 	ServiceOnline(serviceID uint64, service string, addr net.Addr)
 	ServiceOffline(serviceID uint64, service string, addr net.Addr)
 	ServiceHeartbeat(serviceID uint64, service string, addr net.Addr)
+}
+
+// mq related
+type MQ interface {
+	Produce(topic string, data []byte, opts ...OptionProduce) error
+}
+
+type ProduceOption struct {
+	Origin interface{}
+	EdgeID uint64
+}
+
+type OptionProduce func(*ProduceOption)
+
+func WithEdgeID(edgeID uint64) OptionProduce {
+	return func(po *ProduceOption) {
+		po.EdgeID = edgeID
+	}
+}
+
+func WithOrigin(origin interface{}) OptionProduce {
+	return func(po *ProduceOption) {
+		po.Origin = origin
+	}
 }
