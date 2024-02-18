@@ -26,10 +26,12 @@ import (
 
 type serviceManager struct {
 	*delegate.UnimplementedDelegate
+	conf *config.Configuration
 
 	informer api.ServiceInformer
 	exchange api.Exchange
-	conf     *config.Configuration
+	mqm      api.MQM
+
 	// serviceID allocator
 	idFactory id.IDFactory
 	shub      *synchub.SyncHub
@@ -163,6 +165,8 @@ func (sm *serviceManager) handleConn(conn net.Conn) error {
 	}
 	// register topics claim of end
 	sm.remoteReceiveClaim(end.ClientID(), meta.Topics)
+	// add the end to MQM
+	sm.mqm.AddMQByEnd(meta.Topics, end)
 
 	// handle online event for end
 	if err = sm.online(end, meta); err != nil {

@@ -7,5 +7,5 @@ import (
 type exchange struct {
 	Edgebound    api.Edgebound
 	Servicebound api.Servicebound
-	MQ           api.MQ
+	MQM          api.MQM
 }

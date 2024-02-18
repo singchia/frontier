@@ -47,9 +47,21 @@ type ServiceInformer interface {
 	ServiceHeartbeat(serviceID uint64, service string, addr net.Addr)
 }
 
-// mq related
+// mq manager and mq related
+type MQM interface {
+	// MQM is a MQ wrapper
+	MQ
+	AddMQ(topics []string, mq MQ)
+	AddMQByEnd(topics []string, end geminio.End)
+	DelMQ(mq MQ)
+	DelMQByEnd(end geminio.End)
+	GetMQ(topic string) MQ
+	GetMQs(topic string) []MQ
+}
+
 type MQ interface {
 	Produce(topic string, data []byte, opts ...OptionProduce) error
+	Close() error
 }
 
 type ProduceOption struct {

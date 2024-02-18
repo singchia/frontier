@@ -66,6 +66,14 @@ type Servicebound struct {
 	Listen Listen `yaml:"listen"`
 }
 
+// message queue
+type MQ struct {
+	BroadCast bool `yaml:"broadcast"`
+}
+
+// exchange
+type Exchange struct{}
+
 type Log struct {
 	LogDir           string `yaml:"log_dir"`
 	LogFile          string `yaml:"log_file"`
