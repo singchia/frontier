@@ -103,6 +103,15 @@ func (ex *exchange) forwardMessageToEdge(end geminio.End) {
 	}()
 }
 
+func (ex *exchange) ForwardToService(end geminio.End) {
+	// raw
+	ex.forwardRawToService(end)
+	// message
+	ex.forwardMessageToService(end)
+	// rpc
+	ex.forwardRPCToService(end)
+}
+
 // raw io from edge, and forward to service
 func (ex *exchange) forwardRawToService(end geminio.End) {
 	//drop the io, actually we won't be here
@@ -162,7 +171,7 @@ func (ex *exchange) forwardMessageToService(end geminio.End) {
 			}
 			topic := msg.Topic()
 			// TODO seperate async and sync produce
-			err = ex.MQ.Produce(topic, msg.Data(), api.WithOrigin(msg), api.WithEdgeID(edgeID))
+			err = ex.MQM.Produce(topic, msg.Data(), api.WithOrigin(msg), api.WithEdgeID(edgeID))
 			if err != nil {
 				klog.Errorf("forward message, produce err: %s, edgeID: %d", err, edgeID)
 				msg.Error(err)

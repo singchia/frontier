@@ -16,7 +16,7 @@ func (sm *serviceManager) acceptStream(stream geminio.Stream) {
 	sm.streams.MSet(serviceID, streamID, stream)
 	// exchange to edge
 	if sm.exchange != nil {
-		sm.exchange.StreamToEdge(stream)
+		// TODO sm.exchange.StreamToEdge(stream)
 	}
 }
 

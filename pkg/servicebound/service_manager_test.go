@@ -33,7 +33,7 @@ func TestServiceManager(t *testing.T) {
 	}
 	inf.wg.Add(2)
 	// service manager
-	sm, err := newServiceManager(conf, dao, inf, nil, timer.NewTimer())
+	sm, err := newServiceManager(conf, dao, inf, nil, nil, timer.NewTimer())
 	if err != nil {
 		t.Error(err)
 		return

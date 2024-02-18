@@ -24,12 +24,19 @@ import (
 	"k8s.io/klog/v2"
 )
 
+func NewServicebound(conf *config.Configuration, dao *dao.Dao, informer api.ServiceInformer,
+	exchange api.Exchange, mqm api.MQM, tmr timer.Timer) (api.Servicebound, error) {
+	return newServiceManager(conf, dao, informer, exchange, mqm, tmr)
+}
+
 type serviceManager struct {
 	*delegate.UnimplementedDelegate
+	conf *config.Configuration
 
 	informer api.ServiceInformer
 	exchange api.Exchange
-	conf     *config.Configuration
+	mqm      api.MQM
+
 	// serviceID allocator
 	idFactory id.IDFactory
 	shub      *synchub.SyncHub
@@ -50,7 +57,7 @@ type serviceManager struct {
 }
 
 func newServiceManager(conf *config.Configuration, dao *dao.Dao, informer api.ServiceInformer,
-	exchange api.Exchange, tmr timer.Timer) (*serviceManager, error) {
+	exchange api.Exchange, mqm api.MQM, tmr timer.Timer) (*serviceManager, error) {
 	listen := &conf.Servicebound.Listen
 	var (
 		ln      net.Listener
@@ -71,6 +78,7 @@ func newServiceManager(conf *config.Configuration, dao *dao.Dao, informer api.Se
 		idFactory: id.DefaultIncIDCounter,
 		informer:  informer,
 	}
+	exchange.AddServicebound(sm)
 
 	if !listen.TLS.Enable {
 		if ln, err = net.Listen(network, addr); err != nil {
@@ -163,6 +171,10 @@ func (sm *serviceManager) handleConn(conn net.Conn) error {
 	}
 	// register topics claim of end
 	sm.remoteReceiveClaim(end.ClientID(), meta.Topics)
+	// add the end to MQM
+	if sm.mqm != nil {
+		sm.mqm.AddMQByEnd(meta.Topics, end)
+	}
 
 	// handle online event for end
 	if err = sm.online(end, meta); err != nil {
@@ -240,6 +252,10 @@ func (sm *serviceManager) CountServices() int {
 	sm.mtx.RLock()
 	defer sm.mtx.RUnlock()
 	return len(sm.services)
+}
+
+func (sm *serviceManager) DelSerivces(service string) error {
+	panic("TODO")
 }
 
 func (sm *serviceManager) ListStreams(serviceID uint64) []geminio.Stream {
