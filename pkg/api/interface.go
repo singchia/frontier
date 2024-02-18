@@ -10,11 +10,16 @@ type Exchange interface {
 	// rpc, message and raw io to edge
 	ForwardToEdge(*Meta, geminio.End)
 	// stream to edge
-	StreamToEdge(geminio.Stream)
+	// TODO StreamToEdge(geminio.Stream)
 	// rpc, message and raw io to service
 	ForwardToService(geminio.End)
 	// stream to service
-	StreamToService(geminio.Stream)
+	// TODO StreamToService(geminio.Stream)
+
+	// for exchange
+	AddEdgebound(Edgebound)
+	AddServicebound(Servicebound)
+	AddMQM(MQM)
 }
 
 // edge related
@@ -23,6 +28,9 @@ type Edgebound interface {
 	// for management
 	GetEdgeByID(edgeID uint64) geminio.End
 	DelEdgeByID(edgeID uint64) error
+
+	Serve()
+	Close() error
 }
 
 type EdgeInformer interface {
@@ -35,10 +43,13 @@ type EdgeInformer interface {
 type Servicebound interface {
 	ListService() []geminio.End
 	// for management
-	GetServiceByName(service string) geminio.End
+	// TODO GetServiceByName(service string) geminio.End
 	GetServiceByRPC(rpc string) (geminio.End, error)
 	GetServiceByTopic(topic string) (geminio.End, error)
 	DelSerivces(service string) error
+
+	Serve()
+	Close() error
 }
 
 type ServiceInformer interface {

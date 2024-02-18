@@ -28,7 +28,7 @@ func TestParseFlags(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ParseFlags()
+			got, err := Parse()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ParseFlags() error = %v, wantErr %v", err, tt.wantErr)
 				return

@@ -99,7 +99,7 @@ type Configuration struct {
 }
 
 // Configuration accepts config file and command-line, and command-line is more privileged.
-func ParseFlags() (*Configuration, error) {
+func Parse() (*Configuration, error) {
 	var (
 		argConfigFile         = pflag.String("config", "", "config file, default not configured")
 		argDaemonRLimitNofile = pflag.Int("daemon-rlimit-nofile", -1, "SetRLimit for number of file of this daemon, default: -1 means ignore")

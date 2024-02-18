@@ -25,12 +25,18 @@ import (
 	"k8s.io/klog/v2"
 )
 
+func NewEdgebound(conf *config.Configuration, dao *dao.Dao, informer api.EdgeInformer,
+	exchange api.Exchange, tmr timer.Timer) (api.Edgebound, error) {
+	return newEdgeManager(conf, dao, informer, exchange, tmr)
+}
+
 type edgeManager struct {
 	*delegate.UnimplementedDelegate
+	conf *config.Configuration
 
 	informer api.EdgeInformer
 	exchange api.Exchange
-	conf     *config.Configuration
+
 	// edgeID allocator
 	idFactory id.IDFactory
 	shub      *synchub.SyncHub
@@ -75,6 +81,7 @@ func newEdgeManager(conf *config.Configuration, dao *dao.Dao, informer api.EdgeI
 		// a simple unix timestamp incemental id factory
 		idFactory: id.DefaultIncIDCounter,
 		informer:  informer,
+		exchange:  exchange,
 	}
 
 	if !listen.TLS.Enable {
@@ -290,6 +297,10 @@ func (em *edgeManager) CountEdges() int {
 func (em *edgeManager) ListStreams(edgeID uint64) []geminio.Stream {
 	all := em.streams.MGetAll(edgeID)
 	return utils.Slice2streams(all)
+}
+
+func (em *edgeManager) DelEdgeByID(edgeID uint64) error {
+	panic("TODO")
 }
 
 // Close all edges and manager
