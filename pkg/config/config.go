@@ -2,11 +2,12 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"io"
 	"os"
-	"strconv"
 
 	armio "github.com/jumboframes/armorigo/io"
+	"github.com/jumboframes/armorigo/log"
 	"github.com/spf13/pflag"
 	"gopkg.in/yaml.v2"
 	"k8s.io/klog/v2"
@@ -102,38 +103,16 @@ type Configuration struct {
 func Parse() (*Configuration, error) {
 	var (
 		argConfigFile         = pflag.String("config", "", "config file, default not configured")
+		argArmorigoLogLevel   = pflag.String("loglevel", "info", "log level for armorigo log")
 		argDaemonRLimitNofile = pflag.Int("daemon-rlimit-nofile", -1, "SetRLimit for number of file of this daemon, default: -1 means ignore")
 
 		config *Configuration
 	)
 	pflag.Lookup("daemon-rlimit-nofile").NoOptDefVal = "1048576"
 
-	// config file
-	if *argConfigFile != "" {
-		data, err := os.ReadFile(*argConfigFile)
-		if err != nil {
-			return nil, err
-		}
-		config = &Configuration{}
-		if err = yaml.Unmarshal(data, config); err != nil {
-			return nil, err
-		}
-	}
-
 	// set klog
 	klogFlags := flag.NewFlagSet("klog", flag.ExitOnError)
 	klog.InitFlags(klogFlags)
-	klogFlags.Set("log_dir", config.Log.LogDir)
-	klogFlags.Set("log_file", config.Log.LogFile)
-	klogFlags.Set("log_file_max_file", strconv.FormatUint(config.Log.LogFileMaxSizeMB, 10))
-	klogFlags.Set("logtostderr", strconv.FormatBool(config.Log.ToStderr))
-	klogFlags.Set("alsologtostderr", strconv.FormatBool(config.Log.AlsoToStderr))
-	klogFlags.Set("verbosity", strconv.FormatInt(int64(config.Log.Verbosity), 10))
-	klogFlags.Set("add_dir_header", strconv.FormatBool(config.Log.AddDirHeader))
-	klogFlags.Set("skip_headers", strconv.FormatBool(config.Log.SkipHeaders))
-	klogFlags.Set("one_output", strconv.FormatBool(config.Log.OneOutput))
-	klogFlags.Set("skip_log_headers", strconv.FormatBool(config.Log.SkipLogHeaders))
-	klogFlags.Set("stderrthreshold", strconv.FormatInt(int64(config.Log.StderrThreshold), 10))
 
 	// sync the glog and klog flags.
 	pflag.CommandLine.VisitAll(func(f1 *pflag.Flag) {
@@ -151,11 +130,32 @@ func Parse() (*Configuration, error) {
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	pflag.Parse()
 
+	// armorigo log
+	level, err := log.ParseLevel(*argArmorigoLogLevel)
+	if err != nil {
+		fmt.Println("parse log level err:", err)
+		return nil, err
+	}
+	log.SetLevel(level)
+	log.SetOutput(os.Stdout)
+
+	// config file
+	if *argConfigFile != "" {
+		// TODO the command-line is prior to config file
+		data, err := os.ReadFile(*argConfigFile)
+		if err != nil {
+			return nil, err
+		}
+		config = &Configuration{}
+		if err = yaml.Unmarshal(data, config); err != nil {
+			return nil, err
+		}
+	}
+
 	if config == nil {
 		config = &Configuration{}
 	}
 	config.Daemon.RLimit.NumFile = *argDaemonRLimitNofile
-
 	return config, nil
 }
 

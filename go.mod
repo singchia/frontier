@@ -2,6 +2,10 @@ module github.com/singchia/frontier
 
 go 1.20
 
+replace (
+	github.com/singchia/geminio => ../../moresec/singchia/geminio
+)
+
 require (
 	github.com/jumboframes/armorigo v0.3.0
 	github.com/singchia/geminio v1.1.2

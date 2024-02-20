@@ -8,7 +8,7 @@ edgebound:
     network: tcp
     addr: 0.0.0.0:2432
     tls:
-      enable: true
+      enable: false
       mtls: true
       ca_certs:
       - ca1.cert
@@ -17,11 +17,11 @@ edgebound:
       - cert: edgebound.cert
         key: edgebound.key
   bypass:
-    enable: true
+    enable: false
     network: tcp
     addr: 192.168.1.10:8443
     tls:
-      enable: true
+      enable: false
       mtls: true
       ca_certs:
       - ca1.cert
@@ -34,7 +34,7 @@ servicebound:
     network: tcp
     addr: 0.0.0.0:2431
     tls:
-      enable: true
+      enable: false
       mtls: true
       ca_certs:
       - ca1.cert

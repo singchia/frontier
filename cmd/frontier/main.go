@@ -20,24 +20,33 @@ func main() {
 		klog.Errorf("parse flags err: %s", err)
 		return
 	}
+	klog.Infof("frontier starts")
+	defer func() {
+		klog.Infof("frontier ends")
+		klog.Flush()
+	}()
+
 	// dao
 	dao, err := dao.NewDao(conf)
 	if err != nil {
 		klog.Errorf("new dao err: %s", err)
 		return
 	}
+	klog.V(5).Infof("new dao succeed")
 	// mqm
 	mqm, err := mq.NewMQM(conf)
 	if err != nil {
 		klog.Errorf("new mq manager err: %s", err)
 		return
 	}
+	klog.V(5).Infof("new mq manager succeed")
 	// exchange
 	exchange, err := exchange.NewExchange(conf)
 	if err != nil {
 		klog.Errorf("new exchange err: %s", err)
 		return
 	}
+	klog.V(5).Infof("new exchange succeed")
 
 	tmr := timer.NewTimer()
 	// servicebound
@@ -46,7 +55,8 @@ func main() {
 		klog.Errorf("new servicebound err: %s", err)
 		return
 	}
-	servicebound.Serve()
+	go servicebound.Serve()
+	klog.V(5).Infof("new servicebound succeed")
 
 	// edgebound
 	edgebound, err := edgebound.NewEdgebound(conf, dao, nil, exchange, tmr)
@@ -54,10 +64,12 @@ func main() {
 		klog.Errorf("new edgebound err: %s", err)
 		return
 	}
-	edgebound.Serve()
+	go edgebound.Serve()
+	klog.V(5).Infof("new edgebound succeed")
 
 	sig := sigaction.NewSignal()
 	sig.Wait(context.TODO())
+
 	edgebound.Close()
 	servicebound.Close()
 }

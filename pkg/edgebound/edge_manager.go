@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"net"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/jumboframes/armorigo/rproxy"
@@ -77,12 +78,14 @@ func newEdgeManager(conf *config.Configuration, dao *dao.Dao, informer api.EdgeI
 		streams:               mapmap.NewMapMap(),
 		dao:                   dao,
 		shub:                  synchub.NewSyncHub(synchub.OptionTimer(tmr)),
+		edges:                 make(map[uint64]geminio.End),
 		UnimplementedDelegate: &delegate.UnimplementedDelegate{},
 		// a simple unix timestamp incemental id factory
 		idFactory: id.DefaultIncIDCounter,
 		informer:  informer,
 		exchange:  exchange,
 	}
+	exchange.AddEdgebound(em)
 
 	if !listen.TLS.Enable {
 		if ln, err = net.Listen(network, addr); err != nil {
@@ -240,7 +243,9 @@ func (em *edgeManager) Serve() {
 	for {
 		conn, err := em.geminioLn.Accept()
 		if err != nil {
-			klog.V(4).Infof("edge manager listener accept err: %s", err)
+			if !strings.Contains(err.Error(), api.ErrStrUseOfClosedConnection) {
+				klog.V(4).Infof("edge manager listener accept err: %s", err)
+			}
 			return
 		}
 		go em.handleConn(conn)
@@ -270,6 +275,7 @@ func (em *edgeManager) handleConn(conn net.Conn) error {
 	return nil
 }
 
+// management apis
 func (em *edgeManager) GetEdgeByID(edgeID uint64) geminio.End {
 	em.mtx.RLock()
 	defer em.mtx.RUnlock()

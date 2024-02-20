@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/jumboframes/armorigo/synchub"
@@ -77,6 +78,7 @@ func newServiceManager(conf *config.Configuration, dao *dao.Dao, informer api.Se
 		// a simple unix timestamp incremental id factory
 		idFactory: id.DefaultIncIDCounter,
 		informer:  informer,
+		exchange:  exchange,
 	}
 	exchange.AddServicebound(sm)
 
@@ -143,7 +145,9 @@ func (sm *serviceManager) Serve() {
 	for {
 		conn, err := sm.ln.Accept()
 		if err != nil {
-			klog.V(4).Infof("service manager listener accept err: %s", err)
+			if !strings.Contains(err.Error(), api.ErrStrUseOfClosedConnection) {
+				klog.V(4).Infof("service manager listener accept err: %s", err)
+			}
 			return
 		}
 		go sm.handleConn(conn)
