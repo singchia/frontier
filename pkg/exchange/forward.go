@@ -79,6 +79,7 @@ func (ex *exchange) forwardMessageToEdge(end geminio.End) {
 				klog.Errorf("forward message, serviceID: %d, receive err: %s", serviceID, err)
 				continue
 			}
+			klog.V(7).Infof("forward message, receive msg: %s from: %d", string(msg.Data()), end.ClientID())
 			// get target edgeID
 			custom := msg.Custom()
 			edgeID := binary.BigEndian.Uint64(custom[len(custom)-8:])
@@ -92,6 +93,7 @@ func (ex *exchange) forwardMessageToEdge(end geminio.End) {
 				return
 			}
 			// publish in sync, TODO publish in async
+			msg.SetClientID(edgeID)
 			err = edge.Publish(context.TODO(), msg)
 			if err != nil {
 				klog.V(5).Infof("forward message, serviceID: %d, publish edge: %d err: %s", serviceID, edgeID, err)

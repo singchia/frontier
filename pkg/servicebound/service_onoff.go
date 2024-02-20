@@ -132,7 +132,7 @@ func (sm *serviceManager) Heartbeat(d delegate.ConnDescriber) error {
 	serviceID := d.ClientID()
 	meta := string(d.Meta())
 	addr := d.RemoteAddr()
-	klog.V(5).Infof("service heartbeat, serviceID: %d, meta: %s, addr: %s", serviceID, string(meta), addr)
+	klog.V(6).Infof("service heartbeat, serviceID: %d, meta: %s, addr: %s", serviceID, string(meta), addr)
 	if sm.informer != nil {
 		sm.informer.ServiceHeartbeat(serviceID, meta, addr)
 	}

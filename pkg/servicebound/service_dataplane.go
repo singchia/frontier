@@ -34,7 +34,7 @@ func (sm *serviceManager) closedStream(stream geminio.Stream) {
 func (sm *serviceManager) forward(meta *api.Meta, end geminio.End) {
 	serviceID := end.ClientID()
 	service := meta.Service
-	klog.V(5).Infof("service forward stream, serviceID: %d, service: %s", serviceID, service)
+	klog.V(5).Infof("service forward raw message and rpc, serviceID: %d, service: %s", serviceID, service)
 	if sm.exchange != nil {
 		sm.exchange.ForwardToEdge(meta, end)
 	}

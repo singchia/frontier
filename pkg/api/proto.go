@@ -1,6 +1,13 @@
 package api
 
 // frontier -> service
+// global rpcs
+var (
+	RPCGetEdgeID   = "get_edge_id"
+	RPCEdgeOnline  = "edge_online"
+	RPCEdgeOffline = "edge_offline"
+)
+
 type OnEdgeOnline struct {
 	EdgeID uint64
 	Meta   []byte
@@ -33,11 +40,7 @@ func (offline *OnEdgeOffline) String() string {
 }
 
 // service -> frontier
-type ReceiveClaim struct {
-	Topics []string
-}
-
-// service -> frontier
+// meta carried when service inited
 type Meta struct {
 	Service string
 	Topics  []string

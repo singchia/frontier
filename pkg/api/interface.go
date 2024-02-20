@@ -7,10 +7,16 @@ import (
 )
 
 type Exchange interface {
+	// For Service
 	// rpc, message and raw io to edge
 	ForwardToEdge(*Meta, geminio.End)
 	// stream to edge
 	// TODO StreamToEdge(geminio.Stream)
+
+	// For Edge
+	GetEdgeID(meta []byte) (uint64, error) // get EdgeID for edge
+	EdgeOnline(edgeID uint64, meta []byte, addr net.Addr) error
+	EdgeOffline(edgeID uint64, meta []byte, addr net.Addr) error
 	// rpc, message and raw io to service
 	ForwardToService(geminio.End)
 	// stream to service
@@ -33,12 +39,6 @@ type Edgebound interface {
 	Close() error
 }
 
-type EdgeInformer interface {
-	EdgeOnline(edgeID uint64, meta []byte, addr net.Addr)
-	EdgeOffline(edgeID uint64, meta []byte, addr net.Addr)
-	EdgeHeartbeat(edgeID uint64, meta []byte, addr net.Addr)
-}
-
 // service related
 type Servicebound interface {
 	ListService() []geminio.End
@@ -52,6 +52,12 @@ type Servicebound interface {
 	Close() error
 }
 
+// informer
+type EdgeInformer interface {
+	EdgeOnline(edgeID uint64, meta []byte, addr net.Addr)
+	EdgeOffline(edgeID uint64, meta []byte, addr net.Addr)
+	EdgeHeartbeat(edgeID uint64, meta []byte, addr net.Addr)
+}
 type ServiceInformer interface {
 	ServiceOnline(serviceID uint64, service string, addr net.Addr)
 	ServiceOffline(serviceID uint64, service string, addr net.Addr)
