@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/jumboframes/armorigo/synchub"
 	"github.com/singchia/frontier/pkg/api"
@@ -28,6 +29,11 @@ import (
 func NewServicebound(conf *config.Configuration, dao *dao.Dao, informer api.ServiceInformer,
 	exchange api.Exchange, mqm api.MQM, tmr timer.Timer) (api.Servicebound, error) {
 	return newServiceManager(conf, dao, informer, exchange, mqm, tmr)
+}
+
+type end struct {
+	End  geminio.End
+	Meta *api.Meta
 }
 
 type serviceManager struct {
@@ -79,6 +85,7 @@ func newServiceManager(conf *config.Configuration, dao *dao.Dao, informer api.Se
 		idFactory: id.DefaultIncIDCounter,
 		informer:  informer,
 		exchange:  exchange,
+		mqm:       mqm,
 	}
 	exchange.AddServicebound(sm)
 
@@ -190,6 +197,7 @@ func (sm *serviceManager) handleConn(conn net.Conn) error {
 	return nil
 }
 
+// topics
 func (sm *serviceManager) remoteReceiveClaim(serviceID uint64, topics []string) error {
 	klog.V(5).Infof("service remote receive claim, topics: %v, serviceID: %d", topics, serviceID)
 	var err error
@@ -208,6 +216,23 @@ func (sm *serviceManager) remoteReceiveClaim(serviceID uint64, topics []string) 
 	return nil
 }
 
+// rpc, RemoteRegistration is called from underlayer
+func (sm *serviceManager) RemoteRegistration(rpc string, serviceID, streamID uint64) {
+	// TODO return error
+	klog.V(5).Infof("service remote rpc registration, rpc: %s, serviceID: %d, streamID: %d", rpc, serviceID, streamID)
+
+	// memdb
+	sr := &model.ServiceRPC{
+		RPC:        rpc,
+		ServiceID:  serviceID,
+		CreateTime: time.Now().Unix(),
+	}
+	err := sm.dao.CreateServiceRPC(sr)
+	if err != nil {
+		klog.Errorf("service remote registration, create service rpc: %s, err: %s, serviceID: %d, streamID: %d", err, rpc, serviceID, streamID)
+	}
+}
+
 func (sm *serviceManager) GetServiceByID(serviceID uint64) geminio.End {
 	sm.mtx.RLock()
 	defer sm.mtx.RUnlock()
@@ -216,27 +241,27 @@ func (sm *serviceManager) GetServiceByID(serviceID uint64) geminio.End {
 }
 
 func (sm *serviceManager) GetServiceByRPC(rpc string) (geminio.End, error) {
+	sm.mtx.RLock()
+	defer sm.mtx.RUnlock()
+
 	mrpc, err := sm.dao.GetServiceRPC(rpc)
 	if err != nil {
 		klog.Errorf("get service by rpc: %s, err: %s", rpc, err)
 		return nil, err
 	}
 
-	sm.mtx.RLock()
-	defer sm.mtx.RUnlock()
-
 	return sm.services[mrpc.ServiceID], nil
 }
 
 func (sm *serviceManager) GetServiceByTopic(topic string) (geminio.End, error) {
+	sm.mtx.RLock()
+	defer sm.mtx.RUnlock()
+
 	mtopic, err := sm.dao.GetServiceTopic(topic)
 	if err != nil {
 		klog.Errorf("get service by topic: %s, err: %s", topic, err)
 		return nil, err
 	}
-
-	sm.mtx.RLock()
-	defer sm.mtx.RUnlock()
 
 	return sm.services[mtopic.ServiceID], nil
 }

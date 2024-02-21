@@ -20,7 +20,7 @@ type mqManager struct {
 
 func NewMQM(conf *config.Configuration) (api.MQM, error) {
 	return newMQManager(conf)
-} 
+}
 
 func newMQManager(conf *config.Configuration) (*mqManager, error) {
 	mqm := &mqManager{
@@ -144,7 +144,7 @@ func (mqm *mqManager) Produce(topic string, data []byte, opts ...api.OptionProdu
 		mq = mqm.GetMQ("*")
 		if mq == nil {
 			err := api.ErrTopicNotOnline
-			klog.Errorf("mq manager, get mq nil, err: %s", err)
+			klog.Errorf("mq manager, get mq nil, topic: %s err: %s", topic, err)
 			return err
 		}
 	}

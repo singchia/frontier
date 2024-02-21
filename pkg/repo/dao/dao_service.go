@@ -65,10 +65,13 @@ func (dao *Dao) GetService(serviceID uint64) (*model.Service, error) {
 	if dao.config.Log.Verbosity >= 4 {
 		tx = tx.Debug()
 	}
-	tx = tx.Where("service_id = ?", serviceID)
+	tx = tx.Where("service_id = ?", serviceID).Limit(1)
 
 	var service model.Service
-	tx = tx.First(&service)
+	tx = tx.Find(&service)
+	if tx.RowsAffected == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
 	return &service, tx.Error
 }
 
@@ -145,10 +148,15 @@ func (dao *Dao) GetServiceRPC(rpc string) (*model.ServiceRPC, error) {
 	if dao.config.Log.Verbosity >= 4 {
 		tx = tx.Debug()
 	}
-	tx = tx.Where("rpc = ?", rpc)
+	tx = tx.Where("rpc = ?", rpc).Limit(1)
 
+	// we not use Fisrt to avoid the warn log when record not found
+	// see https://github.com/go-gorm/gorm/issues/4932
 	var mrpc model.ServiceRPC
-	tx = tx.First(&mrpc)
+	tx = tx.Find(&mrpc)
+	if tx.RowsAffected == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
 	return &mrpc, tx.Error
 }
 
@@ -194,7 +202,7 @@ func (dao *Dao) CountServiceRPCs(query *ServiceRPCQuery) (int64, error) {
 	return count, tx.Error
 }
 
-func (dao *Dao) DeleteServiceRPC(serviceID uint64) error {
+func (dao *Dao) DeleteServiceRPCs(serviceID uint64) error {
 	tx := dao.dbService.Where("service_id = ?", serviceID)
 	if dao.config.Log.Verbosity >= 4 {
 		tx = tx.Debug()
@@ -239,10 +247,13 @@ func (dao *Dao) GetServiceTopic(topic string) (*model.ServiceTopic, error) {
 	if dao.config.Log.Verbosity >= 4 {
 		tx = tx.Debug()
 	}
-	tx = tx.Where("topic = ?", topic)
+	tx = tx.Where("topic = ?", topic).Limit(1)
 
 	var mtopic model.ServiceTopic
-	tx = tx.First(&mtopic)
+	tx = tx.Find(&mtopic)
+	if tx.RowsAffected == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
 	return &mtopic, tx.Error
 }
 
