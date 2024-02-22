@@ -24,8 +24,9 @@ func NewMQM(conf *config.Configuration) (api.MQM, error) {
 
 func newMQManager(conf *config.Configuration) (*mqManager, error) {
 	mqm := &mqManager{
-		mqs:  make(map[string][]api.MQ),
-		conf: conf,
+		mqs:     make(map[string][]api.MQ),
+		mqindex: make(map[string]*uint64),
+		conf:    conf,
 	}
 	return mqm, nil
 }
@@ -37,7 +38,7 @@ func (mqm *mqManager) AddMQ(topics []string, mq api.MQ) {
 	for _, topic := range topics {
 		mqs, ok := mqm.mqs[topic]
 		if !ok {
-			klog.V(6).Infof("mq manager, add topic: %s mq succeed", topic)
+			klog.V(5).Infof("mq manager, add topic: %s mq succeed", topic)
 			mqm.mqs[topic] = []api.MQ{mq}
 			mqm.mqindex[topic] = new(uint64)
 			continue
@@ -59,7 +60,7 @@ func (mqm *mqManager) AddMQ(topics []string, mq api.MQ) {
 		}
 		mqs = append(mqs, mq)
 		mqm.mqs[topic] = mqs
-		klog.V(6).Infof("mq mqnager, add topic: %s mq succeed", topic)
+		klog.V(5).Infof("mq mqnager, add topic: %s mq succeed", topic)
 	}
 }
 

@@ -222,7 +222,7 @@ func (service *serviceEnd) Receive(ctx context.Context) (geminio.Message, error)
 		return msg, nil
 	}
 	edgeID := binary.BigEndian.Uint64(custom[len(custom)-8:])
-	custom = custom[:custom[len(custom)-8]]
+	custom = custom[:len(custom)-8]
 	msg.SetClientID(edgeID)
 	msg.SetCustom(custom)
 	return msg, nil
