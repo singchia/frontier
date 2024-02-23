@@ -19,4 +19,5 @@
 
 # Go workspace file
 go.work
-go.sum
+
+frontier
