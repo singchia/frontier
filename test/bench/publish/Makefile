@@ -15,3 +15,6 @@ publish_edge: edge/*.go
 publish_service: service/*.go
 	CGO_ENABLED=0 GOOS=$(GOHOSTOS) GOARCH=$(GOARCH) \
 		go build -trimpath -ldflags "-s -w" -o publish_service service/*.go
+
+bench: publish_edge publish_service
+	chmod +x ./publish.sh && ./publish.sh

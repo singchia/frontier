@@ -9,3 +9,6 @@ publish:
 .PHONY: clean
 clean:
 	make clean -C publish
+
+bench:
+	make bench -C publish

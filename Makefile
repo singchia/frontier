@@ -38,6 +38,10 @@ container:
 	docker rm -f frontier
 	docker run -d --name frontier -p 2431:2431 -p 2432:2432 frontier:${VERSION} 
 
+.PHONY: bench
+bench: container
+	make bench -C test/bench
+
 .PHONY: output
 output: build
 
