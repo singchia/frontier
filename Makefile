@@ -19,8 +19,8 @@ examples:
 .PHONY: clean
 clean:
 	rm ./frontier
-	rm ./examples/iclm/iclm_edge
-	rm ./examples/iclm/iclm_service
+	make clean -C examples
+	make clean -C test/bench
 
 .PHONY: install
 install:
@@ -32,6 +32,11 @@ install:
 .PHONY: image
 image:
 	docker buildx build -t frontier:${VERSION} .
+
+.PHONY: container
+container:
+	docker rm -f frontier
+	docker run -d --name frontier -p 2431:2431 -p 2432:2432 frontier:${VERSION} 
 
 .PHONY: output
 output: build

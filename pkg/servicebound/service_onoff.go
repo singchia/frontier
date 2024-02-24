@@ -56,7 +56,7 @@ func (sm *serviceManager) online(end geminio.End, meta *api.Meta) error {
 func (sm *serviceManager) offline(serviceID uint64, addr net.Addr) error {
 	// TODO transaction
 	legacy := false
-	// cache
+	// clear cache
 	sm.mtx.Lock()
 	defer sm.mtx.Unlock()
 
@@ -78,7 +78,7 @@ func (sm *serviceManager) offline(serviceID uint64, addr net.Addr) error {
 		}
 	}()
 
-	// memdb
+	// clear memdb
 	if err := sm.dao.DeleteService(&dao.ServiceDelete{
 		ServiceID: serviceID,
 		Addr:      addr.String(),
@@ -97,6 +97,12 @@ func (sm *serviceManager) offline(serviceID uint64, addr net.Addr) error {
 		klog.Errorf("service offline, dao delete service topics err: %s, serviceID: %d", err, serviceID)
 		return err
 	}
+
+	// clear mqm
+	if sm.mqm != nil {
+		sm.mqm.DelMQByEnd(value)
+	}
+
 	klog.V(5).Infof("service offline, remote topics declaim succeed, serviceID: %d", serviceID)
 	return nil
 }

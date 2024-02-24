@@ -5,6 +5,9 @@ ARG TARGETOS
 # an automatic platform ARG enabled by Docker BuildKit.
 ARG TARGETARCH
 
+ENV GO111MODULE=on \
+    GOPROXY=https://goproxy.io
+
 WORKDIR /go/src/github.com/singchia/frontier
 RUN --mount=type=bind,readwrite,target=/go/src/github.com/singchia/frontier \
     make DESTDIR=/tmp/install all install
