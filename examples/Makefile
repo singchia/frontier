@@ -7,3 +7,7 @@ all: iclm
 .PHONY: iclm
 iclm:
 	make -C iclm
+
+.PHONY: clean
+clean:
+	make clean -C iclm

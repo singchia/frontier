@@ -105,7 +105,10 @@ func (em *edgeManager) ConnOnline(d delegate.ConnDescriber) error {
 	}
 	// exchange to service
 	if em.exchange != nil {
-		return em.exchange.EdgeOnline(edgeID, meta, addr)
+		err := em.exchange.EdgeOnline(edgeID, meta, addr)
+		if err == api.ErrServiceNotOnline {
+			return nil
+		}
 	}
 	return nil
 }
@@ -168,10 +171,14 @@ func (em *edgeManager) GetClientID(meta []byte) (uint64, error) {
 	if em.exchange != nil {
 		edgeID, err = em.exchange.GetEdgeID(meta)
 		if err == nil {
-			return edgeID, err
+			klog.V(5).Infof("edge get edgeID: %d from exchange, meta: %s", edgeID, string(meta))
+			return edgeID, nil
 		}
 	}
-	if err == api.ErrRecordNotFound && em.conf.Edgebound.EdgeIDAllocWhenNoIDServiceOn {
+
+	if err == api.ErrServiceNotOnline && em.conf.Edgebound.EdgeIDAllocWhenNoIDServiceOn {
+		edgeID = em.idFactory.GetID()
+		klog.V(5).Infof("edge get edgeID: %d, meta: %s, after no ID acquired from exchange", edgeID, string(meta))
 		return em.idFactory.GetID(), nil
 	}
 	return 0, err

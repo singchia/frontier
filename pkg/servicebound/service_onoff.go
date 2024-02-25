@@ -18,6 +18,8 @@ func (sm *serviceManager) online(end geminio.End, meta *api.Meta) error {
 	// cache
 	var sync synchub.Sync
 	sm.mtx.Lock()
+	defer sm.mtx.Unlock()
+
 	old, ok := sm.services[end.ClientID()]
 	if ok {
 		// it the old connection exits, offline it
@@ -31,7 +33,6 @@ func (sm *serviceManager) online(end geminio.End, meta *api.Meta) error {
 		}
 	}
 	sm.services[end.ClientID()] = end
-	sm.mtx.Unlock()
 
 	if sync != nil {
 		// unlikely here
@@ -55,20 +56,20 @@ func (sm *serviceManager) online(end geminio.End, meta *api.Meta) error {
 func (sm *serviceManager) offline(serviceID uint64, addr net.Addr) error {
 	// TODO transaction
 	legacy := false
-	// cache
+	// clear cache
 	sm.mtx.Lock()
+	defer sm.mtx.Unlock()
+
 	value, ok := sm.services[serviceID]
 	if ok {
 		end := value.(geminio.End)
 		if end != nil && end.RemoteAddr().String() == addr.String() {
 			legacy = true
 			delete(sm.services, serviceID)
-			klog.V(5).Infof("service offline, serviceID: %d, remote addr: %s", serviceID, end.RemoteAddr().String())
 		}
 	} else {
 		klog.Warningf("service offline, serviceID: %d not found in cache", serviceID)
 	}
-	sm.mtx.Unlock()
 
 	defer func() {
 		if legacy {
@@ -77,7 +78,7 @@ func (sm *serviceManager) offline(serviceID uint64, addr net.Addr) error {
 		}
 	}()
 
-	// memdb
+	// clear memdb
 	if err := sm.dao.DeleteService(&dao.ServiceDelete{
 		ServiceID: serviceID,
 		Addr:      addr.String(),
@@ -85,14 +86,24 @@ func (sm *serviceManager) offline(serviceID uint64, addr net.Addr) error {
 		klog.Errorf("service offline, dao delete service err: %s, serviceID: %d", err, serviceID)
 		return err
 	}
-	if err := sm.dao.DeleteEdgeRPCs(serviceID); err != nil {
+
+	if err := sm.dao.DeleteServiceRPCs(serviceID); err != nil {
 		klog.Errorf("service offline, dao delete service rpcs err: %s, serviceID: %d", err, serviceID)
 		return err
 	}
+	klog.V(5).Infof("service offline, remote rpc de-register succeed, serviceID: %d", serviceID)
+
 	if err := sm.dao.DeleteServiceTopics(serviceID); err != nil {
 		klog.Errorf("service offline, dao delete service topics err: %s, serviceID: %d", err, serviceID)
 		return err
 	}
+
+	// clear mqm
+	if sm.mqm != nil {
+		sm.mqm.DelMQByEnd(value)
+	}
+
+	klog.V(5).Infof("service offline, remote topics declaim succeed, serviceID: %d", serviceID)
 	return nil
 }
 
@@ -113,7 +124,7 @@ func (sm *serviceManager) ConnOffline(d delegate.ConnDescriber) error {
 	serviceID := d.ClientID()
 	meta := string(d.Meta())
 	addr := d.RemoteAddr()
-	klog.V(4).Infof("service offline, serviceID: %d, service: %s, addr: %s", serviceID, meta, addr)
+	klog.V(5).Infof("service offline, serviceID: %d, service: %s, remote addr: %s", serviceID, meta, addr)
 	// offline the cache
 	err := sm.offline(serviceID, addr)
 	if err != nil {
@@ -137,23 +148,6 @@ func (sm *serviceManager) Heartbeat(d delegate.ConnDescriber) error {
 		sm.informer.ServiceHeartbeat(serviceID, meta, addr)
 	}
 	return nil
-}
-
-// RemoteRegistration is called from underlayer
-func (sm *serviceManager) RemoteRegistration(rpc string, serviceID, streamID uint64) {
-	// TODO return error
-	klog.V(5).Infof("service remote rpc registration, rpc: %s, serviceID: %d, streamID: %d", rpc, serviceID, streamID)
-
-	// memdb
-	sr := &model.ServiceRPC{
-		RPC:        rpc,
-		ServiceID:  serviceID,
-		CreateTime: time.Now().Unix(),
-	}
-	err := sm.dao.CreateServiceRPC(sr)
-	if err != nil {
-		klog.Errorf("service remote registration, create service rpc: %s, err: %s, serviceID: %d, streamID: %d", err, rpc, serviceID, streamID)
-	}
 }
 
 // actually the meta is service

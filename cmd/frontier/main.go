@@ -41,7 +41,7 @@ func main() {
 	}
 	klog.V(5).Infof("new mq manager succeed")
 	// exchange
-	exchange, err := exchange.NewExchange(conf)
+	exchange, err := exchange.NewExchange(conf, mqm)
 	if err != nil {
 		klog.Errorf("new exchange err: %s", err)
 		return

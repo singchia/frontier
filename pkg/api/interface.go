@@ -25,7 +25,6 @@ type Exchange interface {
 	// for exchange
 	AddEdgebound(Edgebound)
 	AddServicebound(Servicebound)
-	AddMQM(MQM)
 }
 
 // edge related

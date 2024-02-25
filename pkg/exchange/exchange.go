@@ -13,13 +13,14 @@ type exchange struct {
 	MQM          api.MQM
 }
 
-func NewExchange(conf *config.Configuration) (api.Exchange, error) {
-	return newExchange(conf)
+func NewExchange(conf *config.Configuration, mqm api.MQM) (api.Exchange, error) {
+	return newExchange(conf, mqm)
 }
 
-func newExchange(conf *config.Configuration) (*exchange, error) {
+func newExchange(conf *config.Configuration, mqm api.MQM) (*exchange, error) {
 	exchange := &exchange{
 		conf: conf,
+		MQM:  mqm,
 	}
 	return exchange, nil
 }
@@ -30,8 +31,4 @@ func (ex *exchange) AddEdgebound(edgebound api.Edgebound) {
 
 func (ex *exchange) AddServicebound(servicebound api.Servicebound) {
 	ex.Servicebound = servicebound
-}
-
-func (ex *exchange) AddMQM(mqm api.MQM) {
-	ex.MQM = mqm
 }

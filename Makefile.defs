@@ -1,0 +1,4 @@
+PREFIX?=/usr
+BINDIR?=$(PREFIX)/bin
+CONFDIR?=$(PREFIX)/conf
+VERSION=$(shell cat VERSION)
