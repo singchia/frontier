@@ -6,7 +6,7 @@ all: publish_edge publish_service
 
 .PHONY: clean
 clean:
-	rm publish_edge publish_service
+	rm publish_edge publish_service || true
 
 publish_edge: edge/*.go
 	CGO_ENABLED=0 GOOS=$(GOHOSTOS) GOARCH=$(GOARCH) \

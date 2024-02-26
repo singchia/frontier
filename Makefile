@@ -18,7 +18,7 @@ examples:
 
 .PHONY: clean
 clean:
-	rm ./frontier
+	rm ./frontier || true
 	make clean -C examples
 	make clean -C test/bench
 
@@ -36,7 +36,7 @@ image:
 .PHONY: container
 container:
 	docker rm -f frontier
-	docker run -d --name frontier -p 2431:2431 -p 2432:2432 frontier:${VERSION} 
+	docker run -d --name frontier -p 2431:2431 -p 2432:2432 frontier:${VERSION} --config /usr/conf/config.yaml -v 5
 
 .PHONY: bench
 bench: container

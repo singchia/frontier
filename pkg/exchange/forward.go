@@ -129,12 +129,13 @@ func (ex *exchange) forwardRPCToService(end geminio.End) {
 	// we hijack all rpcs and forward them to service
 	end.Hijack(func(ctx context.Context, method string, r1 geminio.Request, r2 geminio.Response) {
 		// get service
-		edge, err := ex.Servicebound.GetServiceByRPC(method)
+		svc, err := ex.Servicebound.GetServiceByRPC(method)
 		if err != nil {
 			klog.Errorf("exchange forward rpc to service, get service by rpc err: %s, edgeID: %d", err, edgeID)
 			r2.SetError(err)
 			return
 		}
+		serviceID := svc.ClientID()
 		// we record the edgeID to service
 		tail := make([]byte, 8)
 		binary.BigEndian.PutUint64(tail, edgeID)
@@ -145,14 +146,15 @@ func (ex *exchange) forwardRPCToService(end geminio.End) {
 			custom = append(custom, tail...)
 		}
 		r1.SetCustom(custom)
+		r1.SetClientID(serviceID)
 		// call
-		r3, err := edge.Call(ctx, method, r1)
+		r3, err := svc.Call(ctx, method, r1)
 		if err != nil {
-			klog.Errorf("edge forward rpc to service, call service err: %s, edgeID: %d", err, edgeID)
+			klog.Errorf("edge forward rpc to service, call service: %d err: %s, edgeID: %d", serviceID, err, edgeID)
 			r2.SetError(err)
 			return
 		}
-		klog.V(6).Infof("edge forward rpc to service, call service rpc: %s success, edgeID: %d", method, edgeID)
+		klog.V(6).Infof("edge forward rpc to service, call service: %d rpc: %s success, edgeID: %d", serviceID, method, edgeID)
 		r2.SetData(r3.Data())
 	})
 }
