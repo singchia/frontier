@@ -167,7 +167,7 @@ func main() {
 				value = ld.Data
 			}
 			if *printmessage {
-				fmt.Printf("> receive msg, edgeID: %d streamID: %d data: %s\n", msg.ClientID(), msg.StreamID(), string(value))
+				fmt.Printf("\n> receive msg, edgeID: %d streamID: %d data: %s\n", msg.ClientID(), msg.StreamID(), string(value))
 				fmt.Print(">>> ")
 			}
 		}
@@ -319,7 +319,7 @@ func main() {
 						fmt.Println("> call err:", err)
 						goto NEXT
 					}
-					fmt.Println("> call success, ret:", string(rsp.Data()))
+					fmt.Println("\n> call success, ret:", string(rsp.Data()))
 					goto NEXT
 				}
 			}
@@ -387,7 +387,7 @@ func handleStream(stream geminio.Stream) {
 			}
 			if *printmessage {
 				edgeID := binary.BigEndian.Uint64(msg.Custom())
-				fmt.Println("> receive msg:", edgeID, msg.StreamID(), string(value))
+				fmt.Printf("\n> receive msg, edgeID: %d streamID: %d data: %s\n", edgeID, msg.StreamID(), string(value))
 				fmt.Print(">>> ")
 			}
 		}
@@ -463,7 +463,9 @@ func echo(ctx context.Context, req geminio.Request, rsp geminio.Response) {
 		addLabel(string(ld.Label), 1)
 		value = ld.Data
 	}
-	fmt.Println("\ncall > ", req.ClientID(), req.StreamID(), string(value))
-	fmt.Print(">>> ")
+	if *printmessage {
+		fmt.Printf("\n> call rpc, method: %s edgeID: %d streamID: %d data: %s\n", "echo", edgeID, req.StreamID(), string(value))
+		fmt.Print(">>> ")
+	}
 	rsp.SetData(value)
 }

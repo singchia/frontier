@@ -166,6 +166,7 @@ func (service *serviceEnd) Register(ctx context.Context, method string, rpc gemi
 		edgeID := binary.BigEndian.Uint64(custom[len(custom)-8:])
 		req.SetClientID(edgeID)
 		rsp.SetClientID(edgeID)
+		rpc(ctx, req, rsp)
 		return
 	}
 	return service.End.Register(ctx, method, wrap)
