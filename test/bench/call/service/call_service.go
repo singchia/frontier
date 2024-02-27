@@ -3,14 +3,15 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"os"
 
 	armlog "github.com/jumboframes/armorigo/log"
+	"github.com/jumboframes/armorigo/sigaction"
 	"github.com/singchia/frontier/api/v1/edge"
 	"github.com/singchia/frontier/api/v1/service"
+	"github.com/singchia/geminio"
 	"github.com/spf13/pflag"
 )
 
@@ -22,7 +23,6 @@ func main() {
 	network := pflag.String("network", "tcp", "network to dial")
 	address := pflag.String("address", "127.0.0.1:2431", "address to dial")
 	serviceName := pflag.String("service", "foo", "service name")
-	topic := pflag.String("topic", "bench", "topic to specific")
 	loglevel := pflag.String("loglevel", "info", "log level, trace debug info warn error")
 	printmessage := pflag.Bool("printmessage", false, "whether print message out")
 
@@ -41,29 +41,24 @@ func main() {
 
 	// get service
 	opt := []service.ServiceOption{service.OptionServiceLog(armlog.DefaultLog), service.OptionServiceName(*serviceName)}
-	if *topic != "" {
-		opt = append(opt, service.OptionServiceReceiveTopics([]string{*topic}))
-	}
 	svc, err := service.NewService(dialer, opt...)
 	if err != nil {
 		log.Println("new end err:", err)
 		return
 	}
-	for {
-		msg, err := svc.Receive(context.TODO())
-		if err == io.EOF {
-			return
-		}
-		if err != nil {
-			fmt.Println("> receive err:", err)
-			fmt.Print(">>> ")
-			continue
-		}
-		msg.Done()
+	// register
+	svc.Register(context.TODO(), "echo", func(ctx context.Context, req geminio.Request, rsp geminio.Response) {
+		value := req.Data()
 		if *printmessage {
-			value := msg.Data()
-			fmt.Printf("> receive msg, edgeID: %d streamID: %d data: %s\n", msg.ClientID(), msg.StreamID(), string(value))
+			edgeID := req.ClientID()
+			fmt.Printf("\n> call rpc, method: %s edgeID: %d streamID: %d data: %s\n", "echo", edgeID, req.StreamID(), string(value))
 			fmt.Print(">>> ")
 		}
-	}
+		rsp.SetData(value)
+	})
+
+	sig := sigaction.NewSignal()
+	sig.Wait(context.TODO())
+
+	svc.Close()
 }

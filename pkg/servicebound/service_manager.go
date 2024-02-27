@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jumboframes/armorigo/log"
 	"github.com/jumboframes/armorigo/synchub"
 	"github.com/singchia/frontier/pkg/api"
 	"github.com/singchia/frontier/pkg/config"
@@ -153,7 +154,7 @@ func (sm *serviceManager) Serve() {
 		conn, err := sm.ln.Accept()
 		if err != nil {
 			if !strings.Contains(err.Error(), api.ErrStrUseOfClosedConnection) {
-				klog.V(4).Infof("service manager listener accept err: %s", err)
+				klog.V(1).Infof("service manager listener accept err: %s", err)
 			}
 			return
 		}
@@ -169,6 +170,7 @@ func (sm *serviceManager) handleConn(conn net.Conn) error {
 	// stream handler
 	opt.SetAcceptStreamFunc(sm.acceptStream)
 	opt.SetClosedStreamFunc(sm.closedStream)
+	opt.SetLog(log.NewKLog())
 	end, err := server.NewEndWithConn(conn, opt)
 	if err != nil {
 		klog.Errorf("service manager geminio server new end err: %s", err)
@@ -199,7 +201,7 @@ func (sm *serviceManager) handleConn(conn net.Conn) error {
 
 // topics
 func (sm *serviceManager) remoteReceiveClaim(serviceID uint64, topics []string) error {
-	klog.V(5).Infof("service remote receive claim, topics: %v, serviceID: %d", topics, serviceID)
+	klog.V(2).Infof("service remote receive claim, topics: %v, serviceID: %d", topics, serviceID)
 	var err error
 	// memdb
 	for _, topic := range topics {
@@ -219,7 +221,7 @@ func (sm *serviceManager) remoteReceiveClaim(serviceID uint64, topics []string) 
 // rpc, RemoteRegistration is called from underlayer
 func (sm *serviceManager) RemoteRegistration(rpc string, serviceID, streamID uint64) {
 	// TODO return error
-	klog.V(5).Infof("service remote rpc registration, rpc: %s, serviceID: %d, streamID: %d", rpc, serviceID, streamID)
+	klog.V(2).Infof("service remote rpc registration, rpc: %s, serviceID: %d, streamID: %d", rpc, serviceID, streamID)
 
 	// memdb
 	sr := &model.ServiceRPC{
@@ -246,7 +248,7 @@ func (sm *serviceManager) GetServiceByRPC(rpc string) (geminio.End, error) {
 
 	mrpc, err := sm.dao.GetServiceRPC(rpc)
 	if err != nil {
-		klog.Errorf("get service by rpc: %s, err: %s", rpc, err)
+		klog.V(2).Infof("get service by rpc: %s, err: %s", rpc, err)
 		return nil, err
 	}
 
@@ -259,7 +261,7 @@ func (sm *serviceManager) GetServiceByTopic(topic string) (geminio.End, error) {
 
 	mtopic, err := sm.dao.GetServiceTopic(topic)
 	if err != nil {
-		klog.Errorf("get service by topic: %s, err: %s", topic, err)
+		klog.V(2).Infof("get service by topic: %s, err: %s", topic, err)
 		return nil, err
 	}
 

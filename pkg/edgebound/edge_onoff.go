@@ -63,7 +63,7 @@ func (em *edgeManager) offline(edgeID uint64, addr net.Addr) error {
 		if end != nil && end.RemoteAddr().String() == addr.String() {
 			legacy = true
 			delete(em.edges, edgeID)
-			klog.V(5).Infof("edge offline, edgeID: %d, remote addr: %s", edgeID, end.RemoteAddr().String())
+			klog.V(2).Infof("edge offline, edgeID: %d, remote addr: %s", edgeID, end.RemoteAddr().String())
 		}
 	} else {
 		klog.Warningf("edge offline, edgeID: %d not found in cache", edgeID)
@@ -98,7 +98,7 @@ func (em *edgeManager) ConnOnline(d delegate.ConnDescriber) error {
 	meta := d.Meta()
 	addr := d.RemoteAddr()
 
-	klog.V(4).Infof("edge online, edgeID: %d, meta: %s, addr: %s", edgeID, string(meta), addr)
+	klog.V(1).Infof("edge online, edgeID: %d, meta: %s, addr: %s", edgeID, string(meta), addr)
 	// inform others
 	if em.informer != nil {
 		em.informer.EdgeOnline(edgeID, d.Meta(), addr)
@@ -118,7 +118,7 @@ func (em *edgeManager) ConnOffline(d delegate.ConnDescriber) error {
 	meta := d.Meta()
 	addr := d.RemoteAddr()
 
-	klog.V(4).Infof("edge offline, edgeID: %d, meta: %s, addr: %s", edgeID, string(meta), addr)
+	klog.V(1).Infof("edge offline, edgeID: %d, meta: %s, addr: %s", edgeID, string(meta), addr)
 	// offline the cache
 	err := em.offline(edgeID, addr)
 	if err != nil {
@@ -141,7 +141,7 @@ func (em *edgeManager) Heartbeat(d delegate.ConnDescriber) error {
 	edgeID := d.ClientID()
 	meta := string(d.Meta())
 	addr := d.RemoteAddr()
-	klog.V(6).Infof("edge heartbeat, edgeID: %d, meta: %s, addr: %s", edgeID, string(meta), addr)
+	klog.V(3).Infof("edge heartbeat, edgeID: %d, meta: %s, addr: %s", edgeID, string(meta), addr)
 	if em.informer != nil {
 		em.informer.EdgeHeartbeat(edgeID, d.Meta(), addr)
 	}
@@ -149,7 +149,7 @@ func (em *edgeManager) Heartbeat(d delegate.ConnDescriber) error {
 }
 
 func (em *edgeManager) RemoteRegistration(rpc string, edgeID, streamID uint64) {
-	klog.V(5).Infof("edge remote rpc registration, rpc: %s, edgeID: %d, streamID: %d", rpc, edgeID, streamID)
+	klog.V(3).Infof("edge remote rpc registration, rpc: %s, edgeID: %d, streamID: %d", rpc, edgeID, streamID)
 
 	// memdb
 	er := &model.EdgeRPC{
@@ -171,14 +171,14 @@ func (em *edgeManager) GetClientID(meta []byte) (uint64, error) {
 	if em.exchange != nil {
 		edgeID, err = em.exchange.GetEdgeID(meta)
 		if err == nil {
-			klog.V(5).Infof("edge get edgeID: %d from exchange, meta: %s", edgeID, string(meta))
+			klog.V(2).Infof("edge get edgeID: %d from exchange, meta: %s", edgeID, string(meta))
 			return edgeID, nil
 		}
 	}
 
 	if err == api.ErrServiceNotOnline && em.conf.Edgebound.EdgeIDAllocWhenNoIDServiceOn {
 		edgeID = em.idFactory.GetID()
-		klog.V(5).Infof("edge get edgeID: %d, meta: %s, after no ID acquired from exchange", edgeID, string(meta))
+		klog.V(2).Infof("edge get edgeID: %d, meta: %s, after no ID acquired from exchange", edgeID, string(meta))
 		return em.idFactory.GetID(), nil
 	}
 	return 0, err

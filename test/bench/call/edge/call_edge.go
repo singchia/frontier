@@ -22,7 +22,7 @@ var (
 func main() {
 	network := pflag.String("network", "tcp", "network to dial")
 	address := pflag.String("address", "127.0.0.1:2432", "address to dial")
-	topic := pflag.String("topic", "bench", "topic to specific")
+	method := pflag.String("method", "echo", "method to specific")
 	loglevel := pflag.String("loglevel", "info", "log level, trace debug info warn error")
 	count := pflag.Int64("count", 10000, "messages to publish")
 	concu := pflag.Int64("concu", 10, "concurrency edges to dial")
@@ -52,7 +52,7 @@ func main() {
 		edges[i] = cli
 	}
 	// start to bench
-	benchPublish(*topic, *count)
+	benchCall(*method, *count)
 
 	// end and collect
 	for _, edge := range edges {
@@ -60,7 +60,7 @@ func main() {
 	}
 }
 
-func benchPublish(topic string, count int64) {
+func benchCall(method string, count int64) {
 	start := time.Now()
 
 	wg := sync.WaitGroup{}
@@ -77,9 +77,9 @@ func benchPublish(topic string, count int64) {
 					break
 				}
 				data := []byte(strconv.FormatInt(newindex, 10))
-				msg := edge.NewMessage(data)
-				err := edge.Publish(context.TODO(), topic, msg)
-				if err != nil {
+				req := edge.NewRequest(data)
+				rsp, err := edge.Call(context.TODO(), method, req)
+				if err != nil || string(data) != string(rsp.Data()) {
 					atomic.AddInt64(&failed, 1)
 					continue
 				}

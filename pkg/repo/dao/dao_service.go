@@ -19,7 +19,7 @@ type ServiceQuery struct {
 // service
 func (dao *Dao) ListServices(query *ServiceQuery) ([]*model.Service, error) {
 	tx := dao.dbService.Model(&model.Service{})
-	if dao.config.Log.Verbosity >= 4 {
+	if dao.config.Dao.Debug {
 		tx = tx.Debug()
 	}
 	tx = buildServiceQuery(tx, query)
@@ -50,7 +50,7 @@ func (dao *Dao) ListServices(query *ServiceQuery) ([]*model.Service, error) {
 
 func (dao *Dao) CountServices(query *ServiceQuery) (int64, error) {
 	tx := dao.dbService.Model(&model.Edge{})
-	if dao.config.Log.Verbosity >= 4 {
+	if dao.config.Dao.Debug {
 		tx = tx.Debug()
 	}
 	tx = buildServiceQuery(tx, query)
@@ -62,7 +62,7 @@ func (dao *Dao) CountServices(query *ServiceQuery) (int64, error) {
 
 func (dao *Dao) GetService(serviceID uint64) (*model.Service, error) {
 	tx := dao.dbService.Model(&model.Service{})
-	if dao.config.Log.Verbosity >= 4 {
+	if dao.config.Dao.Debug {
 		tx = tx.Debug()
 	}
 	tx = tx.Where("service_id = ?", serviceID).Limit(1)
@@ -82,7 +82,7 @@ type ServiceDelete struct {
 
 func (dao *Dao) DeleteService(delete *ServiceDelete) error {
 	tx := dao.dbService
-	if dao.config.Log.Verbosity >= 4 {
+	if dao.config.Dao.Debug {
 		tx = tx.Debug()
 	}
 	tx = buildServiceDelete(tx, delete)
@@ -91,7 +91,7 @@ func (dao *Dao) DeleteService(delete *ServiceDelete) error {
 
 func (dao *Dao) CreateService(service *model.Service) error {
 	var tx *gorm.DB
-	if dao.config.Log.Verbosity >= 4 {
+	if dao.config.Dao.Debug {
 		tx = tx.Debug()
 	}
 	tx = dao.dbService.Create(service)
@@ -145,7 +145,7 @@ type ServiceRPCQuery struct {
 
 func (dao *Dao) GetServiceRPC(rpc string) (*model.ServiceRPC, error) {
 	tx := dao.dbService.Model(&model.ServiceRPC{})
-	if dao.config.Log.Verbosity >= 4 {
+	if dao.config.Dao.Debug {
 		tx = tx.Debug()
 	}
 	tx = tx.Where("rpc = ?", rpc).Limit(1)
@@ -162,7 +162,7 @@ func (dao *Dao) GetServiceRPC(rpc string) (*model.ServiceRPC, error) {
 
 func (dao *Dao) ListServiceRPCs(query *ServiceRPCQuery) ([]string, error) {
 	tx := dao.dbService.Model(&model.ServiceRPC{})
-	if dao.config.Log.Verbosity >= 4 {
+	if dao.config.Dao.Debug {
 		tx = tx.Debug()
 	}
 	tx = buildServiceRPCQuery(tx, query)
@@ -192,7 +192,7 @@ func (dao *Dao) ListServiceRPCs(query *ServiceRPCQuery) ([]string, error) {
 
 func (dao *Dao) CountServiceRPCs(query *ServiceRPCQuery) (int64, error) {
 	tx := dao.dbService.Model(&model.ServiceRPC{})
-	if dao.config.Log.Verbosity >= 4 {
+	if dao.config.Dao.Debug {
 		tx = tx.Debug()
 	}
 	tx = buildServiceRPCQuery(tx, query)
@@ -204,7 +204,7 @@ func (dao *Dao) CountServiceRPCs(query *ServiceRPCQuery) (int64, error) {
 
 func (dao *Dao) DeleteServiceRPCs(serviceID uint64) error {
 	tx := dao.dbService.Where("service_id = ?", serviceID)
-	if dao.config.Log.Verbosity >= 4 {
+	if dao.config.Dao.Debug {
 		tx = tx.Debug()
 	}
 	return tx.Delete(&model.ServiceRPC{}).Error
@@ -212,7 +212,7 @@ func (dao *Dao) DeleteServiceRPCs(serviceID uint64) error {
 
 func (dao *Dao) CreateServiceRPC(rpc *model.ServiceRPC) error {
 	tx := dao.dbService
-	if dao.config.Log.Verbosity >= 4 {
+	if dao.config.Dao.Debug {
 		tx = tx.Debug()
 	}
 	return tx.Create(rpc).Error
@@ -244,7 +244,7 @@ type ServiceTopicQuery struct {
 
 func (dao *Dao) GetServiceTopic(topic string) (*model.ServiceTopic, error) {
 	tx := dao.dbService.Model(&model.ServiceTopic{})
-	if dao.config.Log.Verbosity >= 4 {
+	if dao.config.Dao.Debug {
 		tx = tx.Debug()
 	}
 	tx = tx.Where("topic = ?", topic).Limit(1)
@@ -259,7 +259,7 @@ func (dao *Dao) GetServiceTopic(topic string) (*model.ServiceTopic, error) {
 
 func (dao *Dao) ListServiceTopics(query *ServiceTopicQuery) ([]string, error) {
 	tx := dao.dbService.Model(&model.ServiceTopic{})
-	if dao.config.Log.Verbosity >= 4 {
+	if dao.config.Dao.Debug {
 		tx = tx.Debug()
 	}
 	tx = buildServiceTopicQuery(tx, query)
@@ -290,7 +290,7 @@ func (dao *Dao) ListServiceTopics(query *ServiceTopicQuery) ([]string, error) {
 
 func (dao *Dao) CountServiceTopics(query *ServiceTopicQuery) (int64, error) {
 	tx := dao.dbService.Model(&model.ServiceTopic{})
-	if dao.config.Log.Verbosity >= 4 {
+	if dao.config.Dao.Debug {
 		tx = tx.Debug()
 	}
 	tx = buildServiceTopicQuery(tx, query)
@@ -302,7 +302,7 @@ func (dao *Dao) CountServiceTopics(query *ServiceTopicQuery) (int64, error) {
 
 func (dao *Dao) DeleteServiceTopics(serviceID uint64) error {
 	tx := dao.dbService.Where("service_id = ?", serviceID)
-	if dao.config.Log.Verbosity >= 4 {
+	if dao.config.Dao.Debug {
 		tx = tx.Debug()
 	}
 	return tx.Delete(&model.ServiceTopic{}).Error
@@ -310,7 +310,7 @@ func (dao *Dao) DeleteServiceTopics(serviceID uint64) error {
 
 func (dao *Dao) CreateServiceTopic(topic *model.ServiceTopic) error {
 	tx := dao.dbService
-	if dao.config.Log.Verbosity >= 4 {
+	if dao.config.Dao.Debug {
 		tx = tx.Debug()
 	}
 	return tx.Create(topic).Error
