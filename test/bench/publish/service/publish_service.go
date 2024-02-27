@@ -44,13 +44,13 @@ func main() {
 	if *topic != "" {
 		opt = append(opt, service.OptionServiceReceiveTopics([]string{*topic}))
 	}
-	srv, err := service.NewService(dialer, opt...)
+	svc, err := service.NewService(dialer, opt...)
 	if err != nil {
 		log.Println("new end err:", err)
 		return
 	}
 	for {
-		msg, err := srv.Receive(context.TODO())
+		msg, err := svc.Receive(context.TODO())
 		if err == io.EOF {
 			return
 		}

@@ -81,9 +81,9 @@ func benchPublish(topic string, count int64) {
 				err := edge.Publish(context.TODO(), topic, msg)
 				if err != nil {
 					atomic.AddInt64(&failed, 1)
-				} else {
-					atomic.AddInt64(&success, 1)
+					continue
 				}
+				atomic.AddInt64(&success, 1)
 			}
 		}(e)
 	}

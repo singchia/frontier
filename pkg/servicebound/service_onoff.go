@@ -91,7 +91,7 @@ func (sm *serviceManager) offline(serviceID uint64, addr net.Addr) error {
 		klog.Errorf("service offline, dao delete service rpcs err: %s, serviceID: %d", err, serviceID)
 		return err
 	}
-	klog.V(5).Infof("service offline, remote rpc de-register succeed, serviceID: %d", serviceID)
+	klog.V(2).Infof("service offline, remote rpc de-register succeed, serviceID: %d", serviceID)
 
 	if err := sm.dao.DeleteServiceTopics(serviceID); err != nil {
 		klog.Errorf("service offline, dao delete service topics err: %s, serviceID: %d", err, serviceID)
@@ -103,7 +103,7 @@ func (sm *serviceManager) offline(serviceID uint64, addr net.Addr) error {
 		sm.mqm.DelMQByEnd(value)
 	}
 
-	klog.V(5).Infof("service offline, remote topics declaim succeed, serviceID: %d", serviceID)
+	klog.V(2).Infof("service offline, remote topics declaim succeed, serviceID: %d", serviceID)
 	return nil
 }
 
@@ -112,7 +112,7 @@ func (sm *serviceManager) ConnOnline(d delegate.ConnDescriber) error {
 	serviceID := d.ClientID()
 	meta := string(d.Meta())
 	addr := d.RemoteAddr()
-	klog.V(4).Infof("service online, serviceID: %d, service: %s, addr: %s", serviceID, meta, addr)
+	klog.V(1).Infof("service online, serviceID: %d, service: %s, addr: %s", serviceID, meta, addr)
 	// notification for others
 	if sm.informer != nil {
 		sm.informer.ServiceOnline(serviceID, meta, addr)
@@ -124,7 +124,7 @@ func (sm *serviceManager) ConnOffline(d delegate.ConnDescriber) error {
 	serviceID := d.ClientID()
 	meta := string(d.Meta())
 	addr := d.RemoteAddr()
-	klog.V(5).Infof("service offline, serviceID: %d, service: %s, remote addr: %s", serviceID, meta, addr)
+	klog.V(2).Infof("service offline, serviceID: %d, service: %s, remote addr: %s", serviceID, meta, addr)
 	// offline the cache
 	err := sm.offline(serviceID, addr)
 	if err != nil {
@@ -143,7 +143,7 @@ func (sm *serviceManager) Heartbeat(d delegate.ConnDescriber) error {
 	serviceID := d.ClientID()
 	meta := string(d.Meta())
 	addr := d.RemoteAddr()
-	klog.V(6).Infof("service heartbeat, serviceID: %d, meta: %s, addr: %s", serviceID, string(meta), addr)
+	klog.V(3).Infof("service heartbeat, serviceID: %d, meta: %s, addr: %s", serviceID, string(meta), addr)
 	if sm.informer != nil {
 		sm.informer.ServiceHeartbeat(serviceID, meta, addr)
 	}

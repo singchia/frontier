@@ -78,7 +78,7 @@ func main() {
 				continue
 			}
 			msg.Done()
-			fmt.Println("> receive msg:", msg.ClientID(), msg.StreamID(), string(msg.Data()))
+			fmt.Printf("\n> receive msg, edgeID: %d streamID: %d data: %s\n", msg.ClientID(), msg.StreamID(), string(msg.Data()))
 			fmt.Print(">>> ")
 		}
 	}()
@@ -293,7 +293,7 @@ func handleStream(stream geminio.Stream) {
 				return
 			}
 			msg.Done()
-			fmt.Println("> receive msg:", msg.ClientID(), msg.StreamID(), string(msg.Data()))
+			fmt.Printf("\n> receive msg, edgeID: %d streamID: %d data: %s\n", msg.ClientID(), msg.StreamID(), string(msg.Data()))
 			fmt.Print(">>> ")
 		}
 	}()
@@ -327,7 +327,8 @@ func handleStream(stream geminio.Stream) {
 }
 
 func echo(ctx context.Context, req geminio.Request, rsp geminio.Response) {
-	fmt.Println("\ncall > ", req.ClientID(), req.StreamID(), string(req.Data()))
+	edgeID := req.ClientID()
+	fmt.Printf("\n> call rpc, method: %s edgeID: %d streamID: %d data: %s\n", "echo", edgeID, req.StreamID(), string(req.Data()))
 	fmt.Print(">>> ")
 	rsp.SetData(req.Data())
 }

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/jumboframes/armorigo/log"
 	"github.com/jumboframes/armorigo/rproxy"
 	"github.com/jumboframes/armorigo/synchub"
 	"github.com/singchia/frontier/pkg/api"
@@ -244,7 +245,7 @@ func (em *edgeManager) Serve() {
 		conn, err := em.geminioLn.Accept()
 		if err != nil {
 			if !strings.Contains(err.Error(), api.ErrStrUseOfClosedConnection) {
-				klog.V(4).Infof("edge manager listener accept err: %s", err)
+				klog.V(1).Infof("edge manager listener accept err: %s", err)
 			}
 			return
 		}
@@ -260,6 +261,7 @@ func (em *edgeManager) handleConn(conn net.Conn) error {
 	// stream handler
 	opt.SetAcceptStreamFunc(em.acceptStream)
 	opt.SetClosedStreamFunc(em.closedStream)
+	opt.SetLog(log.NewKLog())
 	end, err := server.NewEndWithConn(conn, opt)
 	if err != nil {
 		klog.Errorf("edge manager geminio server new end err: %s", err)

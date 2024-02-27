@@ -17,7 +17,7 @@ type EdgeQuery struct {
 
 func (dao *Dao) ListEdges(query *EdgeQuery) ([]*model.Edge, error) {
 	tx := dao.dbEdge.Model(&model.Edge{})
-	if dao.config.Log.Verbosity >= 4 {
+	if dao.config.Dao.Debug {
 		tx = tx.Debug()
 	}
 	tx = buildEdgeQuery(tx, query)
@@ -48,7 +48,7 @@ func (dao *Dao) ListEdges(query *EdgeQuery) ([]*model.Edge, error) {
 
 func (dao *Dao) CountEdges(query *EdgeQuery) (int64, error) {
 	tx := dao.dbEdge.Model(&model.Edge{})
-	if dao.config.Log.Verbosity >= 4 {
+	if dao.config.Dao.Debug {
 		tx = tx.Debug()
 	}
 	tx = buildEdgeQuery(tx, query)
@@ -60,7 +60,7 @@ func (dao *Dao) CountEdges(query *EdgeQuery) (int64, error) {
 
 func (dao *Dao) GetEdge(edgeID uint64) (*model.Edge, error) {
 	tx := dao.dbEdge.Model(&model.Edge{})
-	if dao.config.Log.Verbosity >= 4 {
+	if dao.config.Dao.Debug {
 		tx = tx.Debug()
 	}
 	tx = tx.Where("edge_id = ?", edgeID)
@@ -77,7 +77,7 @@ type EdgeDelete struct {
 
 func (dao *Dao) DeleteEdge(delete *EdgeDelete) error {
 	tx := dao.dbEdge
-	if dao.config.Log.Verbosity >= 4 {
+	if dao.config.Dao.Debug {
 		tx = tx.Debug()
 	}
 	tx = buildEdgeDelete(tx, delete)
@@ -86,7 +86,7 @@ func (dao *Dao) DeleteEdge(delete *EdgeDelete) error {
 
 func (dao *Dao) CreateEdge(edge *model.Edge) error {
 	tx := dao.dbEdge
-	if dao.config.Log.Verbosity >= 4 {
+	if dao.config.Dao.Debug {
 		tx = tx.Debug()
 	}
 	return tx.Create(edge).Error
@@ -134,7 +134,7 @@ type EdgeRPCQuery struct {
 
 func (dao *Dao) ListEdgeRPCs(query *EdgeRPCQuery) ([]string, error) {
 	tx := dao.dbEdge.Model(&model.EdgeRPC{})
-	if dao.config.Log.Verbosity >= 4 {
+	if dao.config.Dao.Debug {
 		tx = tx.Debug()
 	}
 	tx = buildEdgeRPCQuery(tx, query)
@@ -165,7 +165,7 @@ func (dao *Dao) ListEdgeRPCs(query *EdgeRPCQuery) ([]string, error) {
 
 func (dao *Dao) CountEdgeRPCs(query *EdgeRPCQuery) (int64, error) {
 	tx := dao.dbEdge.Model(&model.EdgeRPC{})
-	if dao.config.Log.Verbosity >= 4 {
+	if dao.config.Dao.Debug {
 		tx = tx.Debug()
 	}
 	tx = buildEdgeRPCQuery(tx, query)
@@ -178,7 +178,7 @@ func (dao *Dao) CountEdgeRPCs(query *EdgeRPCQuery) (int64, error) {
 
 func (dao *Dao) DeleteEdgeRPCs(edgeID uint64) error {
 	tx := dao.dbEdge.Where("edge_id = ?", edgeID)
-	if dao.config.Log.Verbosity >= 4 {
+	if dao.config.Dao.Debug {
 		tx = tx.Debug()
 	}
 	return tx.Delete(&model.EdgeRPC{}).Error
@@ -186,7 +186,7 @@ func (dao *Dao) DeleteEdgeRPCs(edgeID uint64) error {
 
 func (dao *Dao) CreateEdgeRPC(rpc *model.EdgeRPC) error {
 	tx := dao.dbEdge
-	if dao.config.Log.Verbosity >= 4 {
+	if dao.config.Dao.Debug {
 		tx = tx.Debug()
 	}
 	return tx.Create(rpc).Error

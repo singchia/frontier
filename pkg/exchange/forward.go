@@ -22,7 +22,7 @@ func (ex *exchange) ForwardToEdge(meta *api.Meta, end geminio.End) {
 func (ex *exchange) forwardRawToEdge(end geminio.End) {
 	//drop the io, actually we won't be here
 	go func() {
-		klog.V(6).Infof("exchange forward raw to edge, discard for now, serviceID: %d", end.ClientID())
+		klog.V(3).Infof("exchange forward raw to edge, discard for now, serviceID: %d", end.ClientID())
 		io.Copy(io.Discard, end)
 	}()
 }
@@ -39,14 +39,15 @@ func (ex *exchange) forwardRPCToEdge(end geminio.End) {
 		// get edge
 		edge := ex.Edgebound.GetEdgeByID(edgeID)
 		if edge == nil {
-			klog.V(4).Infof("service forward rpc, serviceID: %d, call edgeID: %d, is not online", serviceID, edgeID)
+			klog.V(1).Infof("service forward rpc, serviceID: %d, call edgeID: %d, is not online", serviceID, edgeID)
 			r2.SetError(api.ErrEdgeNotOnline)
 			return
 		}
 		// call edge
+		r1.SetClientID(edge.ClientID())
 		r3, err := edge.Call(ctx, method, r1)
 		if err != nil {
-			klog.V(5).Infof("service forward rpc, serviceID: %d, call edgeID: %d, err: %s", serviceID, edgeID, err)
+			klog.V(2).Infof("service forward rpc, serviceID: %d, call edgeID: %d, err: %s", serviceID, edgeID, err)
 			r2.SetError(err)
 			return
 		}
@@ -73,13 +74,13 @@ func (ex *exchange) forwardMessageToEdge(end geminio.End) {
 			msg, err := end.Receive(context.TODO())
 			if err != nil {
 				if err == io.EOF {
-					klog.V(5).Infof("service forward message, serviceID: %d, receive EOF", serviceID)
+					klog.V(2).Infof("service forward message, serviceID: %d, receive EOF", serviceID)
 					return
 				}
 				klog.Errorf("service forward message, serviceID: %d, receive err: %s", serviceID, err)
 				continue
 			}
-			klog.V(7).Infof("service forward message, receive msg: %s from: %d", string(msg.Data()), end.ClientID())
+			klog.V(2).Infof("service forward message, receive msg: %s from: %d", string(msg.Data()), end.ClientID())
 			// get target edgeID
 			custom := msg.Custom()
 			edgeID := binary.BigEndian.Uint64(custom[len(custom)-8:])
@@ -88,7 +89,7 @@ func (ex *exchange) forwardMessageToEdge(end geminio.End) {
 			// get edge
 			edge := ex.Edgebound.GetEdgeByID(edgeID)
 			if edge == nil {
-				klog.V(4).Infof("service forward message, serviceID: %d, the edge: %d is not online", serviceID, edgeID)
+				klog.V(1).Infof("service forward message, serviceID: %d, the edge: %d is not online", serviceID, edgeID)
 				msg.Error(api.ErrEdgeNotOnline)
 				return
 			}
@@ -96,7 +97,7 @@ func (ex *exchange) forwardMessageToEdge(end geminio.End) {
 			msg.SetClientID(edgeID)
 			err = edge.Publish(context.TODO(), msg)
 			if err != nil {
-				klog.V(5).Infof("service forward message, serviceID: %d, publish edge: %d err: %s", serviceID, edgeID, err)
+				klog.V(2).Infof("service forward message, serviceID: %d, publish edge: %d err: %s", serviceID, edgeID, err)
 				msg.Error(err)
 				return
 			}
@@ -118,7 +119,7 @@ func (ex *exchange) ForwardToService(end geminio.End) {
 func (ex *exchange) forwardRawToService(end geminio.End) {
 	//drop the io, actually we won't be here
 	go func() {
-		klog.V(6).Infof("exchange forward raw to service, discard for now, edgeID: %d", end.ClientID())
+		klog.V(3).Infof("exchange forward raw to service, discard for now, edgeID: %d", end.ClientID())
 		io.Copy(io.Discard, end)
 	}()
 }
@@ -131,7 +132,7 @@ func (ex *exchange) forwardRPCToService(end geminio.End) {
 		// get service
 		svc, err := ex.Servicebound.GetServiceByRPC(method)
 		if err != nil {
-			klog.Errorf("exchange forward rpc to service, get service by rpc err: %s, edgeID: %d", err, edgeID)
+			klog.V(2).Infof("exchange forward rpc to service, get service by rpc err: %s, edgeID: %d", err, edgeID)
 			r2.SetError(err)
 			return
 		}
@@ -154,7 +155,7 @@ func (ex *exchange) forwardRPCToService(end geminio.End) {
 			r2.SetError(err)
 			return
 		}
-		klog.V(6).Infof("edge forward rpc to service, call service: %d rpc: %s success, edgeID: %d", serviceID, method, edgeID)
+		klog.V(3).Infof("edge forward rpc to service, call service: %d rpc: %s success, edgeID: %d", serviceID, method, edgeID)
 		r2.SetData(r3.Data())
 	})
 }
@@ -167,7 +168,7 @@ func (ex *exchange) forwardMessageToService(end geminio.End) {
 			msg, err := end.Receive(context.TODO())
 			if err != nil {
 				if err == io.EOF {
-					klog.V(5).Infof("edge forward message, edgeID: %d, receive EOF", edgeID)
+					klog.V(2).Infof("edge forward message, edgeID: %d, receive EOF", edgeID)
 					return
 				}
 				klog.Errorf("edge forward message, receive err: %s, edgeID: %d, ", err, edgeID)

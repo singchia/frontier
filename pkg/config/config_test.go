@@ -52,7 +52,6 @@ func TestParseFile(t *testing.T) {
 		},
 		Edgebound:    Edgebound{},
 		Servicebound: Servicebound{},
-		Log:          Log{},
 	}
 	_, err := yaml.Marshal(conf)
 	if err != nil {

@@ -15,11 +15,14 @@ import (
 
 // daemon related
 type RLimit struct {
-	NumFile int `yaml:"nofile"`
+	Enable  bool `yaml:"enable"`
+	NumFile int  `yaml:"nofile"`
 }
 
 type PProf struct {
-	Addr string `yaml:"addr"`
+	Enable         bool   `yaml:"enable"`
+	Addr           string `yaml:"addr"`
+	CPUProfileRate int    `yaml:"cpu_profile_rate"`
 }
 
 type Daemon struct {
@@ -75,18 +78,8 @@ type MQ struct {
 // exchange
 type Exchange struct{}
 
-type Log struct {
-	LogDir           string `yaml:"log_dir"`
-	LogFile          string `yaml:"log_file"`
-	LogFileMaxSizeMB uint64 `yaml:"log_file_max_size"`
-	ToStderr         bool   `yaml:"logtostderr"`
-	AlsoToStderr     bool   `yaml:"alsologtostderr"`
-	Verbosity        int32  `yaml:"verbosity"`
-	AddDirHeader     bool   `yaml:"add_dir_header"`
-	SkipHeaders      bool   `yaml:"skip_headers"`
-	OneOutput        bool   `yaml:"one_output"`
-	SkipLogHeaders   bool   `yaml:"skip_log_headers"`
-	StderrThreshold  int32  `yaml:"stderrthreshold"`
+type Dao struct {
+	Debug bool `yaml:"debug"`
 }
 
 type Configuration struct {
@@ -96,7 +89,7 @@ type Configuration struct {
 
 	Servicebound Servicebound `yaml:"servicebound"`
 
-	Log Log `yaml:"log"`
+	Dao Dao `yaml:"dao"`
 }
 
 // Configuration accepts config file and command-line, and command-line is more privileged.
@@ -155,7 +148,11 @@ func Parse() (*Configuration, error) {
 	if config == nil {
 		config = &Configuration{}
 	}
+	// daemon
 	config.Daemon.RLimit.NumFile = *argDaemonRLimitNofile
+	if config.Daemon.PProf.CPUProfileRate == 0 {
+		config.Daemon.PProf.CPUProfileRate = 10000
+	}
 	return config, nil
 }
 
@@ -166,7 +163,8 @@ func genDefaultConfig(writer io.Writer) error {
 				NumFile: 1024,
 			},
 			PProf: PProf{
-				Addr: "0.0.0.0:6060",
+				Enable: true,
+				Addr:   "0.0.0.0:6060",
 			},
 		},
 		Edgebound: Edgebound{
@@ -228,18 +226,9 @@ func genDefaultConfig(writer io.Writer) error {
 				},
 			},
 		},
-		Log: Log{
-			LogDir:           "/app/log",
-			LogFile:          "frontier.log",
-			LogFileMaxSizeMB: 100,
-			ToStderr:         false,
-			AlsoToStderr:     false,
-			Verbosity:        4,
-			AddDirHeader:     true,
-			SkipHeaders:      true,
-			OneOutput:        true,
-			SkipLogHeaders:   true,
-			StderrThreshold:  1024,
+
+		Dao: Dao{
+			Debug: false,
 		},
 	}
 	data, err := yaml.Marshal(conf)

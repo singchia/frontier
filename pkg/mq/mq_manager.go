@@ -38,14 +38,14 @@ func (mqm *mqManager) AddMQ(topics []string, mq api.MQ) {
 	for _, topic := range topics {
 		mqs, ok := mqm.mqs[topic]
 		if !ok {
-			klog.V(5).Infof("mq manager, add topic: %s mq succeed", topic)
+			klog.V(2).Infof("mq manager, add topic: %s mq succeed", topic)
 			mqm.mqs[topic] = []api.MQ{mq}
 			mqm.mqindex[topic] = new(uint64)
 			continue
 		}
 		for _, exist := range mqs {
 			if exist == mq {
-				klog.V(5).Infof("mq manager, add topic: %s mq existed", topic)
+				klog.V(2).Infof("mq manager, add topic: %s mq existed", topic)
 				continue
 			}
 			// special handle for service, a deep comparison
@@ -53,14 +53,14 @@ func (mqm *mqManager) AddMQ(topics []string, mq api.MQ) {
 			if ok {
 				right, ok := mq.(*mqService)
 				if ok && left.end == right.end {
-					klog.V(5).Infof("mq manager, add topic: %s service mq existed", topic)
+					klog.V(2).Infof("mq manager, add topic: %s service mq existed", topic)
 					continue
 				}
 			}
 		}
 		mqs = append(mqs, mq)
 		mqm.mqs[topic] = mqs
-		klog.V(5).Infof("mq mqnager, add topic: %s mq succeed", topic)
+		klog.V(2).Infof("mq mqnager, add topic: %s mq succeed", topic)
 	}
 }
 
@@ -77,7 +77,7 @@ func (mqm *mqManager) DelMQ(mq api.MQ) {
 		news := []api.MQ{}
 		for _, exist := range mqs {
 			if exist == mq {
-				klog.V(6).Infof("mq manager, del topic: %s mq succeed", topic)
+				klog.V(3).Infof("mq manager, del topic: %s mq succeed", topic)
 				continue
 			}
 			news = append(news, exist)
@@ -103,7 +103,7 @@ func (mqm *mqManager) DelMQByEnd(end geminio.End) {
 			left, ok := exist.(*mqService)
 			if ok {
 				if ok && left.end == end {
-					klog.V(6).Infof("mq manager, del topic: %s service mq succeed", topic)
+					klog.V(3).Infof("mq manager, del topic: %s service mq succeed", topic)
 					continue
 				}
 			}
@@ -154,7 +154,7 @@ func (mqm *mqManager) Produce(topic string, data []byte, opts ...api.OptionProdu
 		klog.Errorf("mq manager, produce topic: %s message err: %s", topic, err)
 		return err
 	}
-	klog.V(6).Infof("mq manager, produce topic: %s message succeed", topic)
+	klog.V(3).Infof("mq manager, produce topic: %s message succeed", topic)
 	return nil
 }
 
