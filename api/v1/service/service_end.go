@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"github.com/singchia/frontier/pkg/api"
+	"github.com/singchia/frontier/pkg/apis"
 	"github.com/singchia/geminio"
 	"github.com/singchia/geminio/client"
 	"github.com/singchia/geminio/options"
@@ -32,7 +32,7 @@ func newServiceEnd(dialer client.Dialer, opts ...ServiceOption) (*serviceEnd, er
 		sopts.SetLog(sopt.logger)
 	}
 	// meta
-	meta := &api.Meta{}
+	meta := &apis.Meta{}
 	if sopt.topics != nil {
 		// we deliver topics in meta
 		meta.Topics = sopt.topics
@@ -59,10 +59,11 @@ func newServiceEnd(dialer client.Dialer, opts ...ServiceOption) (*serviceEnd, er
 
 // Control Register
 func (service *serviceEnd) RegisterGetEdgeID(ctx context.Context, getEdgeID GetEdgeID) error {
-	return service.End.Register(ctx, api.RPCGetEdgeID, func(ctx context.Context, req geminio.Request, rsp geminio.Response) {
+	return service.End.Register(ctx, apis.RPCGetEdgeID, func(ctx context.Context, req geminio.Request, rsp geminio.Response) {
 		id, err := getEdgeID(req.Data())
 		if err != nil {
 			// we just deliver the err back
+			// get ID err will force close the edge unless EdgeIDAllocWhenNoIDServiceOn is configured
 			rsp.SetError(err)
 			return
 		}
@@ -73,8 +74,8 @@ func (service *serviceEnd) RegisterGetEdgeID(ctx context.Context, getEdgeID GetE
 }
 
 func (service *serviceEnd) RegisterEdgeOnline(ctx context.Context, edgeOnline EdgeOnline) error {
-	return service.End.Register(ctx, api.RPCEdgeOnline, func(ctx context.Context, req geminio.Request, rsp geminio.Response) {
-		on := &api.OnEdgeOnline{}
+	return service.End.Register(ctx, apis.RPCEdgeOnline, func(ctx context.Context, req geminio.Request, rsp geminio.Response) {
+		on := &apis.OnEdgeOnline{}
 		err := json.Unmarshal(req.Data(), on)
 		if err != nil {
 			// shouldn't be here
@@ -83,6 +84,7 @@ func (service *serviceEnd) RegisterEdgeOnline(ctx context.Context, edgeOnline Ed
 		}
 		err = edgeOnline(on.EdgeID, on.Meta, on)
 		if err != nil {
+			// online err will force close the edge
 			rsp.SetError(err)
 			return
 		}
@@ -91,8 +93,8 @@ func (service *serviceEnd) RegisterEdgeOnline(ctx context.Context, edgeOnline Ed
 }
 
 func (service *serviceEnd) RegisterEdgeOffline(ctx context.Context, edgeOffline EdgeOffline) error {
-	return service.End.Register(ctx, api.RPCEdgeOffline, func(ctx context.Context, req geminio.Request, rsp geminio.Response) {
-		off := &api.OnEdgeOffline{}
+	return service.End.Register(ctx, apis.RPCEdgeOffline, func(ctx context.Context, req geminio.Request, rsp geminio.Response) {
+		off := &apis.OnEdgeOffline{}
 		err := json.Unmarshal(req.Data(), off)
 		if err != nil {
 			// shouldn't be here

@@ -4,7 +4,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/singchia/frontier/pkg/api"
+	"github.com/singchia/frontier/pkg/apis"
 	"github.com/singchia/frontier/pkg/config"
 	"github.com/singchia/geminio"
 	"k8s.io/klog/v2"
@@ -14,24 +14,24 @@ type mqManager struct {
 	conf *config.Configuration
 	// mqs
 	mtx     sync.RWMutex
-	mqs     map[string][]api.MQ // key: topic, value: mqs
-	mqindex map[string]*uint64  // for round robin
+	mqs     map[string][]apis.MQ // key: topic, value: mqs
+	mqindex map[string]*uint64   // for round robin
 }
 
-func NewMQM(conf *config.Configuration) (api.MQM, error) {
+func NewMQM(conf *config.Configuration) (apis.MQM, error) {
 	return newMQManager(conf)
 }
 
 func newMQManager(conf *config.Configuration) (*mqManager, error) {
 	mqm := &mqManager{
-		mqs:     make(map[string][]api.MQ),
+		mqs:     make(map[string][]apis.MQ),
 		mqindex: make(map[string]*uint64),
 		conf:    conf,
 	}
 	return mqm, nil
 }
 
-func (mqm *mqManager) AddMQ(topics []string, mq api.MQ) {
+func (mqm *mqManager) AddMQ(topics []string, mq apis.MQ) {
 	mqm.mtx.Lock()
 	defer mqm.mtx.Unlock()
 
@@ -39,7 +39,7 @@ func (mqm *mqManager) AddMQ(topics []string, mq api.MQ) {
 		mqs, ok := mqm.mqs[topic]
 		if !ok {
 			klog.V(2).Infof("mq manager, add topic: %s mq succeed", topic)
-			mqm.mqs[topic] = []api.MQ{mq}
+			mqm.mqs[topic] = []apis.MQ{mq}
 			mqm.mqindex[topic] = new(uint64)
 			continue
 		}
@@ -69,12 +69,12 @@ func (mqm *mqManager) AddMQByEnd(topics []string, end geminio.End) {
 	mqm.AddMQ(topics, mq)
 }
 
-func (mqm *mqManager) DelMQ(mq api.MQ) {
+func (mqm *mqManager) DelMQ(mq apis.MQ) {
 	mqm.mtx.Lock()
 	defer mqm.mtx.Unlock()
 
 	for topic, mqs := range mqm.mqs {
-		news := []api.MQ{}
+		news := []apis.MQ{}
 		for _, exist := range mqs {
 			if exist == mq {
 				klog.V(3).Infof("mq manager, del topic: %s mq succeed", topic)
@@ -98,7 +98,7 @@ func (mqm *mqManager) DelMQByEnd(end geminio.End) {
 	defer mqm.mtx.Unlock()
 
 	for topic, mqs := range mqm.mqs {
-		news := []api.MQ{}
+		news := []apis.MQ{}
 		for _, exist := range mqs {
 			left, ok := exist.(*mqService)
 			if ok {
@@ -118,7 +118,7 @@ func (mqm *mqManager) DelMQByEnd(end geminio.End) {
 	}
 }
 
-func (mqm *mqManager) GetMQ(topic string) api.MQ {
+func (mqm *mqManager) GetMQ(topic string) apis.MQ {
 	mqm.mtx.RLock()
 	defer mqm.mtx.RUnlock()
 
@@ -133,18 +133,18 @@ func (mqm *mqManager) GetMQ(topic string) api.MQ {
 	return mqs[i]
 }
 
-func (mqm *mqManager) GetMQs(topic string) []api.MQ {
+func (mqm *mqManager) GetMQs(topic string) []apis.MQ {
 	mqm.mtx.RLock()
 	defer mqm.mtx.RUnlock()
 	return mqm.mqs[topic]
 }
 
-func (mqm *mqManager) Produce(topic string, data []byte, opts ...api.OptionProduce) error {
+func (mqm *mqManager) Produce(topic string, data []byte, opts ...apis.OptionProduce) error {
 	mq := mqm.GetMQ(topic)
 	if mq == nil {
 		mq = mqm.GetMQ("*")
 		if mq == nil {
-			err := api.ErrTopicNotOnline
+			err := apis.ErrTopicNotOnline
 			klog.Errorf("mq manager, get mq nil, topic: %s err: %s", topic, err)
 			return err
 		}

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/jumboframes/armorigo/synchub"
-	"github.com/singchia/frontier/pkg/api"
+	"github.com/singchia/frontier/pkg/apis"
 	"github.com/singchia/frontier/pkg/repo/dao"
 	"github.com/singchia/frontier/pkg/repo/model"
 	"github.com/singchia/geminio"
@@ -106,7 +106,7 @@ func (em *edgeManager) ConnOnline(d delegate.ConnDescriber) error {
 	// exchange to service
 	if em.exchange != nil {
 		err := em.exchange.EdgeOnline(edgeID, meta, addr)
-		if err == api.ErrServiceNotOnline {
+		if err == apis.ErrServiceNotOnline {
 			return nil
 		}
 	}
@@ -176,7 +176,7 @@ func (em *edgeManager) GetClientID(meta []byte) (uint64, error) {
 		}
 	}
 
-	if err == api.ErrServiceNotOnline && em.conf.Edgebound.EdgeIDAllocWhenNoIDServiceOn {
+	if err == apis.ErrServiceNotOnline && em.conf.Edgebound.EdgeIDAllocWhenNoIDServiceOn {
 		edgeID = em.idFactory.GetID()
 		klog.V(2).Infof("edge get edgeID: %d, meta: %s, after no ID acquired from exchange", edgeID, string(meta))
 		return em.idFactory.GetID(), nil

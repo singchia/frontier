@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 
-	"github.com/singchia/frontier/pkg/api"
+	"github.com/singchia/frontier/pkg/apis"
 	"github.com/singchia/geminio"
 	"github.com/singchia/geminio/options"
 	"k8s.io/klog/v2"
@@ -14,12 +14,12 @@ type mqService struct {
 	end geminio.End
 }
 
-func NewMQServiceFromEnd(end geminio.End) api.MQ {
+func NewMQServiceFromEnd(end geminio.End) apis.MQ {
 	return &mqService{end}
 }
 
-func (mq *mqService) Produce(topic string, data []byte, opts ...api.OptionProduce) error {
-	opt := &api.ProduceOption{}
+func (mq *mqService) Produce(topic string, data []byte, opts ...apis.OptionProduce) error {
+	opt := &apis.ProduceOption{}
 	for _, fun := range opts {
 		fun(opt)
 	}
@@ -39,6 +39,7 @@ func (mq *mqService) Produce(topic string, data []byte, opts ...api.OptionProduc
 	mopt := options.NewMessage()
 	mopt.SetCustom(custom)
 	mopt.SetTopic(topic)
+	mopt.SetCnss(msg.Cnss())
 	newmsg := mq.end.NewMessage(data, mopt)
 	err := mq.end.Publish(context.TODO(), newmsg)
 	if err != nil {

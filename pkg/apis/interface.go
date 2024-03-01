@@ -1,4 +1,4 @@
-package api
+package apis
 
 import (
 	"net"
@@ -11,7 +11,7 @@ type Exchange interface {
 	// rpc, message and raw io to edge
 	ForwardToEdge(*Meta, geminio.End)
 	// stream to edge
-	// TODO StreamToEdge(geminio.Stream)
+	StreamToEdge(geminio.Stream)
 
 	// For Edge
 	GetEdgeID(meta []byte) (uint64, error) // get EdgeID for edge
@@ -20,7 +20,7 @@ type Exchange interface {
 	// rpc, message and raw io to service
 	ForwardToService(geminio.End)
 	// stream to service
-	// TODO StreamToService(geminio.Stream)
+	StreamToService(geminio.Stream)
 
 	// for exchange
 	AddEdgebound(Edgebound)
@@ -42,7 +42,7 @@ type Edgebound interface {
 type Servicebound interface {
 	ListService() []geminio.End
 	// for management
-	// TODO GetServiceByName(service string) geminio.End
+	GetServiceByName(service string) (geminio.End, error)
 	GetServiceByRPC(rpc string) (geminio.End, error)
 	GetServiceByTopic(topic string) (geminio.End, error)
 	DelSerivces(service string) error

@@ -15,7 +15,7 @@ func (em *edgeManager) acceptStream(stream geminio.Stream) {
 	em.streams.MSet(edgeID, streamID, stream)
 	// exchange to service
 	if em.exchange != nil {
-		// TODO em.exchange.StreamToService(stream)
+		em.exchange.StreamToService(stream)
 	}
 }
 

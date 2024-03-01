@@ -12,7 +12,7 @@ import (
 
 	"github.com/jumboframes/armorigo/log"
 	"github.com/jumboframes/armorigo/synchub"
-	"github.com/singchia/frontier/pkg/api"
+	"github.com/singchia/frontier/pkg/apis"
 	"github.com/singchia/frontier/pkg/config"
 	"github.com/singchia/frontier/pkg/mapmap"
 	"github.com/singchia/frontier/pkg/repo/dao"
@@ -27,23 +27,23 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func NewServicebound(conf *config.Configuration, dao *dao.Dao, informer api.ServiceInformer,
-	exchange api.Exchange, mqm api.MQM, tmr timer.Timer) (api.Servicebound, error) {
+func NewServicebound(conf *config.Configuration, dao *dao.Dao, informer apis.ServiceInformer,
+	exchange apis.Exchange, mqm apis.MQM, tmr timer.Timer) (apis.Servicebound, error) {
 	return newServiceManager(conf, dao, informer, exchange, mqm, tmr)
 }
 
 type end struct {
 	End  geminio.End
-	Meta *api.Meta
+	Meta *apis.Meta
 }
 
 type serviceManager struct {
 	*delegate.UnimplementedDelegate
 	conf *config.Configuration
 
-	informer api.ServiceInformer
-	exchange api.Exchange
-	mqm      api.MQM
+	informer apis.ServiceInformer
+	exchange apis.Exchange
+	mqm      apis.MQM
 
 	// serviceID allocator
 	idFactory id.IDFactory
@@ -64,8 +64,8 @@ type serviceManager struct {
 	tmr timer.Timer
 }
 
-func newServiceManager(conf *config.Configuration, dao *dao.Dao, informer api.ServiceInformer,
-	exchange api.Exchange, mqm api.MQM, tmr timer.Timer) (*serviceManager, error) {
+func newServiceManager(conf *config.Configuration, dao *dao.Dao, informer apis.ServiceInformer,
+	exchange apis.Exchange, mqm apis.MQM, tmr timer.Timer) (*serviceManager, error) {
 	listen := &conf.Servicebound.Listen
 	var (
 		ln      net.Listener
@@ -153,7 +153,7 @@ func (sm *serviceManager) Serve() {
 	for {
 		conn, err := sm.ln.Accept()
 		if err != nil {
-			if !strings.Contains(err.Error(), api.ErrStrUseOfClosedConnection) {
+			if !strings.Contains(err.Error(), apis.ErrStrUseOfClosedConnection) {
 				klog.V(1).Infof("service manager listener accept err: %s", err)
 			}
 			return
@@ -176,7 +176,7 @@ func (sm *serviceManager) handleConn(conn net.Conn) error {
 		klog.Errorf("service manager geminio server new end err: %s", err)
 		return err
 	}
-	meta := &api.Meta{}
+	meta := &apis.Meta{}
 	err = json.Unmarshal(end.Meta(), meta)
 	if err != nil {
 		klog.Errorf("handle conn, json unmarshal err: %s", err)
@@ -240,6 +240,19 @@ func (sm *serviceManager) GetServiceByID(serviceID uint64) geminio.End {
 	defer sm.mtx.RUnlock()
 
 	return sm.services[serviceID]
+}
+
+func (sm *serviceManager) GetServiceByName(name string) (geminio.End, error) {
+	sm.mtx.RLock()
+	defer sm.mtx.RUnlock()
+
+	mservice, err := sm.dao.GetServiceByName(name)
+	if err != nil {
+		klog.V(2).Infof("get service by name: %s, err: %s", name, err)
+		return nil, err
+	}
+
+	return sm.services[mservice.ServiceID], nil
 }
 
 func (sm *serviceManager) GetServiceByRPC(rpc string) (geminio.End, error) {

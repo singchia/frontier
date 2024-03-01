@@ -5,12 +5,13 @@ import (
 	"encoding/binary"
 	"io"
 
-	"github.com/singchia/frontier/pkg/api"
+	"github.com/singchia/frontier/pkg/apis"
 	"github.com/singchia/geminio"
+	"github.com/singchia/geminio/options"
 	"k8s.io/klog/v2"
 )
 
-func (ex *exchange) ForwardToEdge(meta *api.Meta, end geminio.End) {
+func (ex *exchange) ForwardToEdge(meta *apis.Meta, end geminio.End) {
 	// raw
 	ex.forwardRawToEdge(end)
 	// message
@@ -40,12 +41,14 @@ func (ex *exchange) forwardRPCToEdge(end geminio.End) {
 		edge := ex.Edgebound.GetEdgeByID(edgeID)
 		if edge == nil {
 			klog.V(1).Infof("service forward rpc, serviceID: %d, call edgeID: %d, is not online", serviceID, edgeID)
-			r2.SetError(api.ErrEdgeNotOnline)
+			r2.SetError(apis.ErrEdgeNotOnline)
 			return
 		}
 		// call edge
-		r1.SetClientID(edge.ClientID())
-		r3, err := edge.Call(ctx, method, r1)
+		ropt := options.NewRequest()
+		ropt.SetCustom(r1.Custom())
+		r3 := edge.NewRequest(r1.Data(), ropt)
+		r4, err := edge.Call(ctx, method, r3)
 		if err != nil {
 			klog.V(2).Infof("service forward rpc, serviceID: %d, call edgeID: %d, err: %s", serviceID, edgeID, err)
 			r2.SetError(err)
@@ -54,7 +57,7 @@ func (ex *exchange) forwardRPCToEdge(end geminio.End) {
 		// we record the edgeID back to r2, for service
 		tail := make([]byte, 8)
 		binary.BigEndian.PutUint64(tail, edgeID)
-		custom = r3.Custom()
+		custom = r4.Custom()
 		if custom == nil {
 			custom = tail
 		} else {
@@ -62,8 +65,8 @@ func (ex *exchange) forwardRPCToEdge(end geminio.End) {
 		}
 		r2.SetCustom(custom)
 		// return
-		r2.SetData(r3.Data())
-		r2.SetError(r3.Error())
+		r2.SetData(r4.Data())
+		r2.SetError(r4.Error())
 	})
 }
 
@@ -90,12 +93,16 @@ func (ex *exchange) forwardMessageToEdge(end geminio.End) {
 			edge := ex.Edgebound.GetEdgeByID(edgeID)
 			if edge == nil {
 				klog.V(1).Infof("service forward message, serviceID: %d, the edge: %d is not online", serviceID, edgeID)
-				msg.Error(api.ErrEdgeNotOnline)
+				msg.Error(apis.ErrEdgeNotOnline)
 				return
 			}
 			// publish in sync, TODO publish in async
-			msg.SetClientID(edgeID)
-			err = edge.Publish(context.TODO(), msg)
+			mopt := options.NewMessage()
+			mopt.SetCustom(msg.Custom())
+			mopt.SetTopic(msg.Topic())
+			mopt.SetCnss(msg.Cnss())
+			newmsg := edge.NewMessage(msg.Data(), mopt)
+			err = edge.Publish(context.TODO(), newmsg)
 			if err != nil {
 				klog.V(2).Infof("service forward message, serviceID: %d, publish edge: %d err: %s", serviceID, edgeID, err)
 				msg.Error(err)
@@ -146,17 +153,21 @@ func (ex *exchange) forwardRPCToService(end geminio.End) {
 		} else {
 			custom = append(custom, tail...)
 		}
-		r1.SetCustom(custom)
-		r1.SetClientID(serviceID)
+
 		// call
-		r3, err := svc.Call(ctx, method, r1)
+		ropt := options.NewRequest()
+		ropt.SetCustom(custom)
+		r3 := svc.NewRequest(r1.Data(), ropt)
+		r4, err := svc.Call(ctx, method, r3)
 		if err != nil {
 			klog.Errorf("edge forward rpc to service, call service: %d err: %s, edgeID: %d", serviceID, err, edgeID)
 			r2.SetError(err)
 			return
 		}
-		klog.V(3).Infof("edge forward rpc to service, call service: %d rpc: %s success, edgeID: %d", serviceID, method, edgeID)
-		r2.SetData(r3.Data())
+		klog.V(3).Infof("edge forward rpc to service, call service: %d rpc: %s to edgeID: %d success", serviceID, method, edgeID)
+
+		r2.SetData(r4.Data())
+		r2.SetCustom(r4.Custom())
 	})
 }
 
@@ -176,7 +187,7 @@ func (ex *exchange) forwardMessageToService(end geminio.End) {
 			}
 			topic := msg.Topic()
 			// TODO seperate async and sync produce
-			err = ex.MQM.Produce(topic, msg.Data(), api.WithOrigin(msg), api.WithEdgeID(edgeID))
+			err = ex.MQM.Produce(topic, msg.Data(), apis.WithOrigin(msg), apis.WithEdgeID(edgeID))
 			if err != nil {
 				klog.Errorf("edge forward message, produce err: %s, edgeID: %d", err, edgeID)
 				msg.Error(err)

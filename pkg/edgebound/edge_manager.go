@@ -12,7 +12,7 @@ import (
 	"github.com/jumboframes/armorigo/log"
 	"github.com/jumboframes/armorigo/rproxy"
 	"github.com/jumboframes/armorigo/synchub"
-	"github.com/singchia/frontier/pkg/api"
+	"github.com/singchia/frontier/pkg/apis"
 	"github.com/singchia/frontier/pkg/config"
 	"github.com/singchia/frontier/pkg/mapmap"
 	"github.com/singchia/frontier/pkg/repo/dao"
@@ -27,8 +27,8 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func NewEdgebound(conf *config.Configuration, dao *dao.Dao, informer api.EdgeInformer,
-	exchange api.Exchange, tmr timer.Timer) (api.Edgebound, error) {
+func NewEdgebound(conf *config.Configuration, dao *dao.Dao, informer apis.EdgeInformer,
+	exchange apis.Exchange, tmr timer.Timer) (apis.Edgebound, error) {
 	return newEdgeManager(conf, dao, informer, exchange, tmr)
 }
 
@@ -36,8 +36,8 @@ type edgeManager struct {
 	*delegate.UnimplementedDelegate
 	conf *config.Configuration
 
-	informer api.EdgeInformer
-	exchange api.Exchange
+	informer apis.EdgeInformer
+	exchange apis.Exchange
 
 	// edgeID allocator
 	idFactory id.IDFactory
@@ -63,8 +63,8 @@ type edgeManager struct {
 }
 
 // support for tls, mtls and tcp listening
-func newEdgeManager(conf *config.Configuration, dao *dao.Dao, informer api.EdgeInformer,
-	exchange api.Exchange, tmr timer.Timer) (*edgeManager, error) {
+func newEdgeManager(conf *config.Configuration, dao *dao.Dao, informer apis.EdgeInformer,
+	exchange apis.Exchange, tmr timer.Timer) (*edgeManager, error) {
 	listen := &conf.Edgebound.Listen
 	var (
 		ln      net.Listener
@@ -244,7 +244,7 @@ func (em *edgeManager) Serve() {
 	for {
 		conn, err := em.geminioLn.Accept()
 		if err != nil {
-			if !strings.Contains(err.Error(), api.ErrStrUseOfClosedConnection) {
+			if !strings.Contains(err.Error(), apis.ErrStrUseOfClosedConnection) {
 				klog.V(1).Infof("edge manager listener accept err: %s", err)
 			}
 			return
