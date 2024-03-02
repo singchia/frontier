@@ -9,13 +9,8 @@ import (
 	"os"
 
 	armlog "github.com/jumboframes/armorigo/log"
-	"github.com/singchia/frontier/api/v1/edge"
 	"github.com/singchia/frontier/api/v1/service"
 	"github.com/spf13/pflag"
-)
-
-var (
-	edges = map[int64]edge.Edge{}
 )
 
 func main() {

@@ -202,6 +202,7 @@ func main() {
 					fmt.Printf("> stream: %s not found\n", cursor)
 					goto NEXT
 				}
+				stream := sn.(geminio.Stream)
 
 				if parts[0] == "publish" {
 					ld := &LabelData{
@@ -209,8 +210,8 @@ func main() {
 						Data:  []byte(parts[1]),
 					}
 					data, _ := json.Marshal(ld)
-					msg := cli.NewMessage(data)
-					err := sn.(geminio.Stream).Publish(context.TODO(), msg)
+					msg := stream.NewMessage(data)
+					err := stream.Publish(context.TODO(), msg)
 					if err != nil {
 						fmt.Println("> publish err:", err)
 						goto NEXT
@@ -229,9 +230,11 @@ func main() {
 					fmt.Printf("> stream: %s not found\n", cursor)
 					goto NEXT
 				}
+				stream := sn.(geminio.Stream)
+
 				if parts[0] == "call" {
-					req := cli.NewRequest([]byte(parts[2]))
-					rsp, err := sn.(geminio.Stream).Call(context.TODO(), string(parts[1]), req)
+					req := stream.NewRequest([]byte(parts[2]))
+					rsp, err := stream.Call(context.TODO(), string(parts[1]), req)
 					if err != nil {
 						fmt.Println("> call err:", err)
 						goto NEXT
@@ -288,7 +291,7 @@ func handleStream(stream geminio.Stream) {
 		for {
 			msg, err := stream.Receive(context.TODO())
 			if err != nil {
-				fmt.Println("> receive err:", err)
+				fmt.Println("\n> stream receive err:", err)
 				fmt.Print(">>> ")
 				return
 			}
@@ -302,7 +305,7 @@ func handleStream(stream geminio.Stream) {
 			data := make([]byte, 1024)
 			_, err := stream.Read(data)
 			if err != nil {
-				fmt.Println("> read err:", err)
+				fmt.Println("\n> stream read err:", err)
 				fmt.Print(">>> ")
 				return
 			}
