@@ -173,7 +173,7 @@ func main() {
 		}
 	}()
 
-	// service accept stream
+	// service accept streams
 	go func() {
 		for {
 			st, err := srv.AcceptStream()
@@ -212,7 +212,7 @@ func main() {
 				fmt.Println(`the command-line protocol
 	1. close
 	2. quit
-	3. open {clientID}
+	3. open {edgeID}
 	4. close {streamID}
 	5. switch {streamID}
 	6. publish {msg} #note to switch to stream first
@@ -290,10 +290,11 @@ func main() {
 					fmt.Printf("> stream: %s not found\n", cursor)
 					goto NEXT
 				}
+				stream := sn.(geminio.Stream)
 
 				if parts[0] == "publish" {
-					msg := srv.NewMessage([]byte(parts[1]))
-					err := sn.(geminio.Stream).Publish(context.TODO(), msg)
+					msg := stream.NewMessage([]byte(parts[1]))
+					err := stream.Publish(context.TODO(), msg)
 					if err != nil {
 						fmt.Println("> publish err:", err)
 						goto NEXT
@@ -312,9 +313,10 @@ func main() {
 					fmt.Printf("> stream: %s not found\n", cursor)
 					goto NEXT
 				}
+				stream := sn.(geminio.Stream)
 				if parts[0] == "call" {
-					req := srv.NewRequest([]byte(parts[2]))
-					rsp, err := sn.(geminio.Stream).Call(context.TODO(), string(parts[1]), req)
+					req := stream.NewRequest([]byte(parts[2]))
+					rsp, err := stream.Call(context.TODO(), string(parts[1]), req)
 					if err != nil {
 						fmt.Println("> call err:", err)
 						goto NEXT
@@ -374,7 +376,8 @@ func handleStream(stream geminio.Stream) {
 		for {
 			msg, err := stream.Receive(context.TODO())
 			if err != nil {
-				log.Println("> receive err:", err)
+				log.Println("\n> stream receive err:", err)
+				fmt.Print(">>> ")
 				return
 			}
 			msg.Done()
@@ -397,7 +400,8 @@ func handleStream(stream geminio.Stream) {
 			data := make([]byte, 1024)
 			_, err := stream.Read(data)
 			if err != nil {
-				log.Println("> read err:", err)
+				log.Println("\n> read err:", err)
+				fmt.Print(">>> ")
 				return
 			}
 			fmt.Println("> read data:", stream.ClientID(),

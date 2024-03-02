@@ -1,17 +1,22 @@
 package main
 
 import (
-	"context"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
+	"sync"
 
 	armlog "github.com/jumboframes/armorigo/log"
-	"github.com/jumboframes/armorigo/sigaction"
 	"github.com/singchia/frontier/api/v1/service"
 	"github.com/singchia/geminio"
 	"github.com/spf13/pflag"
+)
+
+var (
+	sts = map[uint64]geminio.Stream{}
+	mtx sync.RWMutex
 )
 
 func main() {
@@ -19,7 +24,6 @@ func main() {
 	address := pflag.String("address", "127.0.0.1:2431", "address to dial")
 	serviceName := pflag.String("service", "foo", "service name")
 	loglevel := pflag.String("loglevel", "info", "log level, trace debug info warn error")
-	printmessage := pflag.Bool("printmessage", false, "whether print message out")
 
 	pflag.Parse()
 	dialer := func() (net.Conn, error) {
@@ -41,19 +45,31 @@ func main() {
 		log.Println("new end err:", err)
 		return
 	}
-	// register
-	svc.Register(context.TODO(), "echo", func(ctx context.Context, req geminio.Request, rsp geminio.Response) {
-		value := req.Data()
-		if *printmessage {
-			edgeID := req.ClientID()
-			fmt.Printf("\n> call rpc, method: %s edgeID: %d streamID: %d data: %s\n", "echo", edgeID, req.StreamID(), string(value))
-			fmt.Print(">>> ")
+
+	// service accept streams
+	for {
+		st, err := svc.AcceptStream()
+		if err == io.EOF {
+			return
+		} else if err != nil {
+			// ESC[2K means erase the line
+			fmt.Printf("> accept stream err: %s", err)
+			continue
 		}
-		rsp.SetData(value)
-	})
+		mtx.Lock()
+		sts[st.StreamID()] = st
+		fmt.Print("\033[2K\r stream number:", len(sts))
+		mtx.Unlock()
 
-	sig := sigaction.NewSignal()
-	sig.Wait(context.TODO())
-
-	svc.Close()
+		go func(st geminio.Stream) {
+			buf := make([]byte, 128)
+			_, err := st.Read(buf)
+			if err == io.EOF {
+				mtx.Lock()
+				delete(sts, st.StreamID())
+				mtx.Unlock()
+				fmt.Printf("\033[2K\r stream number: %d", len(sts))
+			}
+		}(st)
+	}
 }

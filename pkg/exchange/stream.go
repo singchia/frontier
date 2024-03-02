@@ -105,7 +105,9 @@ func (ex *exchange) streamForwardMessage(left, right geminio.Stream) {
 		for {
 			msg, err := from.Receive(context.TODO())
 			if err != nil {
-				klog.Errorf("stream forward message, receive err: %s, fromID: %d, toID: %d", err, fromID, toID)
+				if err != io.EOF {
+					klog.Errorf("stream forward message, receive err: %s, fromID: %d, toID: %d", err, fromID, toID)
+				}
 				return
 			}
 

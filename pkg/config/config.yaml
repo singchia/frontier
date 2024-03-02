@@ -2,6 +2,7 @@ daemon:
   rlimit:
     nofile: 1024
   pprof:
+    enable: true
     addr: 0.0.0.0:6060
 edgebound:
   listen:
