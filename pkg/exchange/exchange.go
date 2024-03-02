@@ -1,23 +1,23 @@
 package exchange
 
 import (
-	"github.com/singchia/frontier/pkg/api"
+	"github.com/singchia/frontier/pkg/apis"
 	"github.com/singchia/frontier/pkg/config"
 )
 
 type exchange struct {
 	conf *config.Configuration
 
-	Edgebound    api.Edgebound
-	Servicebound api.Servicebound
-	MQM          api.MQM
+	Edgebound    apis.Edgebound
+	Servicebound apis.Servicebound
+	MQM          apis.MQM
 }
 
-func NewExchange(conf *config.Configuration, mqm api.MQM) (api.Exchange, error) {
+func NewExchange(conf *config.Configuration, mqm apis.MQM) (apis.Exchange, error) {
 	return newExchange(conf, mqm)
 }
 
-func newExchange(conf *config.Configuration, mqm api.MQM) (*exchange, error) {
+func newExchange(conf *config.Configuration, mqm apis.MQM) (*exchange, error) {
 	exchange := &exchange{
 		conf: conf,
 		MQM:  mqm,
@@ -25,10 +25,10 @@ func newExchange(conf *config.Configuration, mqm api.MQM) (*exchange, error) {
 	return exchange, nil
 }
 
-func (ex *exchange) AddEdgebound(edgebound api.Edgebound) {
+func (ex *exchange) AddEdgebound(edgebound apis.Edgebound) {
 	ex.Edgebound = edgebound
 }
 
-func (ex *exchange) AddServicebound(servicebound api.Servicebound) {
+func (ex *exchange) AddServicebound(servicebound apis.Servicebound) {
 	ex.Servicebound = servicebound
 }

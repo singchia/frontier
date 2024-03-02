@@ -75,6 +75,21 @@ func (dao *Dao) GetService(serviceID uint64) (*model.Service, error) {
 	return &service, tx.Error
 }
 
+func (dao *Dao) GetServiceByName(name string) (*model.Service, error) {
+	tx := dao.dbService.Model(&model.Service{})
+	if dao.config.Dao.Debug {
+		tx = tx.Debug()
+	}
+	tx = tx.Where("service = ?", name).Limit(1)
+
+	var service model.Service
+	tx = tx.Find(&service)
+	if tx.RowsAffected == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+	return &service, tx.Error
+}
+
 type ServiceDelete struct {
 	ServiceID uint64
 	Addr      string

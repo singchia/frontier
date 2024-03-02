@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/jumboframes/armorigo/synchub"
-	"github.com/singchia/frontier/pkg/api"
+	"github.com/singchia/frontier/pkg/apis"
 	"github.com/singchia/frontier/pkg/repo/dao"
 	"github.com/singchia/frontier/pkg/repo/model"
 	"github.com/singchia/geminio"
@@ -14,7 +14,7 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func (sm *serviceManager) online(end geminio.End, meta *api.Meta) error {
+func (sm *serviceManager) online(end geminio.End, meta *apis.Meta) error {
 	// cache
 	var sync synchub.Sync
 	sm.mtx.Lock()

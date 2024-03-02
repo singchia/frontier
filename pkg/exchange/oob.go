@@ -6,44 +6,45 @@ import (
 	"encoding/json"
 	"net"
 
-	"github.com/singchia/frontier/pkg/api"
+	"github.com/singchia/frontier/pkg/apis"
+
 	"k8s.io/klog/v2"
 )
 
 func (ex *exchange) GetEdgeID(meta []byte) (uint64, error) {
-	svc, err := ex.Servicebound.GetServiceByRPC(api.RPCGetEdgeID)
+	svc, err := ex.Servicebound.GetServiceByRPC(apis.RPCGetEdgeID)
 	if err != nil {
 		klog.V(2).Infof("exchange get edgeID, get service err: %s, meta: %s", err, string(meta))
-		if err == api.ErrRecordNotFound {
-			return 0, api.ErrServiceNotOnline
+		if err == apis.ErrRecordNotFound {
+			return 0, apis.ErrServiceNotOnline
 		}
 		return 0, err
 	}
 	// call service
 	req := svc.NewRequest(meta)
-	rsp, err := svc.Call(context.TODO(), api.RPCGetEdgeID, req)
+	rsp, err := svc.Call(context.TODO(), apis.RPCGetEdgeID, req)
 	if err != nil {
 		klog.V(2).Infof("exchange call service: %d, get edgeID err: %s, meta: %s", svc.ClientID(), err, meta)
 		return 0, err
 	}
 	data := rsp.Data()
 	if data == nil || len(data) != 8 {
-		return 0, api.ErrIllegalEdgeID
+		return 0, apis.ErrIllegalEdgeID
 	}
 	return binary.BigEndian.Uint64(data), nil
 }
 
 func (ex *exchange) EdgeOnline(edgeID uint64, meta []byte, addr net.Addr) error {
-	svc, err := ex.Servicebound.GetServiceByRPC(api.RPCEdgeOnline)
+	svc, err := ex.Servicebound.GetServiceByRPC(apis.RPCEdgeOnline)
 	if err != nil {
 		klog.V(2).Infof("exchange edge online, get service err: %s, edgeID: %d, meta: %s, addr: %s", err, edgeID, string(meta), addr)
-		if err == api.ErrRecordNotFound {
-			return api.ErrServiceNotOnline
+		if err == apis.ErrRecordNotFound {
+			return apis.ErrServiceNotOnline
 		}
 		return err
 	}
 	// call service the edge online event
-	event := &api.OnEdgeOnline{
+	event := &apis.OnEdgeOnline{
 		EdgeID: edgeID,
 		Meta:   meta,
 		Net:    addr.Network(),
@@ -56,7 +57,7 @@ func (ex *exchange) EdgeOnline(edgeID uint64, meta []byte, addr net.Addr) error 
 	}
 	// call service
 	req := svc.NewRequest(data)
-	_, err = svc.Call(context.TODO(), api.RPCEdgeOnline, req)
+	_, err = svc.Call(context.TODO(), apis.RPCEdgeOnline, req)
 	if err != nil {
 		klog.V(2).Infof("exchange call service: %d, edge online err: %s, meta: %s, addr: %s", svc.ClientID(), err, meta, addr)
 		return err
@@ -65,16 +66,16 @@ func (ex *exchange) EdgeOnline(edgeID uint64, meta []byte, addr net.Addr) error 
 }
 
 func (ex *exchange) EdgeOffline(edgeID uint64, meta []byte, addr net.Addr) error {
-	svc, err := ex.Servicebound.GetServiceByRPC(api.RPCEdgeOffline)
+	svc, err := ex.Servicebound.GetServiceByRPC(apis.RPCEdgeOffline)
 	if err != nil {
 		klog.V(2).Infof("exchange edge offline, get service err: %s, edgeID: %d, meta: %s, addr: %s", err, edgeID, string(meta), addr)
-		if err == api.ErrRecordNotFound {
-			return api.ErrServiceNotOnline
+		if err == apis.ErrRecordNotFound {
+			return apis.ErrServiceNotOnline
 		}
 		return err
 	}
 	// call service the edge offline event
-	event := &api.OnEdgeOffline{
+	event := &apis.OnEdgeOffline{
 		EdgeID: edgeID,
 		Meta:   meta,
 		Net:    addr.Network(),
@@ -87,7 +88,7 @@ func (ex *exchange) EdgeOffline(edgeID uint64, meta []byte, addr net.Addr) error
 	}
 	// call service
 	req := svc.NewRequest(data)
-	_, err = svc.Call(context.TODO(), api.RPCEdgeOffline, req)
+	_, err = svc.Call(context.TODO(), apis.RPCEdgeOffline, req)
 	if err != nil {
 		klog.V(2).Infof("exchange call service: %d, edge offline err: %s, meta: %s, addr: %s", svc.ClientID(), err, meta, addr)
 		return err

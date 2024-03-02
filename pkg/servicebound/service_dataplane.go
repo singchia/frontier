@@ -1,7 +1,7 @@
 package servicebound
 
 import (
-	"github.com/singchia/frontier/pkg/api"
+	"github.com/singchia/frontier/pkg/apis"
 	"github.com/singchia/geminio"
 	"k8s.io/klog/v2"
 )
@@ -16,7 +16,7 @@ func (sm *serviceManager) acceptStream(stream geminio.Stream) {
 	sm.streams.MSet(serviceID, streamID, stream)
 	// exchange to edge
 	if sm.exchange != nil {
-		// TODO sm.exchange.StreamToEdge(stream)
+		sm.exchange.StreamToEdge(stream)
 	}
 }
 
@@ -31,7 +31,7 @@ func (sm *serviceManager) closedStream(stream geminio.Stream) {
 }
 
 // forward to exchange
-func (sm *serviceManager) forward(meta *api.Meta, end geminio.End) {
+func (sm *serviceManager) forward(meta *apis.Meta, end geminio.End) {
 	serviceID := end.ClientID()
 	service := meta.Service
 	klog.V(2).Infof("service forward raw message and rpc, serviceID: %d, service: %s", serviceID, service)

@@ -1,4 +1,4 @@
-package api
+package apis
 
 // frontier -> service
 // global rpcs
