@@ -58,7 +58,8 @@ type serviceManager struct {
 
 	// dao and repo for services
 	dao *dao.Dao
-	ln  net.Listener
+	// listener for geminio
+	ln net.Listener
 
 	// timer for all service ends
 	tmr timer.Timer

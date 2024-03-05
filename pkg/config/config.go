@@ -70,6 +70,10 @@ type Servicebound struct {
 	Listen Listen `yaml:"listen"`
 }
 
+type Http struct {
+	Listen Listen `yaml:"listen"`
+}
+
 // message queue
 type MQ struct {
 	BroadCast bool `yaml:"broadcast"`
@@ -88,6 +92,8 @@ type Configuration struct {
 	Edgebound Edgebound `yaml:"edgebound"`
 
 	Servicebound Servicebound `yaml:"servicebound"`
+
+	Http Http `yaml:"http"`
 
 	Dao Dao `yaml:"dao"`
 }

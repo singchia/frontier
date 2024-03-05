@@ -5,6 +5,7 @@ go 1.20
 replace github.com/singchia/geminio => ../../moresec/singchia/geminio
 
 require (
+	github.com/gorilla/mux v1.8.1
 	github.com/jumboframes/armorigo v0.4.0-rc.1
 	github.com/singchia/geminio v1.1.5-rc.1
 	github.com/singchia/go-timer/v2 v2.2.1
