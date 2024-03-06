@@ -42,6 +42,14 @@ container:
 bench: container
 	make bench -C test/bench
 
+.PHONY: frontier-gen-api
+frontier-gen-api:
+	docker buildx build -t frontier-gen-api:${VERSION} -f images/Dockerfile.controlplane-api .
+
+.PHONY: api
+api:
+	docker run --rm -v ${PWD}/api/controlplane/v1:/api/controlplane/v1 frontier-gen-api:${VERSION}
+
 .PHONY: output
 output: build
 

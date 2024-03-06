@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/singchia/frontier/api/v1/edge"
+	"github.com/singchia/frontier/api/dataplane/v1/edge"
 	"github.com/spf13/pflag"
 
 	armlog "github.com/jumboframes/armorigo/log"

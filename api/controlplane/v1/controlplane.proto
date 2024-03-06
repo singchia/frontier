@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package controlplane;
+
+option go_package = "github.com/singchia/frontier/api/controlplane/v1;v1";
+
+import "google/api/annotations.proto";
+
+message ListEdgesRequest {
+    optional string meta = 1;
+    optional string addr = 2;
+    optional string rpc = 3;
+    optional uint64 edge_id = 4;
+    int64 page = 5;
+    int64 page_size = 6;
+    optional int64 start_time = 7;
+    optional int64 end_time = 8;
+    optional string order = 9;
+}
+
+message ListEdgesResponse {
+    repeated Edge edges = 1;
+    uint32 count = 2;
+}
+
+message Edge {
+    uint64 edge_id = 1;
+    string meta = 2;
+    string addr = 3;
+    int64 create_time = 4;
+}
+
+service ControlPlane {
+    rpc ListEdges(ListEdgesRequest) returns(ListEdgesResponse)
+        { option(google.api.http) = { get: "/v1"}; };
+}
