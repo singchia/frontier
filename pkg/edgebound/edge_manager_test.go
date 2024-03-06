@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/singchia/frontier/api/v1/edge"
+	"github.com/singchia/frontier/api/dataplane/v1/edge"
 	"github.com/singchia/frontier/pkg/config"
 	"github.com/singchia/frontier/pkg/repo/dao"
 	"github.com/singchia/go-timer/v2"

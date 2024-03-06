@@ -19,7 +19,7 @@ import (
 	"time"
 
 	armlog "github.com/jumboframes/armorigo/log"
-	"github.com/singchia/frontier/api/v1/service"
+	"github.com/singchia/frontier/api/dataplane/v1/service"
 	"github.com/singchia/geminio"
 	"github.com/spf13/pflag"
 )
