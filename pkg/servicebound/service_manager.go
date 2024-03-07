@@ -150,17 +150,19 @@ func newServiceManager(conf *config.Configuration, dao *dao.Dao, informer apis.S
 	return sm, nil
 }
 
-func (sm *serviceManager) Serve() {
+func (sm *serviceManager) Serve() error {
 	for {
 		conn, err := sm.ln.Accept()
 		if err != nil {
 			if !strings.Contains(err.Error(), apis.ErrStrUseOfClosedConnection) {
 				klog.V(1).Infof("service manager listener accept err: %s", err)
+				return err
 			}
-			return
+			break
 		}
 		go sm.handleConn(conn)
 	}
+	return nil
 }
 
 func (sm *serviceManager) handleConn(conn net.Conn) error {
@@ -301,6 +303,18 @@ func (sm *serviceManager) CountServices() int {
 
 func (sm *serviceManager) DelSerivces(service string) error {
 	panic("TODO")
+}
+
+func (sm *serviceManager) DelServiceByID(serviceID uint64) error {
+	// TODO test it
+	sm.mtx.RLock()
+	defer sm.mtx.RUnlock()
+
+	service, ok := sm.services[serviceID]
+	if !ok {
+		return apis.ErrEdgeNotOnline
+	}
+	return service.Close()
 }
 
 func (sm *serviceManager) ListStreams(serviceID uint64) []geminio.Stream {

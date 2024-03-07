@@ -1,29 +1,27 @@
-package http
+package controlplane
 
 import (
 	"crypto/tls"
 	"crypto/x509"
 	"net"
-	"net/http"
 	"os"
-	"strings"
 
-	"github.com/gorilla/mux"
+	"github.com/go-kratos/kratos/v2"
 	"github.com/singchia/frontier/pkg/apis"
 	"github.com/singchia/frontier/pkg/config"
+	"github.com/singchia/frontier/pkg/controlplane/server"
+	"github.com/singchia/frontier/pkg/controlplane/service"
+	"github.com/singchia/frontier/pkg/repo/dao"
 	"github.com/singchia/frontier/pkg/security"
+	"github.com/soheilhy/cmux"
 	"k8s.io/klog/v2"
 )
 
-type Rest struct {
-	conf   *config.Configuration
-	router *mux.Router
-
-	// listener for http
-	ln net.Listener
+type ControlPlane struct {
+	app *kratos.App
 }
 
-func NewRest(conf *config.Configuration) (*Rest, error) {
+func NewControlPlane(conf *config.Configuration, dao *dao.Dao, servicebound apis.Servicebound, edgebound apis.Edgebound) (*ControlPlane, error) {
 	listen := &conf.Http.Listen
 	var (
 		ln      net.Listener
@@ -31,10 +29,6 @@ func NewRest(conf *config.Configuration) (*Rest, error) {
 		addr    string = listen.Addr
 		err     error
 	)
-
-	rest := &Rest{
-		conf: conf,
-	}
 
 	if !listen.TLS.Enable {
 		if ln, err = net.Listen(network, addr); err != nil {
@@ -90,18 +84,32 @@ func NewRest(conf *config.Configuration) (*Rest, error) {
 			}
 		}
 	}
-	rest.ln = ln
 
-	// router
+	// service
+	svc := service.NewControlPlaneService(dao, servicebound, edgebound)
 
-	return rest, nil
+	// http and grpc server
+	cm := cmux.New(ln)
+	grpcLn := cm.MatchWithWriters(cmux.HTTP2MatchHeaderFieldSendSettings("content-type", "application/grpc"))
+	httpLn := cm.Match(cmux.Any())
+
+	gs := server.NewGRPCServer(grpcLn, svc)
+	hs := server.NewHTTPServer(httpLn, svc)
+	app := kratos.New(kratos.Server(gs, hs))
+
+	return &ControlPlane{
+		app: app,
+	}, nil
 }
 
-func (rest *Rest) Serve() {
-	err := http.Serve(rest.ln, rest.router)
+func (cp *ControlPlane) Serve() error {
+	err := cp.app.Run()
 	if err != nil {
-		if !strings.Contains(err.Error(), apis.ErrStrUseOfClosedConnection) {
-			klog.V(1).Infof("rest listener serve err: %s", err)
-		}
+		klog.Errorf("control plane serve err: %s", err)
 	}
+	return err
+}
+
+func (cp *ControlPlane) Close() error {
+	return cp.app.Stop()
 }

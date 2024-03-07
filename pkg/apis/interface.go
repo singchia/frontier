@@ -34,7 +34,7 @@ type Edgebound interface {
 	GetEdgeByID(edgeID uint64) geminio.End
 	DelEdgeByID(edgeID uint64) error
 
-	Serve()
+	Serve() error
 	Close() error
 }
 
@@ -47,7 +47,7 @@ type Servicebound interface {
 	GetServiceByTopic(topic string) (geminio.End, error)
 	DelSerivces(service string) error
 
-	Serve()
+	Serve() error
 	Close() error
 }
 
