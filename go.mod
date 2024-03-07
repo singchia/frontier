@@ -2,12 +2,10 @@ module github.com/singchia/frontier
 
 go 1.20
 
-replace github.com/singchia/geminio => ../../moresec/singchia/geminio
-
 require (
 	github.com/go-kratos/kratos/v2 v2.7.2
 	github.com/jumboframes/armorigo v0.4.0-rc.1
-	github.com/singchia/geminio v1.1.5-rc.1
+	github.com/singchia/geminio v1.1.5-rc.2
 	github.com/singchia/go-timer/v2 v2.2.1
 	github.com/soheilhy/cmux v0.1.5
 	github.com/spf13/pflag v1.0.5
