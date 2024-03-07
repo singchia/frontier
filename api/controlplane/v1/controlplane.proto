@@ -6,6 +6,14 @@ option go_package = "github.com/singchia/frontier/api/controlplane/v1;v1";
 
 import "google/api/annotations.proto";
 
+message Edge {
+    uint64 edge_id = 1;
+    string meta = 2;
+    string addr = 3;
+    int64 create_time = 4;
+}
+
+// list edges
 message ListEdgesRequest {
     optional string meta = 1;
     optional string addr = 2;
@@ -23,14 +31,126 @@ message ListEdgesResponse {
     uint32 count = 2;
 }
 
-message Edge {
+// get edge
+message GetEdgeRequest {
     uint64 edge_id = 1;
-    string meta = 2;
+}
+
+// kick edge
+message KickEdgeRequest {
+    uint64 edge_id = 1;
+}
+
+message KickEdgeResponse {}
+
+// list edge rpcs
+message ListEdgeRPCsRequest {
+    optional string meta = 1;
+    optional uint64 edge_id = 2;
+    int64 page = 3;
+    int64 page_size = 4;
+    optional int64 start_time = 5;
+    optional int64 end_time = 6;
+    optional string order = 7;
+}
+
+message ListEdgeRPCsResponse {
+    repeated string rpcs = 1;
+    uint32 count = 2;
+}
+
+message Service {
+    uint64 service_id = 1;
+    string service = 2;
     string addr = 3;
     int64 create_time = 4;
 }
 
+// list services
+message ListServicesRequest {
+    optional string service = 1;
+    optional string addr = 2;
+    optional string rpc = 3;
+    optional string topic = 4;
+    optional uint64 service_id = 5;
+    int64 page = 6;
+    int64 page_size = 7;
+    optional int64 start_time = 8;
+    optional int64 end_time = 9;
+    optional string order = 10;
+}
+
+message ListServicesResponse {
+    repeated Service services = 1;
+    uint32 count = 2;
+}
+
+// get service
+message GetServiceRequest {
+    uint64 service_id = 1;
+}
+
+// kick service
+message KickServiceRequest {
+    uint64 service_id = 1;
+}
+
+message KickServiceResponse {}
+
+// list service rpcs
+message ListServiceRPCsRequest {
+    optional string service = 1;
+    optional uint64 service_id = 2;
+    int64 page = 3;
+    int64 page_size = 4;
+    optional int64 start_time = 5;
+    optional int64 end_time = 6;
+    optional string order = 7;
+}
+
+message ListServiceRPCsResponse {
+    repeated string rpcs = 1;
+    uint32 count = 2;
+}
+
+// list service topics
+message ListServiceTopicsRequest {
+    optional string service = 1;
+    optional uint64 service_id = 2;
+    int64 page = 3;
+    int64 page_size = 4;
+    optional int64 start_time = 5;
+    optional int64 end_time = 6;
+    optional string order = 7;
+}
+
+message ListServiceTopicsResponse {
+    repeated string topics = 1;
+    uint32 count = 2;
+}
+
 service ControlPlane {
-    rpc ListEdges(ListEdgesRequest) returns(ListEdgesResponse)
-        { option(google.api.http) = { get: "/v1"}; };
+    // edge related
+    rpc ListEdges(ListEdgesRequest) returns (ListEdgesResponse)
+        { option(google.api.http) = { get: "/v1/edges"}; };
+    rpc GetEdge(GetEdgeRequest) returns (Edge)
+        { option(google.api.http) = { get: "/v1/edges/{edge_id}"}; };
+    rpc KickEdge(KickEdgeRequest) returns (KickEdgeResponse)
+        { option(google.api.http) = { delete: "/v1/edges/{edge_id}"}; };
+
+    rpc ListEdgeRPCs(ListEdgeRPCsRequest) returns (ListEdgeRPCsResponse)
+        { option(google.api.http) = { get: "/v1/edges/rpcs"}; };
+
+    // service related
+    rpc ListServices(ListServicesRequest) returns (ListServicesResponse)
+        { option(google.api.http) = { get: "/v1/services"}; };
+    rpc GetService(GetServiceRequest) returns (Service)
+        { option(google.api.http) = { get: "/v1/services/{service_id}"}; };
+    rpc KickService(KickServiceRequest) returns (KickServiceResponse)
+        { option(google.api.http) = { delete: "/v1/services/{service_id}"}; };
+
+    rpc ListServiceRPCs(ListServiceRPCsRequest) returns (ListServiceRPCsResponse)
+        { option(google.api.http) = { get: "/v1/services/rpcs"}; };
+    rpc ListServiceTopics(ListServiceTopicsRequest) returns (ListServiceTopicsResponse)
+        { option(google.api.http) = { get: "/v1/services/topics"}; };
 }

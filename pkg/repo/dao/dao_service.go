@@ -253,7 +253,7 @@ func buildServiceRPCQuery(tx *gorm.DB, query *ServiceRPCQuery) *gorm.DB {
 type ServiceTopicQuery struct {
 	Query
 	// Condition fields
-	Topic     string
+	Service   string
 	ServiceID uint64
 }
 
@@ -333,8 +333,8 @@ func (dao *Dao) CreateServiceTopic(topic *model.ServiceTopic) error {
 
 func buildServiceTopicQuery(tx *gorm.DB, query *ServiceTopicQuery) *gorm.DB {
 	// join and search
-	if query.Topic != "" {
-		tx = tx.InnerJoins("INNER JOIN services ON services.service_id = service_topics.service_id AND service LIKE ?", "%"+query.Topic+"%")
+	if query.Service != "" {
+		tx = tx.InnerJoins("INNER JOIN services ON services.service_id = service_topics.service_id AND service LIKE ?", "%"+query.Service+"%")
 	}
 	// time range
 	if query.StartTime != 0 && query.EndTime != 0 && query.EndTime > query.StartTime {

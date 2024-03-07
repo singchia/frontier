@@ -234,7 +234,7 @@ func (em *edgeManager) bypassDial(_ net.Addr, _ interface{}) (net.Conn, error) {
 }
 
 // Serve blocks until the Accept error
-func (em *edgeManager) Serve() {
+func (em *edgeManager) Serve() error {
 	bypass := &em.conf.Edgebound.Bypass
 	if bypass.Enable {
 		go em.cm.Serve()
@@ -246,11 +246,13 @@ func (em *edgeManager) Serve() {
 		if err != nil {
 			if !strings.Contains(err.Error(), apis.ErrStrUseOfClosedConnection) {
 				klog.V(1).Infof("edge manager listener accept err: %s", err)
+				return err
 			}
-			return
+			break
 		}
 		go em.handleConn(conn)
 	}
+	return nil
 }
 
 func (em *edgeManager) handleConn(conn net.Conn) error {
@@ -308,7 +310,15 @@ func (em *edgeManager) ListStreams(edgeID uint64) []geminio.Stream {
 }
 
 func (em *edgeManager) DelEdgeByID(edgeID uint64) error {
-	panic("TODO")
+	// TODO test it
+	em.mtx.RLock()
+	defer em.mtx.RUnlock()
+
+	edge, ok := em.edges[edgeID]
+	if !ok {
+		return apis.ErrEdgeNotOnline
+	}
+	return edge.Close()
 }
 
 // Close all edges and manager
