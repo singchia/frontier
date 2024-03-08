@@ -1,0 +1,312 @@
+definitions:
+  v1.Edge:
+    properties:
+      addr:
+        type: string
+      create_time:
+        type: integer
+      edge_id:
+        type: integer
+      meta:
+        type: string
+    type: object
+  v1.KickEdgeResponse:
+    type: object
+  v1.KickServiceResponse:
+    type: object
+  v1.ListEdgeRPCsResponse:
+    properties:
+      count:
+        type: integer
+      rpcs:
+        items:
+          type: string
+        type: array
+    type: object
+  v1.ListEdgesResponse:
+    properties:
+      count:
+        type: integer
+      edges:
+        items:
+          $ref: '#/definitions/v1.Edge'
+        type: array
+    type: object
+  v1.ListServiceRPCsResponse:
+    properties:
+      count:
+        type: integer
+      rpcs:
+        items:
+          type: string
+        type: array
+    type: object
+  v1.ListServiceTopicsResponse:
+    properties:
+      count:
+        type: integer
+      topics:
+        items:
+          type: string
+        type: array
+    type: object
+  v1.ListServicesResponse:
+    properties:
+      count:
+        type: integer
+      services:
+        items:
+          $ref: '#/definitions/v1.Service'
+        type: array
+    type: object
+  v1.Service:
+    properties:
+      addr:
+        type: string
+      create_time:
+        type: integer
+      service:
+        type: string
+      service_id:
+        type: integer
+    type: object
+info:
+  contact:
+    email: singchia@163.com
+    name: Austin Zhai
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  title: Frontier Swagger API
+  version: "1.0"
+paths:
+  /v1/edges:
+    get:
+      parameters:
+      - in: query
+        name: addr
+        type: string
+      - in: query
+        name: edge_id
+        type: integer
+      - in: query
+        name: end_time
+        type: integer
+      - in: query
+        name: meta
+        type: string
+      - in: query
+        name: order
+        type: string
+      - in: query
+        name: page
+        type: integer
+      - in: query
+        name: page_size
+        type: integer
+      - in: query
+        name: rpc
+        type: string
+      - in: query
+        name: start_time
+        type: integer
+      responses:
+        "200":
+          description: result
+          schema:
+            $ref: '#/definitions/v1.ListEdgesResponse'
+      summary: ListEdges
+      tags:
+      - "1.0"
+  /v1/edges/{edge_id}:
+    delete:
+      parameters:
+      - in: query
+        name: edge_id
+        type: integer
+      responses:
+        "200":
+          description: result
+          schema:
+            $ref: '#/definitions/v1.KickEdgeResponse'
+      summary: Kick Edge
+      tags:
+      - "1.0"
+    get:
+      parameters:
+      - in: query
+        name: edge_id
+        type: integer
+      responses:
+        "200":
+          description: result
+          schema:
+            $ref: '#/definitions/v1.Edge'
+      summary: Get Edge
+      tags:
+      - "1.0"
+  /v1/edges/rpcs:
+    get:
+      parameters:
+      - in: query
+        name: edge_id
+        type: integer
+      - in: query
+        name: end_time
+        type: integer
+      - in: query
+        name: meta
+        type: string
+      - in: query
+        name: order
+        type: string
+      - in: query
+        name: page
+        type: integer
+      - in: query
+        name: page_size
+        type: integer
+      - in: query
+        name: start_time
+        type: integer
+      responses:
+        "200":
+          description: result
+          schema:
+            $ref: '#/definitions/v1.ListEdgeRPCsResponse'
+      summary: List Edges RPCs
+      tags:
+      - "1.0"
+  /v1/services:
+    get:
+      parameters:
+      - in: query
+        name: addr
+        type: string
+      - in: query
+        name: end_time
+        type: integer
+      - in: query
+        name: order
+        type: string
+      - in: query
+        name: page
+        type: integer
+      - in: query
+        name: page_size
+        type: integer
+      - in: query
+        name: rpc
+        type: string
+      - in: query
+        name: service
+        type: string
+      - in: query
+        name: service_id
+        type: integer
+      - in: query
+        name: start_time
+        type: integer
+      - in: query
+        name: topic
+        type: string
+      responses:
+        "200":
+          description: result
+          schema:
+            $ref: '#/definitions/v1.ListServicesResponse'
+      summary: List Services
+      tags:
+      - "1.0"
+  /v1/services/{service_id}:
+    delete:
+      parameters:
+      - in: query
+        name: service_id
+        type: integer
+      responses:
+        "200":
+          description: result
+          schema:
+            $ref: '#/definitions/v1.KickServiceResponse'
+      summary: Kick Service
+      tags:
+      - "1.0"
+    get:
+      parameters:
+      - in: query
+        name: service_id
+        type: integer
+      responses:
+        "200":
+          description: result
+          schema:
+            $ref: '#/definitions/v1.Service'
+      summary: Get Service
+      tags:
+      - "1.0"
+  /v1/services/rpcs:
+    get:
+      parameters:
+      - in: query
+        name: end_time
+        type: integer
+      - in: query
+        name: order
+        type: string
+      - in: query
+        name: page
+        type: integer
+      - in: query
+        name: page_size
+        type: integer
+      - in: query
+        name: service
+        type: string
+      - in: query
+        name: service_id
+        type: integer
+      - in: query
+        name: start_time
+        type: integer
+      responses:
+        "200":
+          description: result
+          schema:
+            $ref: '#/definitions/v1.ListServiceRPCsResponse'
+      summary: List Services RPCs
+      tags:
+      - "1.0"
+  /v1/services/topics:
+    get:
+      parameters:
+      - in: query
+        name: end_time
+        type: integer
+      - in: query
+        name: order
+        type: string
+      - in: query
+        name: page
+        type: integer
+      - in: query
+        name: page_size
+        type: integer
+      - in: query
+        name: service
+        type: string
+      - in: query
+        name: service_id
+        type: integer
+      - in: query
+        name: start_time
+        type: integer
+      responses:
+        "200":
+          description: result
+          schema:
+            $ref: '#/definitions/v1.ListServiceTopicsResponse'
+      summary: List Services Topics
+      tags:
+      - "1.0"
+swagger: "2.0"
