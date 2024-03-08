@@ -15,7 +15,6 @@ import (
 	"github.com/singchia/frontier/pkg/apis"
 	"github.com/singchia/frontier/pkg/config"
 	"github.com/singchia/frontier/pkg/mapmap"
-	"github.com/singchia/frontier/pkg/repo/dao"
 	"github.com/singchia/frontier/pkg/repo/model"
 	"github.com/singchia/frontier/pkg/security"
 	"github.com/singchia/frontier/pkg/utils"
@@ -27,9 +26,9 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func NewServicebound(conf *config.Configuration, dao *dao.Dao, informer apis.ServiceInformer,
+func NewServicebound(conf *config.Configuration, repo apis.Repo, informer apis.ServiceInformer,
 	exchange apis.Exchange, mqm apis.MQM, tmr timer.Timer) (apis.Servicebound, error) {
-	return newServiceManager(conf, dao, informer, exchange, mqm, tmr)
+	return newServiceManager(conf, repo, informer, exchange, mqm, tmr)
 }
 
 type end struct {
@@ -53,11 +52,11 @@ type serviceManager struct {
 	services map[uint64]geminio.End
 	mtx      sync.RWMutex
 	// key: serviceID; subkey: streamID; value: geminio.Stream
-	// we don't store stream info to dao, because they may will be too much.
+	// we don't store stream info to repo, because they may will be too much.
 	streams *mapmap.MapMap
 
-	// dao and repo for services
-	dao *dao.Dao
+	// repo and repo for services
+	repo apis.Repo
 	// listener for geminio
 	ln net.Listener
 
@@ -65,7 +64,7 @@ type serviceManager struct {
 	tmr timer.Timer
 }
 
-func newServiceManager(conf *config.Configuration, dao *dao.Dao, informer apis.ServiceInformer,
+func newServiceManager(conf *config.Configuration, repo apis.Repo, informer apis.ServiceInformer,
 	exchange apis.Exchange, mqm apis.MQM, tmr timer.Timer) (*serviceManager, error) {
 	listen := &conf.Servicebound.Listen
 	var (
@@ -79,7 +78,7 @@ func newServiceManager(conf *config.Configuration, dao *dao.Dao, informer apis.S
 		conf:                  conf,
 		tmr:                   tmr,
 		streams:               mapmap.NewMapMap(),
-		dao:                   dao,
+		repo:                  repo,
 		shub:                  synchub.NewSyncHub(synchub.OptionTimer(tmr)),
 		services:              make(map[uint64]geminio.End),
 		UnimplementedDelegate: &delegate.UnimplementedDelegate{},
@@ -212,7 +211,7 @@ func (sm *serviceManager) remoteReceiveClaim(serviceID uint64, topics []string) 
 			Topic:     topic,
 			ServiceID: serviceID,
 		}
-		err = sm.dao.CreateServiceTopic(st)
+		err = sm.repo.CreateServiceTopic(st)
 		if err != nil {
 			klog.Errorf("service remote receive claim, create service topic: %s, err: %s", topic, err)
 			return err
@@ -232,7 +231,7 @@ func (sm *serviceManager) RemoteRegistration(rpc string, serviceID, streamID uin
 		ServiceID:  serviceID,
 		CreateTime: time.Now().Unix(),
 	}
-	err := sm.dao.CreateServiceRPC(sr)
+	err := sm.repo.CreateServiceRPC(sr)
 	if err != nil {
 		klog.Errorf("service remote registration, create service rpc: %s, err: %s, serviceID: %d, streamID: %d", err, rpc, serviceID, streamID)
 	}
@@ -249,7 +248,7 @@ func (sm *serviceManager) GetServiceByName(name string) (geminio.End, error) {
 	sm.mtx.RLock()
 	defer sm.mtx.RUnlock()
 
-	mservice, err := sm.dao.GetServiceByName(name)
+	mservice, err := sm.repo.GetServiceByName(name)
 	if err != nil {
 		klog.V(2).Infof("get service by name: %s, err: %s", name, err)
 		return nil, err
@@ -262,7 +261,7 @@ func (sm *serviceManager) GetServiceByRPC(rpc string) (geminio.End, error) {
 	sm.mtx.RLock()
 	defer sm.mtx.RUnlock()
 
-	mrpc, err := sm.dao.GetServiceRPC(rpc)
+	mrpc, err := sm.repo.GetServiceRPC(rpc)
 	if err != nil {
 		klog.V(2).Infof("get service by rpc: %s, err: %s", rpc, err)
 		return nil, err
@@ -275,7 +274,7 @@ func (sm *serviceManager) GetServiceByTopic(topic string) (geminio.End, error) {
 	sm.mtx.RLock()
 	defer sm.mtx.RUnlock()
 
-	mtopic, err := sm.dao.GetServiceTopic(topic)
+	mtopic, err := sm.repo.GetServiceTopic(topic)
 	if err != nil {
 		klog.V(2).Infof("get service by topic: %s, err: %s", topic, err)
 		return nil, err

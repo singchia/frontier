@@ -46,8 +46,8 @@ func (sm *serviceManager) online(end geminio.End, meta *apis.Meta) error {
 		Addr:       end.RemoteAddr().String(),
 		CreateTime: time.Now().Unix(),
 	}
-	if err := sm.dao.CreateService(service); err != nil {
-		klog.Errorf("service online, dao create err: %s, serviceID: %d", err, end.ClientID())
+	if err := sm.repo.CreateService(service); err != nil {
+		klog.Errorf("service online, repo create err: %s, serviceID: %d", err, end.ClientID())
 		return err
 	}
 	return nil
@@ -79,22 +79,22 @@ func (sm *serviceManager) offline(serviceID uint64, addr net.Addr) error {
 	}()
 
 	// clear memdb
-	if err := sm.dao.DeleteService(&dao.ServiceDelete{
+	if err := sm.repo.DeleteService(&dao.ServiceDelete{
 		ServiceID: serviceID,
 		Addr:      addr.String(),
 	}); err != nil {
-		klog.Errorf("service offline, dao delete service err: %s, serviceID: %d", err, serviceID)
+		klog.Errorf("service offline, repo delete service err: %s, serviceID: %d", err, serviceID)
 		return err
 	}
 
-	if err := sm.dao.DeleteServiceRPCs(serviceID); err != nil {
-		klog.Errorf("service offline, dao delete service rpcs err: %s, serviceID: %d", err, serviceID)
+	if err := sm.repo.DeleteServiceRPCs(serviceID); err != nil {
+		klog.Errorf("service offline, repo delete service rpcs err: %s, serviceID: %d", err, serviceID)
 		return err
 	}
 	klog.V(2).Infof("service offline, remote rpc de-register succeed, serviceID: %d", serviceID)
 
-	if err := sm.dao.DeleteServiceTopics(serviceID); err != nil {
-		klog.Errorf("service offline, dao delete service topics err: %s, serviceID: %d", err, serviceID)
+	if err := sm.repo.DeleteServiceTopics(serviceID); err != nil {
+		klog.Errorf("service offline, repo delete service topics err: %s, serviceID: %d", err, serviceID)
 		return err
 	}
 

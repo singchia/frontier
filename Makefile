@@ -31,7 +31,7 @@ install:
 
 .PHONY: image
 image:
-	docker buildx build -t frontier:${VERSION} .
+	docker buildx build -t frontier:${VERSION} -f images/Dockerfile.frontier .
 
 .PHONY: container
 container:
@@ -49,6 +49,14 @@ frontier-gen-api:
 .PHONY: api
 api:
 	docker run --rm -v ${PWD}/api/controlplane/v1:/api/controlplane/v1 frontier-gen-api:${VERSION}
+
+.PHONY: frontier-gen-swagger
+frontier-gen-swagger:
+	docker buildx build -t frontier-gen-swagger:${VERSION} -f images/Dockerfile.controlplane-swagger .
+
+.PHONY: swagger
+swagger:
+	docker run --rm -v ${PWD}:/frontier frontier-gen-swagger:${VERSION}
 
 .PHONY: output
 output: build

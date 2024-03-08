@@ -3,6 +3,8 @@ package apis
 import (
 	"net"
 
+	"github.com/singchia/frontier/pkg/repo/dao"
+	"github.com/singchia/frontier/pkg/repo/model"
 	"github.com/singchia/geminio"
 )
 
@@ -45,6 +47,7 @@ type Servicebound interface {
 	GetServiceByName(service string) (geminio.End, error)
 	GetServiceByRPC(rpc string) (geminio.End, error)
 	GetServiceByTopic(topic string) (geminio.End, error)
+	DelServiceByID(serviceID uint64) error
 	DelSerivces(service string) error
 
 	Serve() error
@@ -61,6 +64,36 @@ type ServiceInformer interface {
 	ServiceOnline(serviceID uint64, service string, addr net.Addr)
 	ServiceOffline(serviceID uint64, service string, addr net.Addr)
 	ServiceHeartbeat(serviceID uint64, service string, addr net.Addr)
+}
+
+// repo
+type Repo interface {
+	Close() error
+	CountEdgeRPCs(query *dao.EdgeRPCQuery) (int64, error)
+	CountEdges(query *dao.EdgeQuery) (int64, error)
+	CountServiceRPCs(query *dao.ServiceRPCQuery) (int64, error)
+	CountServiceTopics(query *dao.ServiceTopicQuery) (int64, error)
+	CountServices(query *dao.ServiceQuery) (int64, error)
+	CreateEdge(edge *model.Edge) error
+	CreateEdgeRPC(rpc *model.EdgeRPC) error
+	CreateService(service *model.Service) error
+	CreateServiceRPC(rpc *model.ServiceRPC) error
+	CreateServiceTopic(topic *model.ServiceTopic) error
+	DeleteEdge(delete *dao.EdgeDelete) error
+	DeleteEdgeRPCs(edgeID uint64) error
+	DeleteService(delete *dao.ServiceDelete) error
+	DeleteServiceRPCs(serviceID uint64) error
+	DeleteServiceTopics(serviceID uint64) error
+	GetEdge(edgeID uint64) (*model.Edge, error)
+	GetService(serviceID uint64) (*model.Service, error)
+	GetServiceByName(name string) (*model.Service, error)
+	GetServiceRPC(rpc string) (*model.ServiceRPC, error)
+	GetServiceTopic(topic string) (*model.ServiceTopic, error)
+	ListEdgeRPCs(query *dao.EdgeRPCQuery) ([]string, error)
+	ListEdges(query *dao.EdgeQuery) ([]*model.Edge, error)
+	ListServiceRPCs(query *dao.ServiceRPCQuery) ([]string, error)
+	ListServiceTopics(query *dao.ServiceTopicQuery) ([]string, error)
+	ListServices(query *dao.ServiceQuery) ([]*model.Service, error)
 }
 
 // mq manager and mq related

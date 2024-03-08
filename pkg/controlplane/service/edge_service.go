@@ -8,29 +8,20 @@ import (
 	"github.com/singchia/frontier/pkg/repo/model"
 )
 
-func (cps *ControlPlaneService) ListEdges(ctx context.Context, req *v1.ListEdgesRequest) (*v1.ListEdgesResponse, error) {
-	return cps.listEdges(ctx, req)
-}
-
-func (cps *ControlPlaneService) GetEdge(ctx context.Context, req *v1.GetEdgeRequest) (*v1.Edge, error) {
-	return cps.getEdge(ctx, req)
-}
-
-func (cps *ControlPlaneService) KickEdge(ctx context.Context, req *v1.KickEdgeRequest) (*v1.KickEdgeResponse, error) {
-	return cps.kickEdge(ctx, req)
-}
-
-func (cps *ControlPlaneService) ListEdgeRPCs(ctx context.Context, req *v1.ListEdgeRPCsRequest) (*v1.ListEdgeRPCsResponse, error) {
-	return cps.listEdgeRPCs(ctx, req)
-}
-
 func (cps *ControlPlaneService) listEdges(_ context.Context, req *v1.ListEdgesRequest) (*v1.ListEdgesResponse, error) {
 	query := &dao.EdgeQuery{}
+	// conditions
 	if req.Meta != nil {
 		query.Meta = *req.Meta
 	}
 	if req.Addr != nil {
 		query.Addr = *req.Addr
+	}
+	if req.Rpc != nil {
+		query.RPC = *req.Rpc
+	}
+	if req.EdgeId != nil {
+		query.EdgeID = *req.EdgeId
 	}
 	// order
 	if req.Order != nil && len(*req.Order) != 0 {
@@ -47,15 +38,10 @@ func (cps *ControlPlaneService) listEdges(_ context.Context, req *v1.ListEdgesRe
 			query.Desc = false
 		}
 	}
-	if req.Rpc != nil {
-		query.RPC = *req.Rpc
-	}
-	if req.EdgeId != nil {
-		query.EdgeID = *req.EdgeId
-	}
 	// pagination
 	query.Page = int(req.Page)
 	query.PageSize = int(req.PageSize)
+	// time range
 	query.StartTime = *req.StartTime
 	query.EndTime = *req.EndTime
 
@@ -92,6 +78,7 @@ func (cps *ControlPlaneService) kickEdge(_ context.Context, req *v1.KickEdgeRequ
 
 func (cps *ControlPlaneService) listEdgeRPCs(_ context.Context, req *v1.ListEdgeRPCsRequest) (*v1.ListEdgeRPCsResponse, error) {
 	query := &dao.EdgeRPCQuery{}
+	// conditions
 	if req.EdgeId != nil {
 		query.EdgeID = *req.EdgeId
 	}
@@ -116,6 +103,7 @@ func (cps *ControlPlaneService) listEdgeRPCs(_ context.Context, req *v1.ListEdge
 	// pagination
 	query.Page = int(req.Page)
 	query.PageSize = int(req.PageSize)
+	// time range
 	query.StartTime = *req.StartTime
 	query.EndTime = *req.EndTime
 
