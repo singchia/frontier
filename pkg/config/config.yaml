@@ -1,34 +1,38 @@
 daemon:
   rlimit:
+    enable: false
     nofile: 1024
   pprof:
     enable: true
     addr: 0.0.0.0:6060
+    cpu_profile_rate: 0
 edgebound:
   listen:
     network: tcp
     addr: 0.0.0.0:2432
     tls:
       enable: false
-      mtls: true
+      mtls: false
       ca_certs:
       - ca1.cert
       - ca2.cert
       certs:
       - cert: edgebound.cert
         key: edgebound.key
+      insecure_skip_verify: false
   bypass:
     enable: false
     network: tcp
     addr: 192.168.1.10:8443
     tls:
-      enable: false
+      enable: true
       mtls: true
       ca_certs:
       - ca1.cert
       certs:
       - cert: frontier.cert
         key: frontier.key
+      insecure_skip_verify: false
   edgeid_alloc_when_no_idservice_on: true
 servicebound:
   listen:
@@ -36,22 +40,23 @@ servicebound:
     addr: 0.0.0.0:2431
     tls:
       enable: false
-      mtls: true
+      mtls: false
       ca_certs:
       - ca1.cert
       - ca2.cert
       certs:
       - cert: servicebound.cert
         key: servicebound.key
-log:
-  log_dir: /app/log
-  log_file: frontier.log
-  log_file_max_size: 100
-  logtostderr: false
-  alsologtostderr: false
-  verbosity: 4
-  add_dir_header: true
-  skip_headers: true
-  one_output: true
-  skip_log_headers: true
-  stderrthreshold: 1024
+      insecure_skip_verify: false
+controlplane:
+  listen:
+    network: tcp
+    addr: 0.0.0.0:2430
+    tls:
+      enable: false
+      mtls: false
+      ca_certs: []
+      certs: []
+      insecure_skip_verify: false
+dao:
+  debug: false

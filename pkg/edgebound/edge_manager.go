@@ -15,7 +15,6 @@ import (
 	"github.com/singchia/frontier/pkg/apis"
 	"github.com/singchia/frontier/pkg/config"
 	"github.com/singchia/frontier/pkg/mapmap"
-	"github.com/singchia/frontier/pkg/repo/dao"
 	"github.com/singchia/frontier/pkg/security"
 	"github.com/singchia/frontier/pkg/utils"
 	"github.com/singchia/geminio"
@@ -27,9 +26,9 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func NewEdgebound(conf *config.Configuration, dao *dao.Dao, informer apis.EdgeInformer,
+func NewEdgebound(conf *config.Configuration, repo apis.Repo, informer apis.EdgeInformer,
 	exchange apis.Exchange, tmr timer.Timer) (apis.Edgebound, error) {
-	return newEdgeManager(conf, dao, informer, exchange, tmr)
+	return newEdgeManager(conf, repo, informer, exchange, tmr)
 }
 
 type edgeManager struct {
@@ -48,11 +47,11 @@ type edgeManager struct {
 	edges map[uint64]geminio.End
 	mtx   sync.RWMutex
 	// key: edgeID; subkey: streamID; value: geminio.Stream
-	// we don't store stream info to dao, because they may will be too much.
+	// we don't store stream info to repo, because they may will be too much.
 	streams *mapmap.MapMap
 
-	// dao and repo for edges
-	dao *dao.Dao
+	// repo and repo for edges
+	repo apis.Repo
 	// listener for edges
 	cm        cmux.CMux
 	geminioLn net.Listener
@@ -63,7 +62,7 @@ type edgeManager struct {
 }
 
 // support for tls, mtls and tcp listening
-func newEdgeManager(conf *config.Configuration, dao *dao.Dao, informer apis.EdgeInformer,
+func newEdgeManager(conf *config.Configuration, repo apis.Repo, informer apis.EdgeInformer,
 	exchange apis.Exchange, tmr timer.Timer) (*edgeManager, error) {
 	listen := &conf.Edgebound.Listen
 	var (
@@ -77,7 +76,7 @@ func newEdgeManager(conf *config.Configuration, dao *dao.Dao, informer apis.Edge
 		conf:                  conf,
 		tmr:                   tmr,
 		streams:               mapmap.NewMapMap(),
-		dao:                   dao,
+		repo:                  repo,
 		shub:                  synchub.NewSyncHub(synchub.OptionTimer(tmr)),
 		edges:                 make(map[uint64]geminio.End),
 		UnimplementedDelegate: &delegate.UnimplementedDelegate{},

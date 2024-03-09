@@ -45,8 +45,8 @@ func (em *edgeManager) online(end geminio.End) error {
 		Addr:       end.RemoteAddr().String(),
 		CreateTime: time.Now().Unix(),
 	}
-	if err := em.dao.CreateEdge(edge); err != nil {
-		klog.Errorf("edge online, dao create err: %s, edgeID: %d", err, end.ClientID())
+	if err := em.repo.CreateEdge(edge); err != nil {
+		klog.Errorf("edge online, repo create err: %s, edgeID: %d", err, end.ClientID())
 		return err
 	}
 	return nil
@@ -78,15 +78,15 @@ func (em *edgeManager) offline(edgeID uint64, addr net.Addr) error {
 	}()
 
 	// memdb
-	if err := em.dao.DeleteEdge(&dao.EdgeDelete{
+	if err := em.repo.DeleteEdge(&dao.EdgeDelete{
 		EdgeID: edgeID,
 		Addr:   addr.String(),
 	}); err != nil {
-		klog.Errorf("edge offline, dao delete edge err: %s, edgeID: %d", err, edgeID)
+		klog.Errorf("edge offline, repo delete edge err: %s, edgeID: %d", err, edgeID)
 		return err
 	}
-	if err := em.dao.DeleteEdgeRPCs(edgeID); err != nil {
-		klog.Errorf("edge offline, dao delete edge rpcs err: %s, edgeID: %d", err, edgeID)
+	if err := em.repo.DeleteEdgeRPCs(edgeID); err != nil {
+		klog.Errorf("edge offline, repo delete edge rpcs err: %s, edgeID: %d", err, edgeID)
 		return err
 	}
 	return nil
@@ -157,7 +157,7 @@ func (em *edgeManager) RemoteRegistration(rpc string, edgeID, streamID uint64) {
 		EdgeID:     edgeID,
 		CreateTime: time.Now().Unix(),
 	}
-	err := em.dao.CreateEdgeRPC(er)
+	err := em.repo.CreateEdgeRPC(er)
 	if err != nil {
 		klog.Errorf("edge remote registration, create edge rpc err: %s, rpc: %s, edgeID: %d, streamID: %d", err, rpc, edgeID, streamID)
 	}

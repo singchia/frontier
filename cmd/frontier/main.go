@@ -7,14 +7,12 @@ import (
 	"runtime"
 
 	"github.com/jumboframes/armorigo/sigaction"
+	"github.com/singchia/frontier/pkg/apis"
 	"github.com/singchia/frontier/pkg/config"
-	"github.com/singchia/frontier/pkg/edgebound"
-	"github.com/singchia/frontier/pkg/exchange"
 	"github.com/singchia/frontier/pkg/mq"
-	"github.com/singchia/frontier/pkg/repo/dao"
-	"github.com/singchia/frontier/pkg/servicebound"
+	"github.com/singchia/frontier/pkg/repo"
+	"github.com/singchia/frontier/pkg/server"
 	"github.com/singchia/frontier/pkg/utils"
-	"github.com/singchia/go-timer/v2"
 	"k8s.io/klog/v2"
 )
 
@@ -46,53 +44,49 @@ func main() {
 		klog.Flush()
 	}()
 
-	// dao
-	dao, err := dao.NewDao(conf)
+	// new repo and mqm
+	repo, mqm, err := newMidwares(conf)
 	if err != nil {
-		klog.Errorf("new dao err: %s", err)
+		klog.Errorf("new midwares err: %s", err)
 		return
 	}
-	klog.V(2).Infof("new dao succeed")
+	defer func() {
+		repo.Close()
+		mqm.Close()
+	}()
+
+	// servers
+	srvs, err := server.NewServer(conf, repo, mqm)
+	if err != nil {
+		klog.Errorf("new server failed")
+		return
+	}
+	klog.V(2).Infof("new servers succeed")
+	srvs.Serve()
+	defer func() {
+		srvs.Close()
+	}()
+
+	sig := sigaction.NewSignal()
+	sig.Wait(context.TODO())
+}
+
+func newMidwares(conf *config.Configuration) (apis.Repo, apis.MQM, error) {
+	// repo
+	repo, err := repo.NewRepo(conf)
+	if err != nil {
+		klog.Errorf("new repo err: %s", err)
+		return nil, nil, err
+	}
+	klog.V(2).Infof("new repo succeed")
 
 	// mqm
 	mqm, err := mq.NewMQM(conf)
 	if err != nil {
 		klog.Errorf("new mq manager err: %s", err)
-		return
+		return nil, nil, err
 	}
 	klog.V(2).Infof("new mq manager succeed")
 
-	// exchange
-	exchange, err := exchange.NewExchange(conf, mqm)
-	if err != nil {
-		klog.Errorf("new exchange err: %s", err)
-		return
-	}
-	klog.V(2).Infof("new exchange succeed")
-
-	tmr := timer.NewTimer()
-	// servicebound
-	servicebound, err := servicebound.NewServicebound(conf, dao, nil, exchange, mqm, tmr)
-	if err != nil {
-		klog.Errorf("new servicebound err: %s", err)
-		return
-	}
-	go servicebound.Serve()
-	klog.V(2).Infof("new servicebound succeed")
-
-	// edgebound
-	edgebound, err := edgebound.NewEdgebound(conf, dao, nil, exchange, tmr)
-	if err != nil {
-		klog.Errorf("new edgebound err: %s", err)
-		return
-	}
-	go edgebound.Serve()
-	klog.V(2).Infof("new edgebound succeed")
-
-	sig := sigaction.NewSignal()
-	sig.Wait(context.TODO())
-
-	edgebound.Close()
-	servicebound.Close()
-	tmr.Close()
+	return repo, mqm, nil
 }

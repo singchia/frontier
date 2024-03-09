@@ -70,7 +70,7 @@ type Servicebound struct {
 	Listen Listen `yaml:"listen"`
 }
 
-type Http struct {
+type ControlPlane struct {
 	Listen Listen `yaml:"listen"`
 }
 
@@ -93,7 +93,7 @@ type Configuration struct {
 
 	Servicebound Servicebound `yaml:"servicebound"`
 
-	Http Http `yaml:"http"`
+	ControlPlane ControlPlane `yaml:"controlplane"`
 
 	Dao Dao `yaml:"dao"`
 }
@@ -173,13 +173,39 @@ func genDefaultConfig(writer io.Writer) error {
 				Addr:   "0.0.0.0:6060",
 			},
 		},
+		ControlPlane: ControlPlane{
+			Listen: Listen{
+				Network: "tcp",
+				Addr:    "0.0.0.0:2430",
+			},
+		},
+		Servicebound: Servicebound{
+			Listen: Listen{
+				Network: "tcp",
+				Addr:    "0.0.0.0:2431",
+				TLS: TLS{
+					Enable: false,
+					MTLS:   false,
+					CACerts: []string{
+						"ca1.cert",
+						"ca2.cert",
+					},
+					Certs: []CertKey{
+						{
+							Cert: "servicebound.cert",
+							Key:  "servicebound.key",
+						},
+					},
+				},
+			},
+		},
 		Edgebound: Edgebound{
 			Listen: Listen{
 				Network: "tcp",
 				Addr:    "0.0.0.0:2432",
 				TLS: TLS{
-					Enable: true,
-					MTLS:   true,
+					Enable: false,
+					MTLS:   false,
 					CACerts: []string{
 						"ca1.cert",
 						"ca2.cert",
@@ -194,7 +220,7 @@ func genDefaultConfig(writer io.Writer) error {
 			},
 			EdgeIDAllocWhenNoIDServiceOn: true,
 			Bypass: Bypass{
-				Enable:  true,
+				Enable:  false,
 				Network: "tcp",
 				Addr:    "192.168.1.10:8443",
 				TLS: TLS{
@@ -212,27 +238,6 @@ func genDefaultConfig(writer io.Writer) error {
 				},
 			},
 		},
-		Servicebound: Servicebound{
-			Listen: Listen{
-				Network: "tcp",
-				Addr:    "0.0.0.0:2431",
-				TLS: TLS{
-					Enable: true,
-					MTLS:   true,
-					CACerts: []string{
-						"ca1.cert",
-						"ca2.cert",
-					},
-					Certs: []CertKey{
-						{
-							Cert: "servicebound.cert",
-							Key:  "servicebound.key",
-						},
-					},
-				},
-			},
-		},
-
 		Dao: Dao{
 			Debug: false,
 		},
