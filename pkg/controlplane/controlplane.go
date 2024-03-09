@@ -11,18 +11,18 @@ import (
 	"github.com/singchia/frontier/pkg/config"
 	"github.com/singchia/frontier/pkg/controlplane/server"
 	"github.com/singchia/frontier/pkg/controlplane/service"
-	"github.com/singchia/frontier/pkg/repo/dao"
 	"github.com/singchia/frontier/pkg/security"
 	"github.com/soheilhy/cmux"
 	"k8s.io/klog/v2"
 )
 
 type ControlPlane struct {
+	cm  cmux.CMux
 	app *kratos.App
 }
 
-func NewControlPlane(conf *config.Configuration, dao *dao.Dao, servicebound apis.Servicebound, edgebound apis.Edgebound) (*ControlPlane, error) {
-	listen := &conf.Http.Listen
+func NewControlPlane(conf *config.Configuration, repo apis.Repo, servicebound apis.Servicebound, edgebound apis.Edgebound) (*ControlPlane, error) {
+	listen := &conf.ControlPlane.Listen
 	var (
 		ln      net.Listener
 		network string = listen.Network
@@ -86,7 +86,7 @@ func NewControlPlane(conf *config.Configuration, dao *dao.Dao, servicebound apis
 	}
 
 	// service
-	svc := service.NewControlPlaneService(dao, servicebound, edgebound)
+	svc := service.NewControlPlaneService(repo, servicebound, edgebound)
 
 	// http and grpc server
 	cm := cmux.New(ln)
@@ -98,18 +98,27 @@ func NewControlPlane(conf *config.Configuration, dao *dao.Dao, servicebound apis
 	app := kratos.New(kratos.Server(gs, hs))
 
 	return &ControlPlane{
+		cm:  cm,
 		app: app,
 	}, nil
 }
 
 func (cp *ControlPlane) Serve() error {
+	go func() {
+		err := cp.cm.Serve()
+		if err != nil {
+			klog.Errorf("control plane cmux serve err: %s", err)
+		}
+	}()
 	err := cp.app.Run()
 	if err != nil {
-		klog.Errorf("control plane serve err: %s", err)
+		klog.Errorf("control plane app run err: %s", err)
+		return err
 	}
-	return err
+	return nil
 }
 
 func (cp *ControlPlane) Close() error {
+	cp.cm.Close()
 	return cp.app.Stop()
 }

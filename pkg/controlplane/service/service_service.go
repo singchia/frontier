@@ -45,14 +45,16 @@ func (cps *ControlPlaneService) listServices(_ context.Context, req *v1.ListServ
 	query.Page = int(req.Page)
 	query.PageSize = int(req.PageSize)
 	// time range
-	query.StartTime = *req.StartTime
-	query.EndTime = *req.EndTime
+	if req.StartTime != nil && req.EndTime != nil {
+		query.StartTime = *req.StartTime
+		query.EndTime = *req.EndTime
+	}
 
-	services, err := cps.dao.ListServices(query)
+	services, err := cps.repo.ListServices(query)
 	if err != nil {
 		return nil, err
 	}
-	count, err := cps.dao.CountServices(query)
+	count, err := cps.repo.CountServices(query)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +66,7 @@ func (cps *ControlPlaneService) listServices(_ context.Context, req *v1.ListServ
 }
 
 func (cps *ControlPlaneService) getService(_ context.Context, req *v1.GetServiceRequest) (*v1.Service, error) {
-	service, err := cps.dao.GetService(req.ServiceId)
+	service, err := cps.repo.GetService(req.ServiceId)
 	if err != nil {
 		return nil, err
 	}
@@ -107,14 +109,16 @@ func (cps *ControlPlaneService) listServiceRPCs(_ context.Context, req *v1.ListS
 	query.Page = int(req.Page)
 	query.PageSize = int(req.PageSize)
 	// time range
-	query.StartTime = *req.StartTime
-	query.EndTime = *req.EndTime
+	if req.StartTime != nil && req.EndTime != nil {
+		query.StartTime = *req.StartTime
+		query.EndTime = *req.EndTime
+	}
 
-	rpcs, err := cps.dao.ListServiceRPCs(query)
+	rpcs, err := cps.repo.ListServiceRPCs(query)
 	if err != nil {
 		return nil, err
 	}
-	count, err := cps.dao.CountServiceRPCs(query)
+	count, err := cps.repo.CountServiceRPCs(query)
 	if err != nil {
 		return nil, err
 	}
@@ -152,14 +156,16 @@ func (cps *ControlPlaneService) listServiceTopics(_ context.Context, req *v1.Lis
 	query.Page = int(req.Page)
 	query.PageSize = int(req.PageSize)
 	// time range
-	query.StartTime = *req.StartTime
-	query.EndTime = *req.EndTime
+	if req.StartTime != nil && req.EndTime != nil {
+		query.StartTime = *req.StartTime
+		query.EndTime = *req.EndTime
+	}
 
-	topics, err := cps.dao.ListServiceTopics(query)
+	topics, err := cps.repo.ListServiceTopics(query)
 	if err != nil {
 		return nil, err
 	}
-	count, err := cps.dao.CountServiceTopics(query)
+	count, err := cps.repo.CountServiceTopics(query)
 	if err != nil {
 		return nil, err
 	}

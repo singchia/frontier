@@ -7,10 +7,10 @@ option go_package = "github.com/singchia/frontier/api/controlplane/v1;v1";
 import "google/api/annotations.proto";
 
 message Edge {
-    uint64 edge_id = 1;
+    uint64 edge_id = 1  [json_name="edge_id"];
     string meta = 2;
     string addr = 3;
-    int64 create_time = 4;
+    int64 create_time = 4  [json_name="create_time"];
 }
 
 // list edges
@@ -60,10 +60,10 @@ message ListEdgeRPCsResponse {
 }
 
 message Service {
-    uint64 service_id = 1;
+    uint64 service_id = 1  [json_name="service_id"];
     string service = 2;
     string addr = 3;
-    int64 create_time = 4;
+    int64 create_time = 4  [json_name="create_time"];
 }
 
 // list services

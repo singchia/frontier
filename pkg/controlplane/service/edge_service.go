@@ -42,14 +42,16 @@ func (cps *ControlPlaneService) listEdges(_ context.Context, req *v1.ListEdgesRe
 	query.Page = int(req.Page)
 	query.PageSize = int(req.PageSize)
 	// time range
-	query.StartTime = *req.StartTime
-	query.EndTime = *req.EndTime
+	if req.StartTime != nil && req.EndTime != nil {
+		query.StartTime = *req.StartTime
+		query.EndTime = *req.EndTime
+	}
 
-	edges, err := cps.dao.ListEdges(query)
+	edges, err := cps.repo.ListEdges(query)
 	if err != nil {
 		return nil, err
 	}
-	count, err := cps.dao.CountEdges(query)
+	count, err := cps.repo.CountEdges(query)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +63,7 @@ func (cps *ControlPlaneService) listEdges(_ context.Context, req *v1.ListEdgesRe
 }
 
 func (cps *ControlPlaneService) getEdge(_ context.Context, req *v1.GetEdgeRequest) (*v1.Edge, error) {
-	edge, err := cps.dao.GetEdge(req.EdgeId)
+	edge, err := cps.repo.GetEdge(req.EdgeId)
 	if err != nil {
 		return nil, err
 	}
@@ -107,11 +109,11 @@ func (cps *ControlPlaneService) listEdgeRPCs(_ context.Context, req *v1.ListEdge
 	query.StartTime = *req.StartTime
 	query.EndTime = *req.EndTime
 
-	rpcs, err := cps.dao.ListEdgeRPCs(query)
+	rpcs, err := cps.repo.ListEdgeRPCs(query)
 	if err != nil {
 		return nil, err
 	}
-	count, err := cps.dao.CountEdgeRPCs(query)
+	count, err := cps.repo.CountEdgeRPCs(query)
 	if err != nil {
 		return nil, err
 	}

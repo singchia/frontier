@@ -49,7 +49,7 @@ func (dao *Dao) ListServices(query *ServiceQuery) ([]*model.Service, error) {
 }
 
 func (dao *Dao) CountServices(query *ServiceQuery) (int64, error) {
-	tx := dao.dbService.Model(&model.Edge{})
+	tx := dao.dbService.Model(&model.Service{})
 	if dao.config.Dao.Debug {
 		tx = tx.Debug()
 	}
