@@ -3,7 +3,6 @@ module github.com/singchia/frontier
 go 1.20
 
 require (
-	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 	github.com/go-kratos/kratos/v2 v2.7.2
 	github.com/jumboframes/armorigo v0.4.0-rc.1
 	github.com/singchia/geminio v1.1.5-rc.2
