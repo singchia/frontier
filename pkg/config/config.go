@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
+	"github.com/IBM/sarama"
 	armio "github.com/jumboframes/armorigo/io"
 	"github.com/jumboframes/armorigo/log"
 	"github.com/spf13/pflag"
@@ -79,6 +81,70 @@ type MQ struct {
 	BroadCast bool `yaml:"broadcast"`
 }
 
+type Kafka struct {
+	Addrs []string `yaml:"addrs"`
+	// Producer is the namespace for configuration related to producing messages,
+	// used by the Producer.
+	Producer struct {
+		// The maximum permitted size of a message (defaults to 1000000). Should be
+		// set equal to or smaller than the broker's `message.max.bytes`.
+		MaxMessageBytes int
+		// The level of acknowledgement reliability needed from the broker (defaults
+		// to WaitForLocal). Equivalent to the `request.required.acks` setting of the
+		// JVM producer.
+		RequiredAcks sarama.RequiredAcks
+		// The maximum duration the broker will wait the receipt of the number of
+		// RequiredAcks (defaults to 10 seconds). This is only relevant when
+		// RequiredAcks is set to WaitForAll or a number > 1. Only supports
+		// millisecond resolution, nanoseconds will be truncated. Equivalent to
+		// the JVM producer's `request.timeout.ms` setting.
+		Timeout time.Duration
+		// The type of compression to use on messages (defaults to no compression).
+		// Similar to `compression.codec` setting of the JVM producer.
+		Compression sarama.CompressionCodec
+		// The level of compression to use on messages. The meaning depends
+		// on the actual compression type used and defaults to default compression
+		// level for the codec.
+		CompressionLevel int
+		// If enabled, the producer will ensure that exactly one copy of each message is
+		// written.
+		Idempotent bool
+
+		// The following config options control how often messages are batched up and
+		// sent to the broker. By default, messages are sent as fast as possible, and
+		// all messages received while the current batch is in-flight are placed
+		// into the subsequent batch.
+		Flush struct {
+			// The best-effort number of bytes needed to trigger a flush. Use the
+			// global sarama.MaxRequestSize to set a hard upper limit.
+			Bytes int
+			// The best-effort number of messages needed to trigger a flush. Use
+			// `MaxMessages` to set a hard upper limit.
+			Messages int
+			// The best-effort frequency of flushes. Equivalent to
+			// `queue.buffering.max.ms` setting of JVM producer.
+			Frequency time.Duration
+			// The maximum number of messages the producer will send in a single
+			// broker request. Defaults to 0 for unlimited. Similar to
+			// `queue.buffering.max.messages` in the JVM producer.
+			MaxMessages int
+		}
+		Retry struct {
+			// The total number of times to retry sending a message (default 3).
+			// Similar to the `message.send.max.retries` setting of the JVM producer.
+			Max int
+			// How long to wait for the cluster to settle between retries
+			// (default 100ms). Similar to the `retry.backoff.ms` setting of the
+			// JVM producer.
+			Backoff time.Duration
+		}
+	}
+}
+
+type MQM struct {
+	Kafka Kafka `yaml:"kafka"`
+}
+
 // exchange
 type Exchange struct{}
 
@@ -96,6 +162,8 @@ type Configuration struct {
 	ControlPlane ControlPlane `yaml:"controlplane"`
 
 	Dao Dao `yaml:"dao"`
+
+	MQM MQM `yaml:"mqm"`
 }
 
 // Configuration accepts config file and command-line, and command-line is more privileged.
