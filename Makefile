@@ -27,7 +27,7 @@ install:
 	install -m 0755 -d $(DESTDIR)$(BINDIR)
 	install -m 0755 -d $(DESTDIR)$(CONFDIR)
 	install -m 0755 ./frontier $(DESTDIR)$(BINDIR)
-	install -m 0755 ./pkg/config/config.yaml $(DESTDIR)$(CONFDIR)
+	install -m 0755 ./pkg/config/frontier.yaml $(DESTDIR)$(CONFDIR)
 
 .PHONY: image
 image:
@@ -36,7 +36,7 @@ image:
 .PHONY: container
 container:
 	docker rm -f frontier
-	docker run -d --name frontier -p 2431:2431 -p 2432:2432 frontier:${VERSION} --config /usr/conf/config.yaml -v 5
+	docker run -d --name frontier -p 2431:2431 -p 2432:2432 frontier:${VERSION} --config /usr/conf/frontier.yaml -v 5
 
 .PHONY: bench
 bench: container

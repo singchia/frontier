@@ -25,4 +25,4 @@ EXPOSE 2431
 EXPOSE 2432
 
 ENTRYPOINT ["/usr/bin/frontier"]
-CMD ["--config", "/usr/conf/config.yaml"]
+CMD ["--config", "/usr/conf/frontier.yaml"]
