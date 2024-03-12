@@ -6,6 +6,7 @@ require (
 	github.com/IBM/sarama v1.43.0
 	github.com/go-kratos/kratos/v2 v2.7.2
 	github.com/jumboframes/armorigo v0.4.0-rc.1
+	github.com/rabbitmq/amqp091-go v1.9.0
 	github.com/singchia/geminio v1.1.5-rc.2
 	github.com/singchia/go-timer/v2 v2.2.1
 	github.com/soheilhy/cmux v0.1.5

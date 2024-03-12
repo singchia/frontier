@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"time"
 
 	"github.com/IBM/sarama"
 	armio "github.com/jumboframes/armorigo/io"
@@ -82,10 +81,13 @@ type MQ struct {
 }
 
 type Kafka struct {
-	Addrs []string `yaml:"addrs"`
+	Enable bool     `yaml:"enable"`
+	Addrs  []string `yaml:"addrs"`
 	// Producer is the namespace for configuration related to producing messages,
 	// used by the Producer.
 	Producer struct {
+		// topics to notify frontier which topics to allow to publish
+		Topics []string
 		// The maximum permitted size of a message (defaults to 1000000). Should be
 		// set equal to or smaller than the broker's `message.max.bytes`.
 		MaxMessageBytes int
@@ -98,7 +100,7 @@ type Kafka struct {
 		// RequiredAcks is set to WaitForAll or a number > 1. Only supports
 		// millisecond resolution, nanoseconds will be truncated. Equivalent to
 		// the JVM producer's `request.timeout.ms` setting.
-		Timeout time.Duration
+		Timeout int
 		// The type of compression to use on messages (defaults to no compression).
 		// Similar to `compression.codec` setting of the JVM producer.
 		Compression sarama.CompressionCodec
@@ -123,7 +125,7 @@ type Kafka struct {
 			Messages int
 			// The best-effort frequency of flushes. Equivalent to
 			// `queue.buffering.max.ms` setting of JVM producer.
-			Frequency time.Duration
+			Frequency int
 			// The maximum number of messages the producer will send in a single
 			// broker request. Defaults to 0 for unlimited. Similar to
 			// `queue.buffering.max.messages` in the JVM producer.
@@ -136,13 +138,80 @@ type Kafka struct {
 			// How long to wait for the cluster to settle between retries
 			// (default 100ms). Similar to the `retry.backoff.ms` setting of the
 			// JVM producer.
-			Backoff time.Duration
+			Backoff int
 		}
+	}
+}
+
+type AMQP struct {
+	Enable bool `yaml:"enable"`
+	// TODO we don't support multiple addresses for now
+	Addrs []string `yaml:"addrs"`
+	// Vhost specifies the namespace of permissions, exchanges, queues and
+	// bindings on the server.  Dial sets this to the path parsed from the URL.
+	Vhost string
+	// 0 max channels means 2^16 - 1
+	ChannelMax int
+	// 0 max bytes means unlimited
+	FrameSize int
+	// less than 1s uses the server's interval
+	Heartbeat int
+	// Connection locale that we expect to always be en_US
+	// Even though servers must return it as per the AMQP 0-9-1 spec,
+	// we are not aware of it being used other than to satisfy the spec requirements
+	Locale string
+	// exchange to declare
+	Exchanges []struct {
+		// exchange name to declare
+		Name string
+		// direct topic fanout headers, default direct
+		Kind       string
+		Durable    bool
+		AutoDelete bool
+		Internal   bool
+		NoWait     bool
+	}
+	// queues to declare, default nil
+	Queues []struct {
+		Name       string
+		Durable    bool
+		AutoDelete bool
+		Exclustive bool
+		NoWait     bool
+	}
+	// queue bindings to exchange, default nil
+	QueueBindings []struct {
+		QueueName    string
+		ExchangeName string
+		BindingKey   string
+		NoWait       bool
+	}
+	Producer struct {
+		// there are actually topics
+		RoutingKeys []string
+		Exchange    string
+		Mandatory   bool
+		Immediate   bool
+
+		// message related
+		Headers map[string]interface{}
+		// properties
+		ContentType     string // MIME content type
+		ContentEncoding string // MIME content encoding
+		DeliveryMode    uint8  // Transient (0 or 1) or Persistent (2)
+		Priority        uint8  // 0 to 9
+		ReplyTo         string // address to to reply to (ex: RPC)
+		Expiration      string // message expiration spec
+		Type            string // message type name
+		UserId          string // creating user id - ex: "guest"
+		AppId           string // creating application id
+
 	}
 }
 
 type MQM struct {
 	Kafka Kafka `yaml:"kafka"`
+	AMQP  AMQP  `yaml:"amqp"`
 }
 
 // exchange

@@ -1,6 +1,8 @@
 package mq
 
 import (
+	"time"
+
 	"github.com/IBM/sarama"
 	"github.com/singchia/frontier/pkg/apis"
 	"github.com/singchia/frontier/pkg/config"
@@ -12,9 +14,9 @@ type mqKafka struct {
 	producer sarama.AsyncProducer
 }
 
-func newMQKafka(conf *config.Configuration) (*mqKafka, error) {
-	kafka := conf.MQM.Kafka
-	sconf := initConfig(&kafka)
+func newKafka(config *config.Configuration) (*mqKafka, error) {
+	kafka := config.MQM.Kafka
+	sconf := initKafkaConfig(&kafka)
 
 	producer, err := sarama.NewAsyncProducer(kafka.Addrs, sconf)
 	if err != nil {
@@ -53,48 +55,48 @@ func newMQKafka(conf *config.Configuration) (*mqKafka, error) {
 	}, nil
 }
 
-func initConfig(kafka *config.Kafka) *sarama.Config {
+func initKafkaConfig(conf *config.Kafka) *sarama.Config {
 	sconf := sarama.NewConfig()
 	sconf.Producer.Return.Successes = true
 	sconf.Producer.Return.Errors = true
-	if kafka.Producer.MaxMessageBytes != 0 {
-		sconf.Producer.MaxMessageBytes = kafka.Producer.MaxMessageBytes
+	if conf.Producer.MaxMessageBytes != 0 {
+		sconf.Producer.MaxMessageBytes = conf.Producer.MaxMessageBytes
 	}
-	if kafka.Producer.RequiredAcks != 0 {
-		sconf.Producer.RequiredAcks = kafka.Producer.RequiredAcks
+	if conf.Producer.RequiredAcks != 0 {
+		sconf.Producer.RequiredAcks = conf.Producer.RequiredAcks
 	}
-	if kafka.Producer.Timeout != 0 {
-		sconf.Producer.Timeout = kafka.Producer.Timeout
+	if conf.Producer.Timeout != 0 {
+		sconf.Producer.Timeout = time.Duration(conf.Producer.Timeout) * time.Second
 	}
-	if kafka.Producer.Idempotent {
-		sconf.Producer.Idempotent = kafka.Producer.Idempotent
+	if conf.Producer.Idempotent {
+		sconf.Producer.Idempotent = conf.Producer.Idempotent
 	}
 	// compression
-	if kafka.Producer.Compression != 0 {
-		sconf.Producer.Compression = kafka.Producer.Compression
+	if conf.Producer.Compression != 0 {
+		sconf.Producer.Compression = conf.Producer.Compression
 	}
-	if kafka.Producer.CompressionLevel != 0 {
-		sconf.Producer.CompressionLevel = kafka.Producer.CompressionLevel
+	if conf.Producer.CompressionLevel != 0 {
+		sconf.Producer.CompressionLevel = conf.Producer.CompressionLevel
 	}
 	// retry
-	if kafka.Producer.Retry.Backoff != 0 {
-		sconf.Producer.Retry.Backoff = kafka.Producer.Retry.Backoff
+	if conf.Producer.Retry.Backoff != 0 {
+		sconf.Producer.Retry.Backoff = time.Duration(conf.Producer.Retry.Backoff) * time.Second
 	}
-	if kafka.Producer.Retry.Max != 0 {
-		sconf.Producer.Retry.Max = kafka.Producer.Retry.Max
+	if conf.Producer.Retry.Max != 0 {
+		sconf.Producer.Retry.Max = conf.Producer.Retry.Max
 	}
 	// flush
-	if kafka.Producer.Flush.Bytes != 0 {
-		sconf.Producer.Flush.Bytes = kafka.Producer.Flush.Bytes
+	if conf.Producer.Flush.Bytes != 0 {
+		sconf.Producer.Flush.Bytes = conf.Producer.Flush.Bytes
 	}
-	if kafka.Producer.Flush.Frequency != 0 {
-		sconf.Producer.Flush.Frequency = kafka.Producer.Flush.Frequency
+	if conf.Producer.Flush.Frequency != 0 {
+		sconf.Producer.Flush.Frequency = time.Duration(conf.Producer.Flush.Frequency) * time.Second
 	}
-	if kafka.Producer.Flush.MaxMessages != 0 {
-		sconf.Producer.Flush.MaxMessages = kafka.Producer.Flush.MaxMessages
+	if conf.Producer.Flush.MaxMessages != 0 {
+		sconf.Producer.Flush.MaxMessages = conf.Producer.Flush.MaxMessages
 	}
-	if kafka.Producer.Flush.Messages != 0 {
-		sconf.Producer.Flush.Messages = kafka.Producer.Flush.Messages
+	if conf.Producer.Flush.Messages != 0 {
+		sconf.Producer.Flush.Messages = conf.Producer.Flush.Messages
 	}
 	return sconf
 }
