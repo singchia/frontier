@@ -88,6 +88,7 @@ type Kafka struct {
 	Producer struct {
 		// topics to notify frontier which topics to allow to publish
 		Topics []string
+		Async  bool
 		// The maximum permitted size of a message (defaults to 1000000). Should be
 		// set equal to or smaller than the broker's `message.max.bytes`.
 		MaxMessageBytes int
@@ -187,8 +188,7 @@ type AMQP struct {
 		NoWait       bool
 	}
 	Producer struct {
-		// there are actually topics
-		RoutingKeys []string
+		RoutingKeys []string // topics
 		Exchange    string
 		Mandatory   bool
 		Immediate   bool
@@ -209,9 +209,24 @@ type AMQP struct {
 	}
 }
 
+type Nats struct {
+	Enable   bool     `yaml:"enable"`
+	Addrs    []string `yaml:"addrs"`
+	Producer struct {
+		Subjects []string // topics
+	}
+	JetStream struct {
+		// using jetstream instead of nats
+		Enable   bool   `yaml:"enable"`
+		Name     string `yaml:"name"`
+		Subjects []string
+	}
+}
+
 type MQM struct {
 	Kafka Kafka `yaml:"kafka"`
 	AMQP  AMQP  `yaml:"amqp"`
+	Nats  Nats  `yaml:"nats"`
 }
 
 // exchange

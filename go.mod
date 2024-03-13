@@ -5,7 +5,9 @@ go 1.20
 require (
 	github.com/IBM/sarama v1.43.0
 	github.com/go-kratos/kratos/v2 v2.7.2
+	github.com/google/uuid v1.6.0
 	github.com/jumboframes/armorigo v0.4.0-rc.1
+	github.com/nats-io/nats.go v1.33.1
 	github.com/rabbitmq/amqp091-go v1.9.0
 	github.com/singchia/geminio v1.1.5-rc.2
 	github.com/singchia/go-timer/v2 v2.2.1
@@ -38,7 +40,6 @@ require (
 	github.com/go-playground/form/v4 v4.2.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
@@ -54,6 +55,8 @@ require (
 	github.com/klauspost/compress v1.17.7 // indirect
 	github.com/mailru/easyjson v0.7.6 // indirect
 	github.com/mattn/go-sqlite3 v1.14.17 // indirect
+	github.com/nats-io/nkeys v0.4.7 // indirect
+	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/singchia/yafsm v1.0.1 // indirect

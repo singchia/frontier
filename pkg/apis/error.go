@@ -13,6 +13,7 @@ var (
 	ErrTopicNotOnline   = errors.New("topic not online")
 	ErrIllegalEdgeID    = errors.New("illegal edgeID")
 	ErrRecordNotFound   = gorm.ErrRecordNotFound
+	ErrEmptyAddress     = errors.New("empty address")
 )
 
 var (

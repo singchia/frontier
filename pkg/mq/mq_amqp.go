@@ -8,7 +8,6 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/singchia/frontier/pkg/apis"
 	"github.com/singchia/frontier/pkg/config"
-	"github.com/singchia/geminio"
 	"k8s.io/klog/v2"
 )
 
@@ -23,8 +22,11 @@ type mqAMQP struct {
 
 func newAMQP(config *config.Configuration) (*mqAMQP, error) {
 	conf := config.MQM.AMQP
+	if conf.Addrs == nil || len(conf.Addrs) == 0 {
+		return nil, apis.ErrEmptyAddress
+	}
 	aconf := initAMQPConfig(&conf)
-
+	// dial
 	url := "amqp://" + conf.Addrs[0]
 	conn, err := amqp.DialConfig(url, *aconf)
 	if err != nil {
@@ -64,6 +66,7 @@ func newAMQP(config *config.Configuration) (*mqAMQP, error) {
 	return &mqAMQP{
 		conn:    conn,
 		channel: channel,
+		conf:    &conf,
 	}, nil
 }
 
@@ -92,7 +95,6 @@ func (mq *mqAMQP) Produce(topic string, data []byte, opts ...apis.OptionProduce)
 	for _, fun := range opts {
 		fun(opt)
 	}
-	message := opt.Origin.(geminio.Message)
 
 	publishing := amqp.Publishing{
 		ContentType:     mq.conf.Producer.ContentType,
@@ -113,10 +115,8 @@ func (mq *mqAMQP) Produce(topic string, data []byte, opts ...apis.OptionProduce)
 		mq.conf.Producer.Exchange, topic, mq.conf.Producer.Mandatory, mq.conf.Producer.Immediate, publishing)
 	if err != nil {
 		klog.Errorf("mq amqp producer, publish err: %s", err)
-		message.Error(err)
 		return err
 	}
-	message.Done()
 	return nil
 }
 

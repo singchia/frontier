@@ -15,40 +15,46 @@ type mqKafka struct {
 }
 
 func newKafka(config *config.Configuration) (*mqKafka, error) {
-	kafka := config.MQM.Kafka
-	sconf := initKafkaConfig(&kafka)
+	conf := config.MQM.Kafka
+	if conf.Addrs == nil || len(conf.Addrs) == 0 {
+		return nil, apis.ErrEmptyAddress
+	}
+	sconf := initKafkaConfig(&conf)
 
-	producer, err := sarama.NewAsyncProducer(kafka.Addrs, sconf)
+	// dial
+	producer, err := sarama.NewAsyncProducer(conf.Addrs, sconf)
 	if err != nil {
 		klog.Errorf("new mq kafka err: %s", err)
 		return nil, err
 	}
 
-	// handle error
-	go func() {
-		for msg := range producer.Errors() {
-			message, ok := msg.Msg.Metadata.(geminio.Message)
-			if !ok {
-				klog.Errorf("mq kafka producer, errors channel return wrong type: %v", msg.Msg.Metadata)
-				continue
+	if conf.Producer.Async {
+		// handle error
+		go func() {
+			for msg := range producer.Errors() {
+				message, ok := msg.Msg.Metadata.(geminio.Message)
+				if !ok {
+					klog.Errorf("mq kafka producer, errors channel return wrong type: %v", msg.Msg.Metadata)
+					continue
+				}
+				message.Error(msg.Err)
+				// TODO metrics
 			}
-			message.Error(msg.Err)
-			// TODO metrics
-		}
-	}()
+		}()
 
-	// handle success
-	go func() {
-		for msg := range producer.Successes() {
-			message, ok := msg.Metadata.(geminio.Message)
-			if !ok {
-				klog.Errorf("mq kafka producer, success channel return wrong type: %v", msg.Metadata)
-				continue
+		// handle success
+		go func() {
+			for msg := range producer.Successes() {
+				message, ok := msg.Metadata.(geminio.Message)
+				if !ok {
+					klog.Errorf("mq kafka producer, success channel return wrong type: %v", msg.Metadata)
+					continue
+				}
+				message.Done()
+				// TODO metrics
 			}
-			message.Done()
-			// TODO metrics
-		}
-	}()
+		}()
+	}
 
 	return &mqKafka{
 		producer: producer,
