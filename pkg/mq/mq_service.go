@@ -23,13 +23,13 @@ func (mq *mqService) Produce(topic string, data []byte, opts ...apis.OptionProdu
 	for _, fun := range opts {
 		fun(opt)
 	}
-	msg := opt.Origin.(geminio.Message)
+	message := opt.Origin.(geminio.Message)
 	edgeID := opt.EdgeID
 	tail := make([]byte, 8)
 	binary.BigEndian.PutUint64(tail, edgeID)
 
 	// we record the edgeID to service
-	custom := msg.Custom()
+	custom := message.Custom()
 	if custom == nil {
 		custom = tail
 	} else {
@@ -39,7 +39,7 @@ func (mq *mqService) Produce(topic string, data []byte, opts ...apis.OptionProdu
 	mopt := options.NewMessage()
 	mopt.SetCustom(custom)
 	mopt.SetTopic(topic)
-	mopt.SetCnss(msg.Cnss())
+	mopt.SetCnss(message.Cnss())
 	newmsg := mq.end.NewMessage(data, mopt)
 	err := mq.end.Publish(context.TODO(), newmsg)
 	if err != nil {

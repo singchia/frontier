@@ -31,8 +31,11 @@ spec:
         - name: {{ .Chart.Name }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          image: "{{ .Values.global.registry }}/{{ .Values.image.frontier.repository }}:{{ .Values.image.frontier.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.frontier.pullPolicy }}
+          volumeMounts:
+            - name: config
+              mountPath: /usr/conf/
           ports:
             - name: controlplane
               containerPort: 2430
@@ -57,3 +60,7 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "frontier.fullname" . }}
