@@ -7,11 +7,11 @@ import (
 	"runtime"
 
 	"github.com/jumboframes/armorigo/sigaction"
-	"github.com/singchia/frontier/pkg/apis"
-	"github.com/singchia/frontier/pkg/config"
-	"github.com/singchia/frontier/pkg/mq"
-	"github.com/singchia/frontier/pkg/repo"
-	"github.com/singchia/frontier/pkg/server"
+	"github.com/singchia/frontier/pkg/frontier/apis"
+	"github.com/singchia/frontier/pkg/frontier/config"
+	"github.com/singchia/frontier/pkg/frontier/mq"
+	"github.com/singchia/frontier/pkg/frontier/repo"
+	"github.com/singchia/frontier/pkg/frontier/server"
 	"github.com/singchia/frontier/pkg/utils"
 	"k8s.io/klog/v2"
 )

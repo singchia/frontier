@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"github.com/singchia/frontier/pkg/apis"
+	"github.com/singchia/frontier/pkg/frontier/apis"
 	"github.com/singchia/geminio"
 	"github.com/singchia/geminio/client"
 	"github.com/singchia/geminio/options"

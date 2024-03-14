@@ -27,7 +27,7 @@ install:
 	install -m 0755 -d $(DESTDIR)$(BINDIR)
 	install -m 0755 -d $(DESTDIR)$(CONFDIR)
 	install -m 0755 ./frontier $(DESTDIR)$(BINDIR)
-	install -m 0755 ./pkg/config/frontier.yaml $(DESTDIR)$(CONFDIR)
+	install -m 0755 ./pkg/frontier/config/frontier.yaml $(DESTDIR)$(CONFDIR)
 
 .PHONY: image
 image:
