@@ -36,6 +36,10 @@ func newRedis(config *config.Configuration) (*mqRedis, error) {
 	}, nil
 }
 
+func (mq *mqRedis) ProducerTopics() []string {
+	return mq.conf.Producer.Channels
+}
+
 func (mq *mqRedis) Produce(topic string, data []byte, opts ...apis.OptionProduce) error {
 	opt := &apis.ProduceOption{}
 	for _, fun := range opts {

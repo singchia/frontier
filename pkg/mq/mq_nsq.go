@@ -8,6 +8,8 @@ import (
 
 type mqNSQ struct {
 	producer *nsq.Producer
+	// conf
+	conf *config.NSQ
 }
 
 func newNSQ(config *config.Configuration) (*mqNSQ, error) {
@@ -22,10 +24,15 @@ func newNSQ(config *config.Configuration) (*mqNSQ, error) {
 	}
 	return &mqNSQ{
 		producer: producer,
+		conf:     &conf,
 	}, nil
 }
 
-func (mq *mqNSQ) Producer(topic string, data []byte, opts ...apis.OptionProduce) error {
+func (mq *mqNSQ) ProducerTopics() []string {
+	return mq.conf.Producer.Topics
+}
+
+func (mq *mqNSQ) Produce(topic string, data []byte, opts ...apis.OptionProduce) error {
 	opt := &apis.ProduceOption{}
 	for _, fun := range opts {
 		fun(opt)

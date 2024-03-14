@@ -13,6 +13,9 @@ import (
 type mqKafka struct {
 	asyncProducer sarama.AsyncProducer
 	producer      sarama.SyncProducer
+
+	// conf
+	conf *config.Kafka
 }
 
 func newKafka(config *config.Configuration) (*mqKafka, error) {
@@ -62,6 +65,7 @@ func newKafka(config *config.Configuration) (*mqKafka, error) {
 		}()
 		return &mqKafka{
 			asyncProducer: asyncProducer,
+			conf:          &conf,
 		}, nil
 	}
 
@@ -72,6 +76,7 @@ func newKafka(config *config.Configuration) (*mqKafka, error) {
 	}
 	return &mqKafka{
 		producer: producer,
+		conf:     &conf,
 	}, nil
 }
 
@@ -119,6 +124,10 @@ func initKafkaConfig(conf *config.Kafka) *sarama.Config {
 		sconf.Producer.Flush.Messages = conf.Producer.Flush.Messages
 	}
 	return sconf
+}
+
+func (mq *mqKafka) ProducerTopics() []string {
+	return mq.conf.Producer.Topics
 }
 
 func (mq *mqKafka) Produce(topic string, data []byte, opts ...apis.OptionProduce) error {
