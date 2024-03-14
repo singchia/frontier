@@ -223,10 +223,30 @@ type Nats struct {
 	}
 }
 
+type NSQ struct {
+	Enable   bool     `yaml:"enable"`
+	Addrs    []string `yaml:"addrs"`
+	Producer struct {
+		Topics []string
+	}
+}
+
+type Redis struct {
+	Enable   bool     `yaml:"enable"`
+	Addrs    []string `yaml:"addrs"`
+	DB       int      `yaml:"db"`
+	Password string   `yaml:"password"`
+	Producer struct {
+		Channels []string
+	}
+}
+
 type MQM struct {
 	Kafka Kafka `yaml:"kafka"`
 	AMQP  AMQP  `yaml:"amqp"`
 	Nats  Nats  `yaml:"nats"`
+	NSQ   NSQ   `yaml:"nsq"`
+	Redis Redis `yaml:"redis"`
 }
 
 // exchange

@@ -78,6 +78,7 @@ func (mq *mqNats) Produce(topic string, data []byte, opts ...apis.OptionProduce)
 	for _, fun := range opts {
 		fun(opt)
 	}
+	// TODO we can add yaegi handler here to let user to do some transfer works
 	if mq.jetstream {
 		_, err := mq.js.Publish(context.TODO(), topic, data)
 		return err
@@ -86,6 +87,7 @@ func (mq *mqNats) Produce(topic string, data []byte, opts ...apis.OptionProduce)
 	return err
 }
 
-func (mq *mqNats) Close() {
+func (mq *mqNats) Close() error {
 	mq.conn.Close()
+	return nil
 }

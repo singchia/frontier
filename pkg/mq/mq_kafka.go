@@ -11,7 +11,8 @@ import (
 )
 
 type mqKafka struct {
-	producer sarama.AsyncProducer
+	asyncProducer sarama.AsyncProducer
+	producer      sarama.SyncProducer
 }
 
 func newKafka(config *config.Configuration) (*mqKafka, error) {
@@ -21,17 +22,23 @@ func newKafka(config *config.Configuration) (*mqKafka, error) {
 	}
 	sconf := initKafkaConfig(&conf)
 
-	// dial
-	producer, err := sarama.NewAsyncProducer(conf.Addrs, sconf)
-	if err != nil {
-		klog.Errorf("new mq kafka err: %s", err)
-		return nil, err
-	}
+	var (
+		asyncProducer sarama.AsyncProducer
+		producer      sarama.SyncProducer
+		err           error
+	)
 
+	// TODO not enabled
 	if conf.Producer.Async {
+		// dial
+		asyncProducer, err = sarama.NewAsyncProducer(conf.Addrs, sconf)
+		if err != nil {
+			klog.Errorf("new mq kafka async producer err: %s, addr: %v", err, conf.Addrs)
+			return nil, err
+		}
 		// handle error
 		go func() {
-			for msg := range producer.Errors() {
+			for msg := range asyncProducer.Errors() {
 				message, ok := msg.Msg.Metadata.(geminio.Message)
 				if !ok {
 					klog.Errorf("mq kafka producer, errors channel return wrong type: %v", msg.Msg.Metadata)
@@ -41,10 +48,9 @@ func newKafka(config *config.Configuration) (*mqKafka, error) {
 				// TODO metrics
 			}
 		}()
-
 		// handle success
 		go func() {
-			for msg := range producer.Successes() {
+			for msg := range asyncProducer.Successes() {
 				message, ok := msg.Metadata.(geminio.Message)
 				if !ok {
 					klog.Errorf("mq kafka producer, success channel return wrong type: %v", msg.Metadata)
@@ -54,8 +60,16 @@ func newKafka(config *config.Configuration) (*mqKafka, error) {
 				// TODO metrics
 			}
 		}()
+		return &mqKafka{
+			asyncProducer: asyncProducer,
+		}, nil
 	}
 
+	producer, err = sarama.NewSyncProducer(conf.Addrs, sconf)
+	if err != nil {
+		klog.Errorf("new mq kafka sync producer err: %s, addr: %v", err, conf.Addrs)
+		return nil, err
+	}
 	return &mqKafka{
 		producer: producer,
 	}, nil
@@ -112,14 +126,13 @@ func (mq *mqKafka) Produce(topic string, data []byte, opts ...apis.OptionProduce
 	for _, fun := range opts {
 		fun(opt)
 	}
-	message := opt.Origin.(geminio.Message)
 
-	mq.producer.Input() <- &sarama.ProducerMessage{
-		Topic:    topic,
-		Value:    sarama.ByteEncoder(data),
-		Metadata: message,
-	}
-	return nil
+	// TODO we can add yaegi handler here to let user to do some transfer works
+	_, _, err := mq.producer.SendMessage(&sarama.ProducerMessage{
+		Topic: topic,
+		Value: sarama.ByteEncoder(data),
+	})
+	return err
 }
 
 func (mq *mqKafka) Close() error {

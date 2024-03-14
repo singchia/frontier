@@ -96,6 +96,7 @@ func (mq *mqAMQP) Produce(topic string, data []byte, opts ...apis.OptionProduce)
 		fun(opt)
 	}
 
+	// TODO we can add yaegi handler here to let user to do some transfer works
 	publishing := amqp.Publishing{
 		ContentType:     mq.conf.Producer.ContentType,
 		ContentEncoding: mq.conf.Producer.ContentEncoding,

@@ -18,15 +18,15 @@ type mqManager struct {
 	mqindex map[string]*uint64   // for round robin
 }
 
-func NewMQM(conf *config.Configuration) (apis.MQM, error) {
-	return newMQManager(conf)
+func NewMQM(config *config.Configuration) (apis.MQM, error) {
+	return newMQManager(config)
 }
 
-func newMQManager(conf *config.Configuration) (*mqManager, error) {
+func newMQManager(config *config.Configuration) (*mqManager, error) {
 	mqm := &mqManager{
 		mqs:     make(map[string][]apis.MQ),
 		mqindex: make(map[string]*uint64),
-		conf:    conf,
+		conf:    config,
 	}
 	return mqm, nil
 }

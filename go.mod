@@ -8,6 +8,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jumboframes/armorigo v0.4.0-rc.1
 	github.com/nats-io/nats.go v1.33.1
+	github.com/nsqio/go-nsq v1.1.0
 	github.com/rabbitmq/amqp091-go v1.9.0
 	github.com/singchia/geminio v1.1.5-rc.2
 	github.com/singchia/go-timer/v2 v2.2.1
@@ -21,6 +22,11 @@ require (
 	gorm.io/driver/sqlite v1.5.4
 	gorm.io/gorm v1.25.5
 	k8s.io/klog/v2 v2.120.1
+)
+
+require (
+	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 )
 
 require (
@@ -59,6 +65,7 @@ require (
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
+	github.com/redis/go-redis/v9 v9.5.1
 	github.com/singchia/yafsm v1.0.1 // indirect
 	golang.org/x/crypto v0.19.0 // indirect
 	golang.org/x/net v0.21.0 // indirect
