@@ -2,6 +2,8 @@ module github.com/singchia/frontier
 
 go 1.20
 
+replace github.com/singchia/geminio => ../../moresec/singchia/geminio
+
 require (
 	github.com/IBM/sarama v1.43.0
 	github.com/go-kratos/kratos/v2 v2.7.2
