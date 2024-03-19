@@ -16,17 +16,31 @@ const (
 	modeCluster
 )
 
+type rds interface {
+	HGetAll(ctx context.Context, key string) *redis.MapStringStringCmd
+	Get(ctx context.Context, key string) *redis.StringCmd
+	MGet(ctx context.Context, keys ...string) *redis.SliceCmd
+	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.StatusCmd
+	Del(ctx context.Context, keys ...string) *redis.IntCmd
+	Expire(ctx context.Context, key string, expiration time.Duration) *redis.BoolCmd
+	Keys(ctx context.Context, pattern string) *redis.StringSliceCmd
+	Ping(ctx context.Context) *redis.StatusCmd
+	Scan(ctx context.Context, cursor uint64, match string, count int64) *redis.ScanCmd
+	Eval(ctx context.Context, script string, keys []string, args ...interface{}) *redis.Cmd
+
+	TxPipeline() redis.Pipeliner
+	Close() error
+}
+
 type Dao struct {
-	mode       int
-	rds        *redis.Client
-	clusterrds *redis.ClusterClient
+	mode int
+	rds  rds
 }
 
 func newDao(config *config.Configuration) (*Dao, error) {
 	var (
-		rds        *redis.Client
-		clusterrds *redis.ClusterClient
-		mode       int
+		rds  rds
+		mode int
 	)
 	conf := config.Redis
 	switch conf.Mode {
@@ -127,8 +141,8 @@ func newDao(config *config.Configuration) (*Dao, error) {
 			DisableIndentity: cconf.DisableIndentity,
 			IdentitySuffix:   cconf.IdentitySuffix,
 		}
-		clusterrds = redis.NewClusterClient(opt)
-		_, err := clusterrds.Ping(context.TODO()).Result()
+		rds = redis.NewClusterClient(opt)
+		_, err := rds.Ping(context.TODO()).Result()
 		if err != nil {
 			klog.Errorf("redis cluster ping err: %s", err)
 			return nil, err
@@ -139,19 +153,11 @@ func newDao(config *config.Configuration) (*Dao, error) {
 		return nil, apis.ErrUnsupportRedisServerMode
 	}
 	return &Dao{
-		rds:        rds,
-		clusterrds: clusterrds,
-		mode:       mode,
+		rds:  rds,
+		mode: mode,
 	}, nil
 }
 
 func (dao *Dao) Close() error {
-	switch dao.mode {
-	case modeStandalone, modeSentinel:
-		return dao.rds.Close()
-
-	case modeCluster:
-		return dao.clusterrds.Close()
-	}
-	return nil
+	return dao.rds.Close()
 }
