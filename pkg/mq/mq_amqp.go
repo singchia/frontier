@@ -90,6 +90,10 @@ func initAMQPConfig(conf *config.AMQP) *amqp.Config {
 	return aconf
 }
 
+func (mq *mqAMQP) ProducerTopics() []string {
+	return mq.conf.Producer.RoutingKeys
+}
+
 func (mq *mqAMQP) Produce(topic string, data []byte, opts ...apis.OptionProduce) error {
 	opt := &apis.ProduceOption{}
 	for _, fun := range opts {
