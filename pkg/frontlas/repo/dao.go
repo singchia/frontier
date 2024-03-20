@@ -16,7 +16,7 @@ const (
 	modeCluster
 )
 
-type rds interface {
+type RDS interface {
 	HGetAll(ctx context.Context, key string) *redis.MapStringStringCmd
 	Get(ctx context.Context, key string) *redis.StringCmd
 	MGet(ctx context.Context, keys ...string) *redis.SliceCmd
@@ -34,12 +34,12 @@ type rds interface {
 
 type Dao struct {
 	mode int
-	rds  rds
+	rds  RDS
 }
 
 func newDao(config *config.Configuration) (*Dao, error) {
 	var (
-		rds  rds
+		rds  RDS
 		mode int
 	)
 	conf := config.Redis

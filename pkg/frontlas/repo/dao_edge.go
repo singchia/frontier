@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"strconv"
 	"strings"
@@ -16,8 +17,11 @@ const (
 	edgesKeyPrefix    = "frontlas:edges:" // example: frontlas:alive:edges:123 "{}"
 	edgesKeyPrefixAll = "frontlas:edges:*"
 
-	edgesAliveKeyPrefix = "frontlas:alive:edges:" // example: frontlas:alive:edges:123 1 ex 20
+	edgesAliveKeyPrefix = "frontlas:alive:edges:" // example: frontlas:alive:edges:123 1 ex 30
 )
+
+//go:embed lua/edge_delete.lua
+var deleteEdgeScript string
 
 // care about the performance
 func (dao *Dao) GetAllEdgeIDs() ([]uint64, error) {
@@ -77,10 +81,36 @@ func (dao *Dao) GetEdge(edgeID uint64) (*Edge, error) {
 	edge := &Edge{}
 	err = json.Unmarshal([]byte(result), edge)
 	if err != nil {
-		klog.Errorf("dao get edges, json unmarshal err: %s", err)
+		klog.Errorf("dao get edge, json unmarshal err: %s", err)
 		return nil, err
 	}
 	return edge, nil
+}
+
+func (dao *Dao) GetEdges(edgeIDs []uint64) ([]*Edge, error) {
+	keys := make([]string, len(edgeIDs))
+	for i, edgeID := range edgeIDs {
+		keys[i] = getEdgeKey(edgeID)
+	}
+
+	results, err := dao.rds.MGet(context.TODO(), keys...).Result()
+	if err != nil {
+		klog.Errorf("dao get edges, mget err: %s", err)
+		return nil, err
+	}
+	edges := []*Edge{}
+	for i, result := range results {
+		if result == nil {
+			edges[i] = nil
+		}
+		edge := &Edge{}
+		err = json.Unmarshal([]byte(result.(string)), edge)
+		if err != nil {
+			klog.Errorf("dao get edges, json unmarshal err: %s", err)
+			return nil, err
+		}
+	}
+	return edges, nil
 }
 
 func (dao *Dao) SetEdge(edgeID uint64, edge *Edge) error {
@@ -112,6 +142,9 @@ func (dao *Dao) SetEdgeAndAlive(edgeID uint64, edge *Edge, expiration time.Durat
 	pipeliner := dao.rds.TxPipeline()
 	pipeliner.Set(context.TODO(), edgeKey, edgeData, -1)
 	pipeliner.Set(context.TODO(), edgeAliveKey, 1, expiration)
+	// fronties
+	pipeliner.HIncrBy(context.TODO(), getFrontierKey(edge.FrontierID), "edge_count", 1)
+
 	_, err = pipeliner.Exec(context.TODO())
 	if err != nil {
 		klog.Errorf("dao set edge and alive, pipeliner exec err: %s", err)
@@ -136,27 +169,7 @@ func (dao *Dao) DeleteEdge(edgeID uint64) error {
 	edgeKey := getEdgeKey(edgeID)
 	edgeAliveKey := getAliveEdgeKey(edgeID)
 
-	script := `
-	local edge_key = KEYS[1]
-	local edge_alive_key = KEYS[2]
-	
-	# get edge and it's frontier_id
-	local edge = redis.call("GET", edge_key)
-	if edge then
-		local value = json.decode(edge)
-		local frontier_id = value['frontier_id']
-		if frontier_id then
-			# decrement the edge_count in frontier
-			local frontier_key = "frontlas:frontiers:" + frontier_id
-			redis.call("HINCRBY", frontier_key, "edge_count", -1)
-		end
-	end
-
-	# remove edge alive
-	return redis.call("DEL", edge_alive_key)
-	`
-
-	_, err := dao.rds.Eval(context.TODO(), script, []string{edgeKey, edgeAliveKey}).Result()
+	_, err := dao.rds.Eval(context.TODO(), deleteEdgeScript, []string{edgeKey, edgeAliveKey, frontiersKeyPrefix}).Result()
 	if err != nil {
 		klog.Errorf("dao delete edge, eval err: %s", err)
 		return err

@@ -6,6 +6,7 @@ replace github.com/singchia/geminio => ../../moresec/singchia/geminio
 
 require (
 	github.com/IBM/sarama v1.43.0
+	github.com/alicebob/miniredis/v2 v2.32.1
 	github.com/go-kratos/kratos/v2 v2.7.2
 	github.com/google/uuid v1.6.0
 	github.com/jumboframes/armorigo v0.4.0-rc.1
@@ -16,6 +17,7 @@ require (
 	github.com/singchia/go-timer/v2 v2.2.1
 	github.com/soheilhy/cmux v0.1.5
 	github.com/spf13/pflag v1.0.5
+	github.com/stretchr/testify v1.8.4
 	github.com/swaggo/swag v1.16.3
 	google.golang.org/genproto/googleapis/api v0.0.0-20240304212257-790db918fca8
 	google.golang.org/grpc v1.62.1
@@ -27,8 +29,11 @@ require (
 )
 
 require (
+	github.com/alicebob/gopher-json v0.0.0-20200520072559-a9ecdc9d1d3a // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/yuin/gopher-lua v1.1.1 // indirect
 )
 
 require (
