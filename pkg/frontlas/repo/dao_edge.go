@@ -14,7 +14,7 @@ import (
 
 // we set expire time to indicate real stats of edges
 const (
-	edgesKeyPrefix    = "frontlas:edges:" // example: frontlas:alive:edges:123 "{}"
+	edgesKeyPrefix    = "frontlas:edges:" // example: frontlas:edges:123 "{}"
 	edgesKeyPrefixAll = "frontlas:edges:*"
 
 	edgesAliveKeyPrefix = "frontlas:alive:edges:" // example: frontlas:alive:edges:123 1 ex 30
@@ -27,13 +27,14 @@ var deleteEdgeScript string
 func (dao *Dao) GetAllEdgeIDs() ([]uint64, error) {
 	results, err := dao.rds.Keys(context.TODO(), edgesKeyPrefixAll).Result()
 	if err != nil {
+		klog.Errorf("dao get all edgeIDs, keys err: %s", err)
 		return nil, err
 	}
 	edgeIDs := []uint64{}
 	for _, v := range results {
 		edgeID, err := getEdgeID(v)
 		if err != nil {
-			klog.Errorf("dao get all edgeIDs, strconv parse err: %s, ", err)
+			klog.Errorf("dao get all edgeIDs, get edgeID err: %s", err)
 			return nil, err
 		}
 		edgeIDs = append(edgeIDs, edgeID)
@@ -73,20 +74,6 @@ func (dao *Dao) GetEdgesByCursor(query *EdgeQuery) ([]*Edge, uint64, error) {
 	return edges, cursor, nil
 }
 
-func (dao *Dao) GetEdge(edgeID uint64) (*Edge, error) {
-	result, err := dao.rds.Get(context.TODO(), getEdgeKey(edgeID)).Result()
-	if err != nil {
-		klog.Errorf("dao get edge, get err: %s", err)
-	}
-	edge := &Edge{}
-	err = json.Unmarshal([]byte(result), edge)
-	if err != nil {
-		klog.Errorf("dao get edge, json unmarshal err: %s", err)
-		return nil, err
-	}
-	return edge, nil
-}
-
 func (dao *Dao) GetEdges(edgeIDs []uint64) ([]*Edge, error) {
 	keys := make([]string, len(edgeIDs))
 	for i, edgeID := range edgeIDs {
@@ -113,14 +100,28 @@ func (dao *Dao) GetEdges(edgeIDs []uint64) ([]*Edge, error) {
 	return edges, nil
 }
 
+func (dao *Dao) GetEdge(edgeID uint64) (*Edge, error) {
+	result, err := dao.rds.Get(context.TODO(), getEdgeKey(edgeID)).Result()
+	if err != nil {
+		klog.Errorf("dao get edge, get err: %s", err)
+		return nil, err
+	}
+	edge := &Edge{}
+	err = json.Unmarshal([]byte(result), edge)
+	if err != nil {
+		klog.Errorf("dao get edge, json unmarshal err: %s", err)
+		return nil, err
+	}
+	return edge, nil
+}
+
 func (dao *Dao) SetEdge(edgeID uint64, edge *Edge) error {
-	edgeKey := getEdgeKey(edgeID)
 	data, err := json.Marshal(edge)
 	if err != nil {
 		klog.Errorf("dao set edge, json marshal err: %s", err)
 		return err
 	}
-	_, err = dao.rds.Set(context.TODO(), edgeKey, data, -1).Result()
+	_, err = dao.rds.Set(context.TODO(), getEdgeKey(edgeID), data, -1).Result()
 	if err != nil {
 		klog.Errorf("dao set edge, set err: %s", err)
 		return err
@@ -129,20 +130,18 @@ func (dao *Dao) SetEdge(edgeID uint64, edge *Edge) error {
 }
 
 func (dao *Dao) SetEdgeAndAlive(edgeID uint64, edge *Edge, expiration time.Duration) error {
-	// edge
-	edgeKey := getEdgeKey(edgeID)
 	edgeData, err := json.Marshal(edge)
 	if err != nil {
 		klog.Errorf("dao set edge and alive, json marshal err: %s", err)
 		return err
 	}
-	// alive
-	edgeAliveKey := getAliveEdgeKey(edgeID)
 
 	pipeliner := dao.rds.TxPipeline()
-	pipeliner.Set(context.TODO(), edgeKey, edgeData, -1)
-	pipeliner.Set(context.TODO(), edgeAliveKey, 1, expiration)
-	// fronties
+	// edge
+	pipeliner.Set(context.TODO(), getEdgeKey(edgeID), edgeData, -1)
+	// alive
+	pipeliner.Set(context.TODO(), getAliveEdgeKey(edgeID), 1, expiration)
+	// frontier edge_count
 	pipeliner.HIncrBy(context.TODO(), getFrontierKey(edge.FrontierID), "edge_count", 1)
 
 	_, err = pipeliner.Exec(context.TODO())
@@ -154,9 +153,9 @@ func (dao *Dao) SetEdgeAndAlive(edgeID uint64, edge *Edge, expiration time.Durat
 }
 
 func (dao *Dao) ExpireEdge(edgeID uint64, expiration time.Duration) error {
-	edgeAliveKey := getAliveEdgeKey(edgeID)
-	ok, err := dao.rds.Expire(context.TODO(), edgeAliveKey, expiration).Result()
+	ok, err := dao.rds.Expire(context.TODO(), getAliveEdgeKey(edgeID), expiration).Result()
 	if err != nil {
+		klog.Errorf("dao expire edge, expire err: %s", err)
 		return err
 	}
 	if !ok {
@@ -165,16 +164,27 @@ func (dao *Dao) ExpireEdge(edgeID uint64, expiration time.Duration) error {
 	return nil
 }
 
+// we keep edge but delete alive:edge
 func (dao *Dao) DeleteEdge(edgeID uint64) error {
-	edgeKey := getEdgeKey(edgeID)
-	edgeAliveKey := getAliveEdgeKey(edgeID)
-
-	_, err := dao.rds.Eval(context.TODO(), deleteEdgeScript, []string{edgeKey, edgeAliveKey, frontiersKeyPrefix}).Result()
+	_, err := dao.rds.Eval(context.TODO(), deleteEdgeScript,
+		[]string{getEdgeKey(edgeID), getAliveEdgeKey(edgeID), frontiersKeyPrefix}).Result()
 	if err != nil {
 		klog.Errorf("dao delete edge, eval err: %s", err)
 		return err
 	}
 	return nil
+}
+
+func (dao *Dao) CountEdges() (int, error) {
+	frontiers, err := dao.GetAllFrontiers()
+	if err != nil {
+		return 0, err
+	}
+	count := 0
+	for _, frontier := range frontiers {
+		count += frontier.EdgeCount
+	}
+	return count, nil
 }
 
 func getEdgeKey(edgeID uint64) string {

@@ -24,6 +24,7 @@ func TestSetEdgeAndAlive(t *testing.T) {
 	dao, err := newDao(config)
 	assert.NoError(t, err)
 
+	// pre set edges
 	edge := &Edge{
 		FrontierID: "a",
 		Addr:       "192.168.0.1",

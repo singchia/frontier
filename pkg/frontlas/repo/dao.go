@@ -18,6 +18,7 @@ const (
 
 type RDS interface {
 	HGetAll(ctx context.Context, key string) *redis.MapStringStringCmd
+	HSet(ctx context.Context, key string, values ...interface{}) *redis.IntCmd
 	Get(ctx context.Context, key string) *redis.StringCmd
 	MGet(ctx context.Context, keys ...string) *redis.SliceCmd
 	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.StatusCmd
