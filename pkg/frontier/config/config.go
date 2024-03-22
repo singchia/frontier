@@ -202,7 +202,9 @@ type Nats struct {
 		// using jetstream instead of nats
 		Enable   bool   `yaml:"enable"`
 		Name     string `yaml:"name"`
-		Subjects []string
+		Producer struct {
+			Subjects []string
+		}
 	}
 }
 

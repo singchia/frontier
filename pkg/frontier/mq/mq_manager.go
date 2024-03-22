@@ -28,6 +28,47 @@ func newMQManager(config *config.Configuration) (*mqManager, error) {
 		mqindex: make(map[string]*uint64),
 		conf:    config,
 	}
+	conf := config.MQM
+	// rabbit
+	if conf.AMQP.Enable {
+		amqp, err := newAMQP(config)
+		if err != nil {
+			return nil, err
+		}
+		mqm.AddMQ(amqp.ProducerTopics(), amqp)
+	}
+	// kafka
+	if conf.Kafka.Enable {
+		kafka, err := newKafka(config)
+		if err != nil {
+			return nil, err
+		}
+		mqm.AddMQ(kafka.ProducerTopics(), kafka)
+	}
+	// nsq
+	if conf.NSQ.Enable {
+		nsq, err := newNSQ(config)
+		if err != nil {
+			return nil, err
+		}
+		mqm.AddMQ(nsq.ProducerTopics(), nsq)
+	}
+	// nats and jetstream
+	if conf.Nats.Enable {
+		nats, err := newNats(config)
+		if err != nil {
+			return nil, err
+		}
+		mqm.AddMQ(nats.ProducerTopics(), nats)
+	}
+	// redis pub
+	if conf.Redis.Enable {
+		redis, err := newRedis(config)
+		if err != nil {
+			return nil, err
+		}
+		mqm.AddMQ(redis.ProducerTopics(), redis)
+	}
 	return mqm, nil
 }
 

@@ -45,7 +45,7 @@ func newNats(config *config.Configuration) (*mqNats, error) {
 		}
 		_, err = js.CreateStream(context.TODO(), jetstream.StreamConfig{
 			Name:     conf.JetStream.Name,
-			Subjects: conf.JetStream.Subjects,
+			Subjects: conf.JetStream.Producer.Subjects,
 		})
 		if err != nil {
 			klog.Errorf("jetstream create stream err: %s", err)
@@ -71,6 +71,13 @@ func getNatsURL(addrs []string) string {
 		}
 	}
 	return url
+}
+
+func (mq *mqNats) ProducerTopics() []string {
+	if mq.conf.JetStream.Enable {
+		return mq.conf.JetStream.Producer.Subjects
+	}
+	return mq.conf.Producer.Subjects
 }
 
 func (mq *mqNats) Produce(topic string, data []byte, opts ...apis.OptionProduce) error {
