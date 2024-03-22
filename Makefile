@@ -10,7 +10,7 @@ frontier:
 
 .PHONY: frontier-linux
 frontier-linux:
-	CC=${CC} GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "-s -w"-o ./frontier cmd/frontier/main.go
+	CC=${CC} GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build -trimpath -ldflags "-s -w" -o ./frontier cmd/frontier/main.go
 
 .PHONY: examples
 examples:
@@ -27,7 +27,7 @@ install:
 	install -m 0755 -d $(DESTDIR)$(BINDIR)
 	install -m 0755 -d $(DESTDIR)$(CONFDIR)
 	install -m 0755 ./frontier $(DESTDIR)$(BINDIR)
-	install -m 0755 ./pkg/config/frontier.yaml $(DESTDIR)$(CONFDIR)
+	install -m 0755 ./pkg/frontier/config/frontier.yaml $(DESTDIR)$(CONFDIR)
 
 .PHONY: image
 image:
