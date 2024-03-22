@@ -15,7 +15,6 @@ import (
 	"github.com/singchia/frontier/pkg/frontier/apis"
 	"github.com/singchia/frontier/pkg/frontier/config"
 	"github.com/singchia/frontier/pkg/mapmap"
-	"github.com/singchia/frontier/pkg/security"
 	"github.com/singchia/frontier/pkg/utils"
 	"github.com/singchia/geminio"
 	"github.com/singchia/geminio/delegate"
@@ -65,12 +64,6 @@ type edgeManager struct {
 func newEdgeManager(conf *config.Configuration, repo apis.Repo, informer apis.EdgeInformer,
 	exchange apis.Exchange, tmr timer.Timer) (*edgeManager, error) {
 	listen := &conf.Edgebound.Listen
-	var (
-		ln      net.Listener
-		network string = listen.Network
-		addr    string = listen.Addr
-		err     error
-	)
 
 	em := &edgeManager{
 		conf:                  conf,
@@ -87,61 +80,10 @@ func newEdgeManager(conf *config.Configuration, repo apis.Repo, informer apis.Ed
 	}
 	exchange.AddEdgebound(em)
 
-	if !listen.TLS.Enable {
-		if ln, err = net.Listen(network, addr); err != nil {
-			klog.Errorf("edge manager net listen err: %s, network: %s, addr: %s", err, network, addr)
-			return nil, err
-		}
-
-	} else {
-		// load all certs to listen
-		certs := []tls.Certificate{}
-		for _, certFile := range listen.TLS.Certs {
-			cert, err := tls.LoadX509KeyPair(certFile.Cert, certFile.Key)
-			if err != nil {
-				klog.Errorf("edge manager tls load x509 cert err: %s, cert: %s, key: %s", err, certFile.Cert, certFile.Key)
-				continue
-			}
-			certs = append(certs, cert)
-		}
-
-		if !listen.TLS.MTLS {
-			// tls
-			if ln, err = tls.Listen(network, addr, &tls.Config{
-				MinVersion:   tls.VersionTLS12,
-				CipherSuites: security.CiperSuites,
-				Certificates: certs,
-			}); err != nil {
-				klog.Errorf("edge manager tls listen err: %s, network: %s, addr: %s", err, network, addr)
-				return nil, err
-			}
-
-		} else {
-			// mtls, require for edge cert
-			// load all ca certs to pool
-			caPool := x509.NewCertPool()
-			for _, caFile := range listen.TLS.CACerts {
-				ca, err := os.ReadFile(caFile)
-				if err != nil {
-					klog.Errorf("edge manager read ca cert err: %s, file: %s", err, caFile)
-					return nil, err
-				}
-				if !caPool.AppendCertsFromPEM(ca) {
-					klog.Warningf("edge manager append ca cert to ca pool err: %s, file: %s", err, caFile)
-					continue
-				}
-			}
-			if ln, err = tls.Listen(network, addr, &tls.Config{
-				MinVersion:   tls.VersionTLS12,
-				CipherSuites: security.CiperSuites,
-				ClientCAs:    caPool,
-				ClientAuth:   tls.RequireAndVerifyClientCert,
-				Certificates: certs,
-			}); err != nil {
-				klog.Errorf("edge manager tls listen err: %s, network: %s, addr: %s", err, network, addr)
-				return nil, err
-			}
-		}
+	ln, err := utils.Listen(listen)
+	if err != nil {
+		klog.Errorf("edge manager listen err: %s", err)
+		return nil, err
 	}
 
 	geminioLn := ln

@@ -28,6 +28,7 @@ type RDS interface {
 	Ping(ctx context.Context) *redis.StatusCmd
 	Scan(ctx context.Context, cursor uint64, match string, count int64) *redis.ScanCmd
 	Eval(ctx context.Context, script string, keys []string, args ...interface{}) *redis.Cmd
+	Exists(ctx context.Context, keys ...string) *redis.IntCmd
 
 	TxPipeline() redis.Pipeliner
 	Close() error

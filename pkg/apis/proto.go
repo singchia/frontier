@@ -1,6 +1,6 @@
 package apis
 
-type Instance struct {
+type FrontierInstance struct {
 	InstanceID string `yaml:"instance_id"`
 	// in k8s, it should be podIP:port
 	AdvertisedServiceboundAddr string `yaml:"advertised_servicebound_addr"`

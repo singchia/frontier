@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/singchia/frontier/api/dataplane/v1/service"
+	gconfig "github.com/singchia/frontier/pkg/config"
 	"github.com/singchia/frontier/pkg/frontier/config"
 	"github.com/singchia/frontier/pkg/frontier/repo/dao"
 	"github.com/singchia/go-timer/v2"
@@ -17,7 +18,7 @@ func TestServiceManager(t *testing.T) {
 
 	conf := &config.Configuration{
 		Servicebound: config.Servicebound{
-			Listen: config.Listen{
+			Listen: gconfig.Listen{
 				Network: network,
 				Addr:    addr,
 			},

@@ -9,6 +9,7 @@ import (
 	"github.com/IBM/sarama"
 	armio "github.com/jumboframes/armorigo/io"
 	"github.com/jumboframes/armorigo/log"
+	"github.com/singchia/frontier/pkg/config"
 	"github.com/spf13/pflag"
 	"gopkg.in/yaml.v2"
 	"k8s.io/klog/v2"
@@ -33,48 +34,28 @@ type Daemon struct {
 	InstanceID string `yaml:"instand_id,omitempty"`
 }
 
-// listen related
-type CertKey struct {
-	Cert string `yaml:"cert"`
-	Key  string `yaml:"key"`
-}
-
-type TLS struct {
-	Enable             bool      `yaml:"enable"`
-	MTLS               bool      `yaml:"mtls"`
-	CACerts            []string  `yaml:"ca_certs"`             // ca certs paths
-	Certs              []CertKey `yaml:"certs"`                // certs paths
-	InsecureSkipVerify bool      `yaml:"insecure_skip_verify"` // for client use
-}
-
-type Listen struct {
-	Network string `yaml:"network"`
-	Addr    string `yaml:"addr"`
-	TLS     TLS    `yaml:"tls"`
-}
-
 // edgebound
 // Bypass is for the lagecy gateway, this will split
 type Bypass struct {
-	Enable  bool   `yaml:"enable"`
-	Network string `yaml:"network"`
-	Addr    string `yaml:"addr"` // addr to dial
-	TLS     TLS    `yaml:"tls"`  // certs to dial or ca to auth
+	Enable  bool       `yaml:"enable"`
+	Network string     `yaml:"network"`
+	Addr    string     `yaml:"addr"` // addr to dial
+	TLS     config.TLS `yaml:"tls"`  // certs to dial or ca to auth
 }
 type Edgebound struct {
-	Listen Listen `yaml:"listen"`
-	Bypass Bypass `yaml:"bypass"`
+	Listen config.Listen `yaml:"listen"`
+	Bypass Bypass        `yaml:"bypass"`
 	// alloc edgeID when no get_id function online
 	EdgeIDAllocWhenNoIDServiceOn bool `yaml:"edgeid_alloc_when_no_idservice_on"`
 }
 
 // servicebound
 type Servicebound struct {
-	Listen Listen `yaml:"listen"`
+	Listen config.Listen `yaml:"listen"`
 }
 
 type ControlPlane struct {
-	Listen Listen `yaml:"listen"`
+	Listen config.Listen `yaml:"listen"`
 }
 
 // message queue
@@ -258,6 +239,14 @@ type Dao struct {
 	Debug bool `yaml:"debug"`
 }
 
+// frontlas
+type Frontlas struct {
+	Enable  bool       `yaml:"enable"`
+	Network string     `yaml:"network"`
+	Addr    string     `yaml:"addr"` // addr to dial
+	TLS     config.TLS `yaml:"tls"`  // certs to dial or ca to auth
+}
+
 type Configuration struct {
 	Daemon Daemon `yaml:"daemon"`
 
@@ -268,6 +257,8 @@ type Configuration struct {
 	ControlPlane ControlPlane `yaml:"controlplane"`
 
 	Dao Dao `yaml:"dao"`
+
+	Frontlas Frontlas
 
 	MQM MQM `yaml:"mqm"`
 }
@@ -348,23 +339,23 @@ func genDefaultConfig(writer io.Writer) error {
 			},
 		},
 		ControlPlane: ControlPlane{
-			Listen: Listen{
+			Listen: config.Listen{
 				Network: "tcp",
 				Addr:    "0.0.0.0:2430",
 			},
 		},
 		Servicebound: Servicebound{
-			Listen: Listen{
+			Listen: config.Listen{
 				Network: "tcp",
 				Addr:    "0.0.0.0:2431",
-				TLS: TLS{
+				TLS: config.TLS{
 					Enable: false,
 					MTLS:   false,
 					CACerts: []string{
 						"ca1.cert",
 						"ca2.cert",
 					},
-					Certs: []CertKey{
+					Certs: []config.CertKey{
 						{
 							Cert: "servicebound.cert",
 							Key:  "servicebound.key",
@@ -374,17 +365,17 @@ func genDefaultConfig(writer io.Writer) error {
 			},
 		},
 		Edgebound: Edgebound{
-			Listen: Listen{
+			Listen: config.Listen{
 				Network: "tcp",
 				Addr:    "0.0.0.0:2432",
-				TLS: TLS{
+				TLS: config.TLS{
 					Enable: false,
 					MTLS:   false,
 					CACerts: []string{
 						"ca1.cert",
 						"ca2.cert",
 					},
-					Certs: []CertKey{
+					Certs: []config.CertKey{
 						{
 							Cert: "edgebound.cert",
 							Key:  "edgebound.key",
@@ -397,13 +388,13 @@ func genDefaultConfig(writer io.Writer) error {
 				Enable:  false,
 				Network: "tcp",
 				Addr:    "192.168.1.10:8443",
-				TLS: TLS{
+				TLS: config.TLS{
 					Enable: true,
 					MTLS:   true,
 					CACerts: []string{
 						"ca1.cert",
 					},
-					Certs: []CertKey{
+					Certs: []config.CertKey{
 						{
 							Cert: "frontier.cert",
 							Key:  "frontier.key",

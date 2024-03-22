@@ -1,5 +1,7 @@
 package config
 
+import "github.com/singchia/frontier/pkg/config"
+
 // daemon related
 type RLimit struct {
 	Enable  bool `yaml:"enable"`
@@ -17,10 +19,9 @@ type Daemon struct {
 	PProf  PProf  `yaml:"pprof"`
 }
 
-// for rest grpc and geminio
-type Server struct {
-	Network string `yaml:"network"`
-	Addr    string `yaml:"addr"`
+// for rest and grpc
+type ControlPlane struct {
+	Listen config.Listen `yaml:"listen"`
 }
 
 // TODO tls support
@@ -166,10 +167,16 @@ type Redis struct {
 	}
 }
 
+type FrontierManager struct {
+	Listen config.Listen `yaml:"listen"`
+}
+
 type Configuration struct {
 	Daemon Daemon `yaml:"daemon"`
 
-	Server Server `yaml:"server"`
+	ControlPlane ControlPlane `yaml:"control_plane"`
+
+	FrontierManager FrontierManager `yaml:"frontier_plane"`
 
 	Redis Redis `yaml:"redis"`
 }

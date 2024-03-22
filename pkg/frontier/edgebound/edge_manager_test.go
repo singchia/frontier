@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/singchia/frontier/api/dataplane/v1/edge"
+	gconfig "github.com/singchia/frontier/pkg/config"
 	"github.com/singchia/frontier/pkg/frontier/config"
 	"github.com/singchia/frontier/pkg/frontier/repo/dao"
 	"github.com/singchia/go-timer/v2"
@@ -17,7 +18,7 @@ func TestEdgeManager(t *testing.T) {
 
 	conf := &config.Configuration{
 		Edgebound: config.Edgebound{
-			Listen: config.Listen{
+			Listen: gconfig.Listen{
 				Network: network,
 				Addr:    addr,
 			},

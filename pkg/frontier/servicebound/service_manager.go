@@ -1,11 +1,8 @@
 package servicebound
 
 import (
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
 	"net"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -16,7 +13,6 @@ import (
 	"github.com/singchia/frontier/pkg/frontier/config"
 	"github.com/singchia/frontier/pkg/frontier/repo/model"
 	"github.com/singchia/frontier/pkg/mapmap"
-	"github.com/singchia/frontier/pkg/security"
 	"github.com/singchia/frontier/pkg/utils"
 	"github.com/singchia/geminio"
 	"github.com/singchia/geminio/delegate"
@@ -67,12 +63,6 @@ type serviceManager struct {
 func newServiceManager(conf *config.Configuration, repo apis.Repo, informer apis.ServiceInformer,
 	exchange apis.Exchange, mqm apis.MQM, tmr timer.Timer) (*serviceManager, error) {
 	listen := &conf.Servicebound.Listen
-	var (
-		ln      net.Listener
-		network string = listen.Network
-		addr    string = listen.Addr
-		err     error
-	)
 
 	sm := &serviceManager{
 		conf:                  conf,
@@ -89,61 +79,10 @@ func newServiceManager(conf *config.Configuration, repo apis.Repo, informer apis
 		mqm:       mqm,
 	}
 	exchange.AddServicebound(sm)
-
-	if !listen.TLS.Enable {
-		if ln, err = net.Listen(network, addr); err != nil {
-			klog.Errorf("service manager net listen err: %s, network: %s, addr: %s", err, network, addr)
-			return nil, err
-		}
-	} else {
-		// load all certs to listen
-		certs := []tls.Certificate{}
-		for _, certFile := range listen.TLS.Certs {
-			cert, err := tls.LoadX509KeyPair(certFile.Cert, certFile.Key)
-			if err != nil {
-				klog.Errorf("service manager tls load x509 cert err: %s, cert: %s, key: %s", err, certFile.Cert, certFile.Key)
-				continue
-			}
-			certs = append(certs, cert)
-		}
-
-		if !listen.TLS.MTLS {
-			// tls
-			if ln, err = tls.Listen(network, addr, &tls.Config{
-				MinVersion:   tls.VersionTLS12,
-				CipherSuites: security.CiperSuites,
-				Certificates: certs,
-			}); err != nil {
-				klog.Errorf("service manager tls listen err: %s, network: %s, addr: %s", err, network, addr)
-				return nil, err
-			}
-
-		} else {
-			// mtls, require for edge cert
-			// load all ca certs to pool
-			caPool := x509.NewCertPool()
-			for _, caFile := range listen.TLS.CACerts {
-				ca, err := os.ReadFile(caFile)
-				if err != nil {
-					klog.Errorf("service manager read ca cert err: %s, file: %s", err, caFile)
-					return nil, err
-				}
-				if !caPool.AppendCertsFromPEM(ca) {
-					klog.Warningf("service manager append ca cert to ca pool err: %s, file: %s", err, caFile)
-					continue
-				}
-			}
-			if ln, err = tls.Listen(network, addr, &tls.Config{
-				MinVersion:   tls.VersionTLS12,
-				CipherSuites: security.CiperSuites,
-				ClientCAs:    caPool,
-				ClientAuth:   tls.RequireAndVerifyClientCert,
-				Certificates: certs,
-			}); err != nil {
-				klog.Errorf("service manager tls listen err: %s, network: %s, addr: %s", err, network, addr)
-				return nil, err
-			}
-		}
+	ln, err := utils.Listen(listen)
+	if err != nil {
+		klog.Errorf("service manager listen err: %s", err)
+		return nil, err
 	}
 	sm.ln = ln
 	return sm, nil
