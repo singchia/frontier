@@ -7,3 +7,9 @@ type FrontierInstance struct {
 	// in k8s, it should be NodeportIP:port
 	AdvertisedEdgeboundAddr string `yaml:"advertised_edgebound_addr"`
 }
+
+type FrontierStats struct {
+	InstanceID   string `yaml:"instance_id"`
+	EdgeCount    int    `yaml:"edge_count"`
+	ServiceCount int    `yaml:"service_count"`
+}
