@@ -13,6 +13,12 @@ import (
 	"k8s.io/klog/v2"
 )
 
+const (
+	edgeHeartbeatInterval     = 30 * time.Second
+	serviceHeartbeatInterval  = 30 * time.Second
+	frontierHeartbeatInterval = 30 * time.Second
+)
+
 // delegates for frontier itself
 func (fm *FrontierManager) ConnOnline(d delegate.ConnDescriber) error {
 	instance := &gapis.FrontierInstance{}
@@ -27,7 +33,7 @@ func (fm *FrontierManager) ConnOnline(d delegate.ConnDescriber) error {
 		AdvertisedEdgeboundAddr:    instance.AdvertisedEdgeboundAddr,
 		EdgeCount:                  0,
 		ServiceCount:               0,
-	}, 30*time.Second)
+	}, frontierHeartbeatInterval)
 	if err != nil {
 		klog.Errorf("frontier manager conn online, set frontier and alive err: %s", err)
 		return err
@@ -62,7 +68,7 @@ func (fm *FrontierManager) Heartbeat(d delegate.ConnDescriber) error {
 		return err
 	}
 	// the heartbeat comes every 20s, but we allow 10 seconds deviations.
-	err = fm.repo.ExpireFrontier(instance.InstanceID, 30*time.Second)
+	err = fm.repo.ExpireFrontier(instance.InstanceID, frontierHeartbeatInterval)
 	if err != nil {
 		klog.Errorf("frontier manager heartbeat, expire frontier err: %s", err)
 		return err
@@ -80,19 +86,134 @@ func (fm *FrontierManager) SyncStats(ctx context.Context, req geminio.Request, r
 		rsp.SetError(err)
 		return
 	}
+	err = fm.repo.SetFrontierCount(stats.InstanceID, stats.EdgeCount, stats.ServiceCount)
+	if err != nil {
+		klog.Errorf("frontier manager sync stats, set frontier count err: %s", err)
+		rsp.SetError(err)
+		return
+	}
 }
 
 // rpcs of edges events
 func (fm *FrontierManager) EdgeOnline(ctx context.Context, req geminio.Request, rsp geminio.Response) {
-
+	edgeOnline := &gapis.EdgeOnline{}
+	err := json.Unmarshal(req.Data(), edgeOnline)
+	if err != nil {
+		klog.Errorf("frontier manager edge online, json unmarshal err: %s", err)
+		rsp.SetError(err)
+		return
+	}
+	err = fm.repo.SetEdgeAndAlive(edgeOnline.EdgeID, &repo.Edge{
+		FrontierID: edgeOnline.FrontierID,
+		Addr:       edgeOnline.Addr,
+		UpdateTime: time.Now().Unix(),
+	}, edgeHeartbeatInterval)
+	if err != nil {
+		klog.Errorf("frontier manager edge online, set edge and alive err: %s", err)
+		rsp.SetError(err)
+		return
+	}
 }
 
 func (fm *FrontierManager) EdgeOffline(ctx context.Context, req geminio.Request, rsp geminio.Response) {
-
+	edgeOffline := &gapis.EdgeOffline{}
+	err := json.Unmarshal(req.Data(), edgeOffline)
+	if err != nil {
+		klog.Errorf("frontier manager edge offline, json unmarshal err: %s", err)
+		rsp.SetError(err)
+		return
+	}
+	err = fm.repo.DeleteEdge(edgeOffline.EdgeID)
+	if err != nil {
+		klog.Errorf("frontier manager edge offline, delete edge err: %s", err)
+		rsp.SetError(err)
+		return
+	}
 }
 
 func (fm *FrontierManager) EdgeHeartbeat(ctx context.Context, req geminio.Request, rsp geminio.Response) {
-
+	edgeHB := &gapis.EdgeHeartbeat{}
+	err := json.Unmarshal(req.Data(), edgeHB)
+	if err != nil {
+		klog.Errorf("frontier manager edge heartbeat, json unmarshal err: %s", err)
+		rsp.SetError(err)
+		return
+	}
+	err = fm.repo.ExpireEdge(edgeHB.EdgeID, edgeHeartbeatInterval)
+	if err != nil {
+		klog.Errorf("frontier manager edge heartbeat, expire edge err: %s", err)
+		rsp.SetError(err)
+		return
+	}
 }
 
 // rpcs of services events
+func (fm *FrontierManager) ServiceOnline(ctx context.Context, req geminio.Request, rsp geminio.Response) {
+	serviceOnline := &gapis.ServiceOnline{}
+	err := json.Unmarshal(req.Data(), serviceOnline)
+	if err != nil {
+		klog.Errorf("frontier manager service online, json unmarshal err: %s", err)
+		rsp.SetError(err)
+		return
+	}
+	err = fm.repo.SetServiceAndAlive(serviceOnline.ServiceID, &repo.Service{
+		FrontierID: serviceOnline.FrontierID,
+		Service:    serviceOnline.Service,
+		Addr:       serviceOnline.Addr,
+		UpdateTime: time.Now().Unix(),
+	}, serviceHeartbeatInterval)
+	if err != nil {
+		klog.Errorf("frontier manager service online, set service and alive err: %s", err)
+		rsp.SetError(err)
+		return
+	}
+}
+
+func (fm *FrontierManager) ServiceOffline(ctx context.Context, req geminio.Request, rsp geminio.Response) {
+	serviceOffline := &gapis.ServiceOffline{}
+	err := json.Unmarshal(req.Data(), serviceOffline)
+	if err != nil {
+		klog.Errorf("frontier manager service offline, json unmarshal err: %s", err)
+		rsp.SetError(err)
+		return
+	}
+	err = fm.repo.DeleteService(serviceOffline.ServiceID)
+	if err != nil {
+		klog.Errorf("frontier manager service offline, delete service err: %s", err)
+		rsp.SetError(err)
+		return
+	}
+}
+
+func (fm *FrontierManager) ServiceHeartbeat(ctx context.Context, req geminio.Request, rsp geminio.Response) {
+	serviceHB := &gapis.ServiceHeartbeat{}
+	err := json.Unmarshal(req.Data(), serviceHB)
+	if err != nil {
+		klog.Errorf("frontier manager service heartbeat, json unmarshal err: %s", err)
+		rsp.SetError(err)
+		return
+	}
+	err = fm.repo.ExpireService(serviceHB.ServiceID, serviceHeartbeatInterval)
+	if err != nil {
+		klog.Errorf("frontier manager service heartbeat, expire service err: %s", err)
+		rsp.SetError(err)
+		return
+	}
+}
+
+// rpcs of frontiers events
+func (fm *FrontierManager) FrontierStats(ctx context.Context, req geminio.Request, rsp geminio.Response) {
+	stats := &gapis.FrontierStats{}
+	err := json.Unmarshal(req.Data(), stats)
+	if err != nil {
+		klog.Errorf("frontier manager frontier stats, json unmarshal err: %s", err)
+		rsp.SetError(err)
+		return
+	}
+	err = fm.repo.SetFrontierCount(stats.InstanceID, stats.EdgeCount, stats.ServiceCount)
+	if err != nil {
+		klog.Errorf("frontier manager frontier stats, set frontier count err: %s", err)
+		rsp.SetError(err)
+		return
+	}
+}

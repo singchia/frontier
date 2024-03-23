@@ -115,6 +115,7 @@ func (dao *Dao) GetEdge(edgeID uint64) (*Edge, error) {
 	return edge, nil
 }
 
+// obsoleted
 func (dao *Dao) SetEdge(edgeID uint64, edge *Edge) error {
 	data, err := json.Marshal(edge)
 	if err != nil {

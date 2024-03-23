@@ -27,6 +27,9 @@ const (
 	RPCServiceOnline    = "service_online"
 	RPCServiceOffline   = "service_offline"
 	RPCServiceHeartbeat = "service_heartbeat"
+
+	// frontier related
+	RPCFrontierStats = "frontier_stats"
 )
 
 type FrontierManager struct {
@@ -89,7 +92,6 @@ func (fm *FrontierManager) handleConn(conn net.Conn) error {
 		klog.Errorf("frontier manager handle conn, register err: %s", err)
 		return err
 	}
-
 	return nil
 }
 
@@ -112,6 +114,21 @@ func (fm *FrontierManager) register(end geminio.End) error {
 	}
 
 	// service_online, service_offline, service_heartbeat
+	err = end.Register(context.TODO(), RPCServiceOnline, fm.ServiceOnline)
+	if err != nil {
+		klog.Errorf("register service_online err: %s", err)
+		return err
+	}
+	err = end.Register(context.TODO(), RPCServiceOffline, fm.ServiceOffline)
+	if err != nil {
+		klog.Errorf("register service_offline err: %s", err)
+		return err
+	}
+	err = end.Register(context.TODO(), RPCServiceHeartbeat, fm.ServiceHeartbeat)
+	if err != nil {
+		klog.Errorf("register service_heartbeat err: %s", err)
+		return err
+	}
 
 	// frontier_stats, frontier_metrics
 	return nil
