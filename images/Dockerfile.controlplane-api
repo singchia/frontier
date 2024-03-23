@@ -16,5 +16,5 @@ RUN curl --location https://github.com/googleapis/api-common-protos/archive/refs
     && tar zxvf 1.50.0.tar.gz \
     && cp -R /usr/src/protoc/api-common-protos-1.50.0/ /protos/
 
-WORKDIR /api/controlplane/v1
+WORKDIR /api/controlplane/frontier/v1
 CMD protoc --proto_path=./ --proto_path=/protos/ --go_out=paths=source_relative:./ --go-http_out=paths=source_relative:./ --go-grpc_out=paths=source_relative:./ --go-errors_out=paths=source_relative:./ --experimental_allow_proto3_optional=true ./*.proto

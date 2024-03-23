@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package controlplane;
 
-option go_package = "github.com/singchia/frontier/api/controlplane/v1;v1";
+option go_package = "github.com/singchia/frontier/api/controlplane/frontier/v1;v1";
 
 import "google/api/annotations.proto";
 
