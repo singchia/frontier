@@ -23,6 +23,9 @@ const (
 //go:embed lua/mhgetall.lua
 var mhgetallScript string
 
+//go:embed lua/frontier_create.lua
+var frontierCreateScript string
+
 func (dao *Dao) GetAllFrontierIDs() ([]string, error) {
 	keys, err := dao.rds.Keys(context.TODO(), frontiersKeyPrefixAll).Result()
 	if err != nil {
@@ -102,6 +105,7 @@ func (dao *Dao) GetFrontier(frontierID string) (*Frontier, error) {
 	return frontier, nil
 }
 
+// obsoleted
 func (dao *Dao) SetFrontier(frontierID string, frontier *Frontier) error {
 	_, err := dao.rds.HSet(context.TODO(), getFrontierKey(frontierID),
 		"advertised_sb_addr", frontier.AdvertisedServiceboundAddr,
@@ -115,23 +119,15 @@ func (dao *Dao) SetFrontier(frontierID string, frontier *Frontier) error {
 	return nil
 }
 
-func (dao *Dao) SetFrontierAndAlive(frontierID string, frontier *Frontier, expiration time.Duration) error {
-	pipeliner := dao.rds.TxPipeline()
-	// frontier
-	pipeliner.HSet(context.TODO(), getFrontierKey(frontierID),
-		"advertised_sb_addr", frontier.AdvertisedServiceboundAddr,
-		"advertised_eb_addr", frontier.AdvertisedEdgeboundAddr,
-		"edge_count", frontier.EdgeCount,
-		"service_count", frontier.ServiceCount)
-	// alive
-	pipeliner.Set(context.TODO(), getAliveFrontierKey(frontierID), 1, expiration)
-
-	_, err := pipeliner.Exec(context.TODO())
+func (dao *Dao) SetFrontierAndAlive(frontierID string, frontier *Frontier, expiration time.Duration) (bool, error) {
+	result, err := dao.rds.Eval(context.TODO(), frontierCreateScript,
+		[]string{getFrontierKey(frontierID), getAliveFrontierKey(frontierID), "advertised_sb_addr", "advertised_eb_addr", "edge_count", "service_count"},
+		expiration.Seconds(), frontier.AdvertisedServiceboundAddr, frontier.AdvertisedEdgeboundAddr, frontier.EdgeCount, frontier.ServiceCount).Result()
 	if err != nil {
-		klog.Errorf("dao set frontier and alive, pipeliner exec err: %s", err)
-		return err
+		klog.Errorf("dao set frontier and alive, eval err: %s", err)
+		return false, err
 	}
-	return nil
+	return result.(int64) == 1, nil
 }
 
 func (dao *Dao) ExpireFrontier(frontier string, expiration time.Duration) error {
@@ -145,11 +141,37 @@ func (dao *Dao) ExpireFrontier(frontier string, expiration time.Duration) error 
 	return nil
 }
 
+// obsoleted
 func (dao *Dao) SetFrontierEdgeCount(frontierID string, edgeCount int) error {
 	_, err := dao.rds.HSet(context.TODO(), getFrontierKey(frontierID),
 		"edge_count", edgeCount).Result()
 	if err != nil {
 		klog.Errorf("dao set frontier edge count, hset err: %s", err)
+		return err
+	}
+	return nil
+}
+
+// obsoleted
+func (dao *Dao) SetFrontierServiceCount(frontierID string, serviceCount int) error {
+	_, err := dao.rds.HSet(context.TODO(), getFrontierKey(frontierID),
+		"service_count", serviceCount).Result()
+	if err != nil {
+		klog.Errorf("dao set frontier service count, hset err: %s", err)
+		return err
+	}
+	return nil
+}
+
+func (dao *Dao) SetFrontierCount(frontierID string, edgeCount, serviceCount int) error {
+	pipeliner := dao.rds.TxPipeline()
+	pipeliner.HSet(context.TODO(), getFrontierKey(frontierID),
+		"edge_count", edgeCount)
+	pipeliner.HSet(context.TODO(), getFrontierKey(frontierID),
+		"service_count", serviceCount)
+	_, err := pipeliner.Exec(context.TODO())
+	if err != nil {
+		klog.Errorf("dao set frontier count, pipeliner exec err: %s", err)
 		return err
 	}
 	return nil

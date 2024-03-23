@@ -33,26 +33,30 @@ install:
 image:
 	docker buildx build -t frontier:${VERSION} -f images/Dockerfile.frontier .
 
-.PHONY: container
-container:
+.PHONY: image-gen-api
+image-gen-api:
+	docker buildx build -t image-gen-api:${VERSION} -f images/Dockerfile.controlplane-api .
+
+.PHONY: image-gen-swagger
+image-gen-swagger:
+	docker buildx build -t frontier-gen-swagger:${VERSION} -f images/Dockerfile.controlplane-swagger .
+
+.PHONY: container-frontier
+container-frontier:
 	docker rm -f frontier
 	docker run -d --name frontier -p 2431:2431 -p 2432:2432 frontier:${VERSION} --config /usr/conf/frontier.yaml -v 5
+
+.PHONY: frontier-api
+frontier-api:
+	docker run --rm -v ${PWD}/api/controlplane/frontier/v1:/api/controlplane/frontier/v1 image-gen-api:${VERSION}
+
+.PHONY: frontlas-api
+frontlas-api:
+	docker run --rm -v ${PWD}/api/controlplane/frontlas/v1:/api/controlplane/frontlas/v1 image-gen-api:${VERSION}
 
 .PHONY: bench
 bench: container
 	make bench -C test/bench
-
-.PHONY: frontier-gen-api
-frontier-gen-api:
-	docker buildx build -t frontier-gen-api:${VERSION} -f images/Dockerfile.controlplane-api .
-
-.PHONY: api
-api:
-	docker run --rm -v ${PWD}/api/controlplane/v1:/api/controlplane/v1 frontier-gen-api:${VERSION}
-
-.PHONY: frontier-gen-swagger
-frontier-gen-swagger:
-	docker buildx build -t frontier-gen-swagger:${VERSION} -f images/Dockerfile.controlplane-swagger .
 
 .PHONY: swagger
 swagger:

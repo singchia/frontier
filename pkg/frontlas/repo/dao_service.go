@@ -113,6 +113,7 @@ func (dao *Dao) GetService(serviceID uint64) (*Service, error) {
 	return service, nil
 }
 
+// obsoleted
 func (dao *Dao) SetService(serviceID uint64, service *Service) error {
 	data, err := json.Marshal(service)
 	if err != nil {

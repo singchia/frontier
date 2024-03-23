@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 
-	v1 "github.com/singchia/frontier/api/controlplane/v1"
+	v1 "github.com/singchia/frontier/api/controlplane/frontier/v1"
 	"github.com/singchia/frontier/pkg/frontier/apis"
 )
 
