@@ -6,21 +6,37 @@ option go_package = "github.com/singchia/frontier/api/controlplane/frontlas/v1;v
 
 import "google/api/annotations.proto";
 
-message GetFrontierByEdgeIDRequest {
-    uint64 edge_id = 1;
-}
-
 message Frontier {
     string frontier_id = 1;
     string advertised_sb_addr = 2;
     string advertised_eb_addr = 3;
 }
 
+message Edge {
+    uint64 edge_id = 1;
+    string addr = 2;
+    uint64 update_time = 3;
+    uint64 frontier_id = 4;
+}
+
+message Service {
+    string service = 1;
+    string addr = 2;
+    uint64 update_time = 3;
+    uint64 frontier_id = 4;
+}
+
+// get frontier
+message GetFrontierByEdgeIDRequest {
+    uint64 edge_id = 1;
+}
+
 message GetFrontierByEdgeIDResponse {
     Frontier fontier = 1;
 }
 
-message GetFrontierByEdgeIDsRequest {
+// multi get frontiers
+message GetFrontiersByEdgeIDsRequest {
     repeated uint64 edge_ids = 1;
 }
 
@@ -28,7 +44,85 @@ message GetFrontiersByEdgeIDsResponse {
     repeated Frontier frontiers = 1;
 }
 
+// list frontiers
+message ListFrontiersRequest {
+    uint32 cursor = 1;
+    uint32 count = 2;
+}
+
+message ListFrontiersResponse {
+    uint32 cursor = 1;
+    repeated Frontier frontiers = 2;
+}
+
+// list edges
+message ListEdgesRequest {
+    uint32 cursor = 1;
+    uint32 count = 2;
+}
+
+message ListEdgesResponse {
+    uint32 cursor = 1;
+    repeated Edge edges = 2;
+}
+
+// get edge
+message GetEdgeByIDRequest {
+    uint64 edge_id = 1;
+}
+
+message GetEdgeByIDResponse {
+    Edge edge = 1;
+}
+
+// get edges
+message GetEdgesByIDsRequest {
+    repeated uint64 edge_ids = 1;
+}
+
+message GetEdgesByIDsResponse {
+    repeated Edge edges = 2;
+}
+
+// list services
+message ListServicesRequest {
+    uint32 cursor = 1;
+    uint32 count = 2;
+}
+
+message ListServicesResponse {
+    uint32 cursor = 1;
+    repeated Service services = 2;
+}
+
+// get service
+message GetServiceByIDRequest {
+    uint64 service_id = 1;
+}
+
+message GetServiceByIDResponse {
+    Service service = 1;
+}
+
+// get services
+message GetServicesByIDsRequest {
+    repeated uint64 service_id = 1;
+}
+
+message GetServicesByIDsResponse {
+    repeated Service service = 1;
+}
+
 service ClusterService {
     rpc GetFrontierByEdge(GetFrontierByEdgeIDRequest) returns (GetFrontierByEdgeIDResponse);
-    rpc MultiGetFrontiersByEdges(GetFrontierByEdgeIDsRequest) returns (GetFrontiersByEdgeIDsResponse);
+    rpc MultiGetFrontiersByEdges(GetFrontiersByEdgeIDsRequest) returns (GetFrontiersByEdgeIDsResponse);
+    rpc ListFrontiers(ListFrontiersRequest) returns (ListFrontiersResponse);
+
+    rpc ListEdges(ListEdgesRequest) returns (ListEdgesResponse);
+    rpc GetEdgesByIDs(GetEdgesByIDsRequest) returns (GetEdgesByIDsResponse);
+    rpc GetEdgeByID(GetEdgeByIDRequest) return (GetEdgeByIDResponse);
+
+    rpc ListServices(ListServicesRequest) returns (ListServicesResponse);
+    rpc GetServicesByIDs(GetServicesByIDsRequest) returns (GetServicesByIDsResponse);
+    rpc GetServiceByID(GetServiceByIDRequest) returns (GetServiceByIDResponse);
 }

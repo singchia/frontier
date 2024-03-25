@@ -2,7 +2,7 @@ module github.com/singchia/frontier
 
 go 1.20
 
-replace github.com/singchia/geminio => ../../moresec/singchia/geminio
+//replace github.com/singchia/geminio => ../../moresec/singchia/geminio
 
 require (
 	github.com/IBM/sarama v1.43.0
@@ -13,7 +13,7 @@ require (
 	github.com/nats-io/nats.go v1.33.1
 	github.com/nsqio/go-nsq v1.1.0
 	github.com/rabbitmq/amqp091-go v1.9.0
-	github.com/singchia/geminio v1.1.5-rc.2
+	github.com/singchia/geminio v1.1.5-rc.3
 	github.com/singchia/go-timer/v2 v2.2.1
 	github.com/soheilhy/cmux v0.1.5
 	github.com/spf13/pflag v1.0.5
