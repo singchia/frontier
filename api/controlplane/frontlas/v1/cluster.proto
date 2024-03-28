@@ -16,14 +16,14 @@ message Edge {
     uint64 edge_id = 1;
     string addr = 2;
     uint64 update_time = 3;
-    uint64 frontier_id = 4;
+    string frontier_id = 4;
 }
 
 message Service {
     string service = 1;
     string addr = 2;
     uint64 update_time = 3;
-    uint64 frontier_id = 4;
+    string frontier_id = 4;
 }
 
 // get frontier
@@ -40,6 +40,7 @@ message ListFrontiersRequest {
     optional uint32 cursor = 1;
     optional uint32 count = 2;
     repeated uint64 edge_ids = 3;
+    repeated string frontier_ids = 4;
 }
 
 message ListFrontiersResponse {
@@ -79,7 +80,7 @@ message GetEdgesCountResponse {
 message ListServicesRequest {
     optional uint32 cursor = 1;
     optional uint32 count = 2;
-    repeated uint64 service_id = 3;
+    repeated uint64 service_ids = 3;
 }
 
 message ListServicesResponse {

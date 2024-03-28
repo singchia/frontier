@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-http v2.6.1
 // - protoc             v3.14.0
-// source: controlplane.proto
+// source: cluster.proto
 
 package v1
 

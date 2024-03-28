@@ -131,5 +131,9 @@ func (fm *FrontierManager) register(end geminio.End) error {
 	}
 
 	// frontier_stats, frontier_metrics
+	err = end.Register(context.TODO(), RPCFrontierStats, fm.SyncStats)
+	if err != nil {
+		klog.Errorf("register frontier_stats err: %s", err)
+	}
 	return nil
 }

@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.3.0
 // - protoc             v3.14.0
-// source: controlplane.proto
+// source: cluster.proto
 
 package v1
 
@@ -364,5 +364,5 @@ var ClusterService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "controlplane.proto",
+	Metadata: "cluster.proto",
 }

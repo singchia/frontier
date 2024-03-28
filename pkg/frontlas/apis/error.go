@@ -8,4 +8,5 @@ var (
 	ErrWrongTypeInRedis         = errors.New("wrong type in redis")
 	ErrWrongLengthInRedis       = errors.New("wrong length in redis")
 	ErrFrontierAlreadySet       = errors.New("frontier already set")
+	ErrIllegalRequest           = errors.New("illegal request")
 )
