@@ -39,7 +39,7 @@ type Dao struct {
 	rds  RDS
 }
 
-func newDao(config *config.Configuration) (*Dao, error) {
+func NewDao(config *config.Configuration) (*Dao, error) {
 	var (
 		rds  RDS
 		mode int

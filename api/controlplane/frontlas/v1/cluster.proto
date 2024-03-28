@@ -1,0 +1,150 @@
+syntax = "proto3";
+
+package controlplane;
+
+option go_package = "github.com/singchia/frontier/api/controlplane/frontlas/v1;v1";
+
+import "google/api/annotations.proto";
+
+message Frontier {
+    string frontier_id = 1;
+    string advertised_sb_addr = 2;
+    string advertised_eb_addr = 3;
+}
+
+message Edge {
+    uint64 edge_id = 1;
+    string addr = 2;
+    uint64 update_time = 3;
+    string frontier_id = 4;
+}
+
+message Service {
+    string service = 1;
+    string addr = 2;
+    uint64 update_time = 3;
+    string frontier_id = 4;
+}
+
+// get frontier
+message GetFrontierByEdgeIDRequest {
+    uint64 edge_id = 1;
+}
+
+message GetFrontierByEdgeIDResponse {
+    Frontier fontier = 1;
+}
+
+// list frontiers
+message ListFrontiersRequest {
+    optional uint32 cursor = 1;
+    optional uint32 count = 2;
+    repeated uint64 edge_ids = 3;
+    repeated string frontier_ids = 4;
+}
+
+message ListFrontiersResponse {
+    optional uint32 cursor = 1;
+    repeated Frontier frontiers = 2;
+}
+
+// list edges
+message ListEdgesRequest {
+    optional uint32 cursor = 1;
+    optional uint32 count = 2;
+    repeated uint64 edge_ids = 3;
+}
+
+message ListEdgesResponse {
+    optional uint32 cursor = 1;
+    repeated Edge edges = 2;
+}
+
+// get edge
+message GetEdgeByIDRequest {
+    uint64 edge_id = 1;
+}
+
+message GetEdgeByIDResponse {
+    Edge edge = 1;
+}
+
+// get edges count
+message GetEdgesCountRequest {}
+
+message GetEdgesCountResponse {
+    uint64 count = 1;
+}
+
+// list services
+message ListServicesRequest {
+    optional uint32 cursor = 1;
+    optional uint32 count = 2;
+    repeated uint64 service_ids = 3;
+}
+
+message ListServicesResponse {
+    optional uint32 cursor = 1;
+    repeated Service services = 2;
+}
+
+// get service
+message GetServiceByIDRequest {
+    uint64 service_id = 1;
+}
+
+message GetServiceByIDResponse {
+    Service service = 1;
+}
+
+// get services count
+message GetServicesCountRequest {}
+
+message GetServicesCountResponse {
+    uint64 count = 1;
+}
+
+service ClusterService {
+    rpc GetFrontierByEdge(GetFrontierByEdgeIDRequest) returns (GetFrontierByEdgeIDResponse) {
+        option(google.api.http) = {
+            get: "/cluster/v1/frontier"
+        }; 
+    };
+    rpc ListFrontiers(ListFrontiersRequest) returns (ListFrontiersResponse) {
+        option(google.api.http) = {
+            get: "/cluster/v1/frontiers"
+        };     
+    };
+
+    rpc ListEdges(ListEdgesRequest) returns (ListEdgesResponse) {
+        option(google.api.http) = {
+            get: "/cluster/v1/edges"
+        };
+    };
+    rpc GetEdgeByID(GetEdgeByIDRequest) returns (GetEdgeByIDResponse) {
+        option(google.api.http) = {
+            get: "/cluster/v1/edge"
+        };
+    };
+    rpc GetEdgesCount(GetEdgesCountRequest) returns (GetEdgesCountResponse) {
+        option(google.api.http) = {
+            get: "/cluster/v1/edges/count"
+        };
+    };
+
+    rpc ListServices(ListServicesRequest) returns (ListServicesResponse)  {
+        option(google.api.http) = {
+            get: "/cluster/v1/services"
+        };
+    };
+    rpc GetServiceByID(GetServiceByIDRequest) returns (GetServiceByIDResponse) {
+        option(google.api.http) = {
+            get: "/cluster/v1/service"
+        };
+    };
+    rpc GetServicesCount(GetServicesCountRequest) returns (GetServicesCountResponse) {
+        option(google.api.http) = {
+            get: "/cluster/v1/services/count"
+        };
+    };
+}

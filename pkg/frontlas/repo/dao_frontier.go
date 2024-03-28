@@ -75,6 +75,24 @@ func (dao *Dao) getFrontiers(keys []string) ([]*Frontier, error) {
 	return redisArrayToFrontiers(keys, elems)
 }
 
+type FrontierQuery struct {
+	Cursor uint64
+	Count  int64
+}
+
+func (dao *Dao) GetFrontiersByCursor(query *FrontierQuery) ([]*Frontier, uint64, error) {
+	keys, cursor, err := dao.rds.Scan(context.TODO(), query.Cursor, frontiersKeyPrefixAll, query.Count).Result()
+	if err != nil {
+		klog.Errorf("dao get frontiers, scan err: %s", err)
+		return nil, 0, err
+	}
+	if keys == nil || len(keys) == 0 {
+		return []*Frontier{}, cursor, nil
+	}
+	frontiers, err := dao.getFrontiers(keys)
+	return frontiers, cursor, err
+}
+
 func (dao *Dao) GetFrontier(frontierID string) (*Frontier, error) {
 	result, err := dao.rds.HGetAll(context.TODO(), getFrontierKey(frontierID)).Result()
 	if err != nil {
