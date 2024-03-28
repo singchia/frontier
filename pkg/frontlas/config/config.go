@@ -180,3 +180,7 @@ type Configuration struct {
 
 	Redis Redis `yaml:"redis"`
 }
+
+func Parse() (*Configuration, error) {
+	return nil, nil
+}

@@ -52,7 +52,7 @@ message ListFrontiersResponse {
 message ListEdgesRequest {
     optional uint32 cursor = 1;
     optional uint32 count = 2;
-    optional uint64 edge_ids = 3;
+    repeated uint64 edge_ids = 3;
 }
 
 message ListEdgesResponse {

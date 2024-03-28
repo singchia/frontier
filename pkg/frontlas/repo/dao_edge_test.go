@@ -21,7 +21,7 @@ func TestSetEdgeAndAlive(t *testing.T) {
 	}
 	config.Redis.Standalone.Addr = s.Addr()
 	config.Redis.Standalone.Network = "tcp"
-	dao, err := newDao(config)
+	dao, err := NewDao(config)
 	assert.NoError(t, err)
 
 	// pre set edges

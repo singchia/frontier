@@ -137,3 +137,7 @@ func (fm *FrontierManager) register(end geminio.End) error {
 	}
 	return nil
 }
+
+func (fm *FrontierManager) Close() error {
+	return fm.ln.Close()
+}
