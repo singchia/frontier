@@ -43,8 +43,9 @@ type Bypass struct {
 	TLS     config.TLS `yaml:"tls"`  // certs to dial or ca to auth
 }
 type Edgebound struct {
-	Listen config.Listen `yaml:"listen"`
-	Bypass Bypass        `yaml:"bypass"`
+	Listen       config.Listen `yaml:"listen"`
+	Bypass       config.Dial   `yaml:"bypass"`
+	BypassEnable bool          `yaml:"bypass_enable"`
 	// alloc edgeID when no get_id function online
 	EdgeIDAllocWhenNoIDServiceOn bool `yaml:"edgeid_alloc_when_no_idservice_on"`
 }
@@ -243,10 +244,7 @@ type Dao struct {
 
 // frontlas
 type Frontlas struct {
-	Enable  bool       `yaml:"enable"`
-	Network string     `yaml:"network"`
-	Addr    string     `yaml:"addr"` // addr to dial
-	TLS     config.TLS `yaml:"tls"`  // certs to dial or ca to auth
+	Dial config.Dial
 }
 
 type Configuration struct {
@@ -386,8 +384,8 @@ func genDefaultConfig(writer io.Writer) error {
 				},
 			},
 			EdgeIDAllocWhenNoIDServiceOn: true,
-			Bypass: Bypass{
-				Enable:  false,
+			BypassEnable:                 false,
+			Bypass: config.Dial{
 				Network: "tcp",
 				Addr:    "192.168.1.10:8443",
 				TLS: config.TLS{

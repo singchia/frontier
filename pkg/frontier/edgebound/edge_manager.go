@@ -2,10 +2,7 @@ package edgebound
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"net"
-	"os"
 	"strings"
 	"sync"
 
@@ -87,7 +84,7 @@ func newEdgeManager(conf *config.Configuration, repo apis.Repo, informer apis.Ed
 	}
 
 	geminioLn := ln
-	bypass := conf.Edgebound.Bypass.Enable
+	bypass := conf.Edgebound.BypassEnable
 	if bypass {
 		// multiplexer
 		cm := cmux.New(ln)
@@ -108,76 +105,12 @@ func newEdgeManager(conf *config.Configuration, repo apis.Repo, informer apis.Ed
 }
 
 func (em *edgeManager) bypassDial(_ net.Addr, _ interface{}) (net.Conn, error) {
-	bypass := &em.conf.Edgebound.Bypass
-	var (
-		network string = bypass.Network
-		addr    string = bypass.Addr
-	)
-
-	if !bypass.TLS.Enable {
-		conn, err := net.Dial(network, addr)
-		if err != nil {
-			return nil, err
-		}
-		return conn, err
-	} else {
-		// load all certs to dial
-		certs := []tls.Certificate{}
-		for _, certFile := range bypass.TLS.Certs {
-			cert, err := tls.LoadX509KeyPair(certFile.Cert, certFile.Key)
-			if err != nil {
-				klog.Errorf("edge manager bypass tls load x509 cert err: %s, cert: %s, key: %s", err, certFile.Cert, certFile.Key)
-				continue
-			}
-			certs = append(certs, cert)
-		}
-
-		if !bypass.TLS.MTLS {
-			// tls
-			conn, err := tls.Dial(network, addr, &tls.Config{
-				Certificates: certs,
-				// it's user's call to verify the server certs or not.
-				InsecureSkipVerify: bypass.TLS.InsecureSkipVerify,
-			})
-			if err != nil {
-				klog.Errorf("edge manager bypass tls dial err: %s, network: %s, addr: %s", err, network, addr)
-				return nil, err
-			}
-			return conn, nil
-		} else {
-			// mtls, dial with our certs
-			// load all ca certs to pool
-			caPool := x509.NewCertPool()
-			for _, caFile := range bypass.TLS.CACerts {
-				ca, err := os.ReadFile(caFile)
-				if err != nil {
-					klog.Errorf("edge manager bypass read ca cert err: %s, file: %s", err, caFile)
-					return nil, err
-				}
-				if !caPool.AppendCertsFromPEM(ca) {
-					klog.Warningf("edge manager bypass append ca cert to ca pool err: %s, file: %s", err, caFile)
-					continue
-				}
-			}
-			conn, err := tls.Dial(network, addr, &tls.Config{
-				Certificates: certs,
-				// we should not skip the verify.
-				InsecureSkipVerify: bypass.TLS.InsecureSkipVerify,
-				RootCAs:            caPool,
-			})
-			if err != nil {
-				klog.Errorf("edge manager bypass tls dial err: %s, network: %s, addr: %s", err, network, addr)
-				return nil, err
-			}
-			return conn, nil
-		}
-	}
+	return utils.Dial(&em.conf.Edgebound.Bypass)
 }
 
 // Serve blocks until the Accept error
 func (em *edgeManager) Serve() error {
-	bypass := &em.conf.Edgebound.Bypass
-	if bypass.Enable {
+	if em.conf.Edgebound.BypassEnable {
 		go em.cm.Serve()
 		go em.rp.Proxy(context.TODO())
 	}
@@ -264,8 +197,7 @@ func (em *edgeManager) DelEdgeByID(edgeID uint64) error {
 
 // Close all edges and manager
 func (em *edgeManager) Close() error {
-	bypass := &em.conf.Edgebound.Bypass
-	if bypass.Enable {
+	if em.conf.Edgebound.BypassEnable {
 		em.cm.Close()
 		em.rp.Close()
 	}

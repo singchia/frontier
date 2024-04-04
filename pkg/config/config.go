@@ -19,3 +19,9 @@ type Listen struct {
 	Addr    string `yaml:"addr"`
 	TLS     TLS    `yaml:"tls"`
 }
+
+type Dial struct {
+	Network string `yaml:"network"`
+	Addr    string `yaml:"addr"`
+	TLS     TLS    `yaml:"tls"`
+}
