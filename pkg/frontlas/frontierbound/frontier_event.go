@@ -27,8 +27,8 @@ func (fm *FrontierManager) ConnOnline(d delegate.ConnDescriber) error {
 		klog.Errorf("frontier manager conn online, json unmarshal err: %s", err)
 		return err
 	}
-	set, err := fm.repo.SetFrontierAndAlive(instance.InstanceID, &repo.Frontier{
-		FrontierID:                 instance.InstanceID,
+	set, err := fm.repo.SetFrontierAndAlive(instance.FrontierID, &repo.Frontier{
+		FrontierID:                 instance.FrontierID,
 		AdvertisedServiceboundAddr: instance.AdvertisedServiceboundAddr,
 		AdvertisedEdgeboundAddr:    instance.AdvertisedEdgeboundAddr,
 		EdgeCount:                  0,
@@ -39,7 +39,7 @@ func (fm *FrontierManager) ConnOnline(d delegate.ConnDescriber) error {
 		return err
 	}
 	if !set {
-		klog.V(1).Infof("frontier manager conn online, frontier: %s already set", instance.InstanceID)
+		klog.V(1).Infof("frontier manager conn online, frontier: %s already set", instance.FrontierID)
 		return apis.ErrFrontierAlreadySet
 	}
 	return nil
@@ -52,9 +52,9 @@ func (fm *FrontierManager) ConnOffline(d delegate.ConnDescriber) error {
 		klog.Errorf("frontier manager conn offline, json unmarshal err: %s", err)
 		return err
 	}
-	err = fm.repo.DeleteFrontier(instance.InstanceID)
+	err = fm.repo.DeleteFrontier(instance.FrontierID)
 	if err != nil {
-		klog.Errorf("frontier manager conn offline, delete frontier: %s err: %s", instance.InstanceID, err)
+		klog.Errorf("frontier manager conn offline, delete frontier: %s err: %s", instance.FrontierID, err)
 		return err
 	}
 	return nil
@@ -68,30 +68,12 @@ func (fm *FrontierManager) Heartbeat(d delegate.ConnDescriber) error {
 		return err
 	}
 	// the heartbeat comes every 20s, but we allow 10 seconds deviations.
-	err = fm.repo.ExpireFrontier(instance.InstanceID, frontierHeartbeatInterval)
+	err = fm.repo.ExpireFrontier(instance.FrontierID, frontierHeartbeatInterval)
 	if err != nil {
 		klog.Errorf("frontier manager heartbeat, expire frontier err: %s", err)
 		return err
 	}
 	return nil
-}
-
-// rpcs
-// rpcs of frontier stats
-func (fm *FrontierManager) SyncStats(ctx context.Context, req geminio.Request, rsp geminio.Response) {
-	stats := &gapis.FrontierStats{}
-	err := json.Unmarshal(req.Data(), stats)
-	if err != nil {
-		klog.Errorf("frontier manager sync stats, json unmarshal err: %s", err)
-		rsp.SetError(err)
-		return
-	}
-	err = fm.repo.SetFrontierCount(stats.InstanceID, stats.EdgeCount, stats.ServiceCount)
-	if err != nil {
-		klog.Errorf("frontier manager sync stats, set frontier count err: %s", err)
-		rsp.SetError(err)
-		return
-	}
 }
 
 // rpcs of edges events
@@ -210,7 +192,7 @@ func (fm *FrontierManager) FrontierStats(ctx context.Context, req geminio.Reques
 		rsp.SetError(err)
 		return
 	}
-	err = fm.repo.SetFrontierCount(stats.InstanceID, stats.EdgeCount, stats.ServiceCount)
+	err = fm.repo.SetFrontierCount(stats.FrontierID, stats.EdgeCount, stats.ServiceCount)
 	if err != nil {
 		klog.Errorf("frontier manager frontier stats, set frontier count err: %s", err)
 		rsp.SetError(err)

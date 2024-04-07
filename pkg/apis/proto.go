@@ -1,7 +1,22 @@
 package apis
 
+const (
+	// edge related
+	RPCEdgeOnline    = "edge_online"
+	RPCEdgeOffline   = "edge_offline"
+	RPCEdgeHeartbeat = "edge_heartbeat"
+
+	// service related
+	RPCServiceOnline    = "service_online"
+	RPCServiceOffline   = "service_offline"
+	RPCServiceHeartbeat = "service_heartbeat"
+
+	// frontier related
+	RPCFrontierStats = "frontier_stats"
+)
+
 type FrontierInstance struct {
-	InstanceID string `yaml:"instance_id"`
+	FrontierID string `yaml:"frontier_id"`
 	// in k8s, it should be podIP:port
 	AdvertisedServiceboundAddr string `yaml:"advertised_servicebound_addr"`
 	// in k8s, it should be NodeportIP:port
@@ -9,7 +24,7 @@ type FrontierInstance struct {
 }
 
 type FrontierStats struct {
-	InstanceID   string `yaml:"instance_id"`
+	FrontierID   string `yaml:"frontier_id"`
 	EdgeCount    int    `yaml:"edge_count"`
 	ServiceCount int    `yaml:"service_count"`
 }

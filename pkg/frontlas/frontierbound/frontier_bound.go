@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/jumboframes/armorigo/log"
+	gapis "github.com/singchia/frontier/pkg/apis"
 	"github.com/singchia/frontier/pkg/frontier/apis"
 	"github.com/singchia/frontier/pkg/frontlas/config"
 	"github.com/singchia/frontier/pkg/frontlas/repo"
@@ -15,21 +16,6 @@ import (
 	"github.com/singchia/geminio/server"
 	"github.com/singchia/go-timer/v2"
 	"k8s.io/klog/v2"
-)
-
-const (
-	// edge related
-	RPCEdgeOnline    = "edge_online"
-	RPCEdgeOffline   = "edge_offline"
-	RPCEdgeHeartbeat = "edge_heartbeat"
-
-	// service related
-	RPCServiceOnline    = "service_online"
-	RPCServiceOffline   = "service_offline"
-	RPCServiceHeartbeat = "service_heartbeat"
-
-	// frontier related
-	RPCFrontierStats = "frontier_stats"
 )
 
 type FrontierManager struct {
@@ -97,41 +83,41 @@ func (fm *FrontierManager) handleConn(conn net.Conn) error {
 
 func (fm *FrontierManager) register(end geminio.End) error {
 	// edge_online, edge_offline, edge_heartbeat
-	err := end.Register(context.TODO(), RPCEdgeOnline, fm.EdgeOnline)
+	err := end.Register(context.TODO(), gapis.RPCEdgeOnline, fm.EdgeOnline)
 	if err != nil {
 		klog.Errorf("register edge_online err: %s", err)
 		return err
 	}
-	err = end.Register(context.TODO(), RPCEdgeOffline, fm.EdgeOffline)
+	err = end.Register(context.TODO(), gapis.RPCEdgeOffline, fm.EdgeOffline)
 	if err != nil {
 		klog.Errorf("register edge_offline err: %s", err)
 		return err
 	}
-	err = end.Register(context.TODO(), RPCEdgeHeartbeat, fm.EdgeHeartbeat)
+	err = end.Register(context.TODO(), gapis.RPCEdgeHeartbeat, fm.EdgeHeartbeat)
 	if err != nil {
 		klog.Errorf("register edge_heartbeat err: %s", err)
 		return err
 	}
 
 	// service_online, service_offline, service_heartbeat
-	err = end.Register(context.TODO(), RPCServiceOnline, fm.ServiceOnline)
+	err = end.Register(context.TODO(), gapis.RPCServiceOnline, fm.ServiceOnline)
 	if err != nil {
 		klog.Errorf("register service_online err: %s", err)
 		return err
 	}
-	err = end.Register(context.TODO(), RPCServiceOffline, fm.ServiceOffline)
+	err = end.Register(context.TODO(), gapis.RPCServiceOffline, fm.ServiceOffline)
 	if err != nil {
 		klog.Errorf("register service_offline err: %s", err)
 		return err
 	}
-	err = end.Register(context.TODO(), RPCServiceHeartbeat, fm.ServiceHeartbeat)
+	err = end.Register(context.TODO(), gapis.RPCServiceHeartbeat, fm.ServiceHeartbeat)
 	if err != nil {
 		klog.Errorf("register service_heartbeat err: %s", err)
 		return err
 	}
 
 	// frontier_stats, frontier_metrics
-	err = end.Register(context.TODO(), RPCFrontierStats, fm.SyncStats)
+	err = end.Register(context.TODO(), gapis.RPCFrontierStats, fm.FrontierStats)
 	if err != nil {
 		klog.Errorf("register frontier_stats err: %s", err)
 	}
