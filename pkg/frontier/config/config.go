@@ -31,7 +31,7 @@ type Daemon struct {
 	RLimit RLimit `yaml:"rlimit"`
 	PProf  PProf  `yaml:"pprof"`
 	// use with frontlas
-	InstanceID string `yaml:"instand_id,omitempty"`
+	FrontiesID string `yaml:"fronties_id,omitempty"`
 }
 
 // edgebound
