@@ -20,7 +20,7 @@
 # Go workspace file
 go.work
 
-frontier
+./frontier
 
 .DS_Store
 docs/.DS_Store
