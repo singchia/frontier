@@ -31,7 +31,7 @@ type Daemon struct {
 	RLimit RLimit `yaml:"rlimit"`
 	PProf  PProf  `yaml:"pprof"`
 	// use with frontlas
-	FrontiesID string `yaml:"fronties_id,omitempty"`
+	FrontierID string `yaml:"frontier_id,omitempty"`
 }
 
 // edgebound
@@ -244,7 +244,12 @@ type Dao struct {
 
 // frontlas
 type Frontlas struct {
-	Dial config.Dial
+	Enable  bool `yaml:"enable"`
+	Dial    config.Dial
+	Metrics struct {
+		Enable   bool
+		Interval int // for stats
+	}
 }
 
 type Configuration struct {
