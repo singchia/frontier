@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net"
+	"sync/atomic"
 	"time"
 
 	"github.com/singchia/frontier/pkg/apis"
@@ -18,6 +19,9 @@ import (
 type Informer struct {
 	end  geminio.End
 	conf *config.Configuration
+
+	// stats
+	edgeCount, serviceCount int32
 }
 
 func NewInformer(conf *config.Configuration, tmr timer.Timer) (*Informer, error) {
@@ -63,8 +67,22 @@ func NewInformer(conf *config.Configuration, tmr timer.Timer) (*Informer, error)
 				if !ok {
 					return
 				}
-				stats := &apis.FrontierStats{}
-				informer.end.Call(context.TODO(), apis.RPCFrontierStats)
+				stats := &apis.FrontierStats{
+					FrontierID:   conf.Daemon.FrontierID,
+					EdgeCount:    int(atomic.LoadInt32(&informer.edgeCount)),
+					ServiceCount: int(atomic.LoadInt32(&informer.serviceCount)),
+				}
+				data, err := json.Marshal(stats)
+				if err != nil {
+					klog.Errorf("frontier upload frontlas stats, json marshal err: %s", err)
+					continue
+				}
+				req := informer.end.NewRequest(data)
+				_, err = informer.end.Call(context.TODO(), apis.RPCFrontierStats, req)
+				if err != nil {
+					klog.Errorf("fronter upload frontlas stats, call err: %s", err)
+					continue
+				}
 			}
 		}()
 	}
@@ -125,7 +143,7 @@ func (informer *Informer) EdgeHeartbeat(edgeID uint64, meta []byte, addr net.Add
 }
 
 // service events
-func (informer *Informer) ServiceOnline(serviceID uint64, meta []byte, addr net.Addr) {
+func (informer *Informer) ServiceOnline(serviceID uint64, meta string, addr net.Addr) {
 	msg := apis.ServiceOnline{
 		FrontierID: informer.conf.Daemon.FrontierID, // TODO emtpy then takes k8s env
 		ServiceID:  serviceID,
@@ -143,7 +161,7 @@ func (informer *Informer) ServiceOnline(serviceID uint64, meta []byte, addr net.
 	}
 }
 
-func (informer *Informer) ServiceOffline(serviceID uint64, meta []byte, addr net.Addr) {
+func (informer *Informer) ServiceOffline(serviceID uint64, meta string, addr net.Addr) {
 	msg := apis.ServiceOffline{
 		FrontierID: informer.conf.Daemon.FrontierID, // TODO emtpy then takes k8s env
 		ServiceID:  serviceID,
@@ -159,7 +177,7 @@ func (informer *Informer) ServiceOffline(serviceID uint64, meta []byte, addr net
 	}
 }
 
-func (informer *Informer) ServiceHeartbeat(serviceID uint64, meta []byte, addr net.Addr) {
+func (informer *Informer) ServiceHeartbeat(serviceID uint64, meta string, addr net.Addr) {
 	msg := apis.ServiceHeartbeat{
 		FrontierID: informer.conf.Daemon.FrontierID, // TODO emtpy then takes k8s env
 		ServiceID:  serviceID,
@@ -173,4 +191,14 @@ func (informer *Informer) ServiceHeartbeat(serviceID uint64, meta []byte, addr n
 	if err != nil {
 		klog.Errorf("frontlas inform service heartbeat, call rpc err: %s", err)
 	}
+}
+
+func (informer *Informer) SetEdgeCount(count int) {
+	count32 := int32(count)
+	atomic.StoreInt32(&informer.edgeCount, count32)
+}
+
+func (informer *Informer) SetServiceCount(count int) {
+	count32 := int32(count)
+	atomic.StoreInt32(&informer.serviceCount, count32)
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/singchia/frontier/pkg/frontier/controlplane"
 	"github.com/singchia/frontier/pkg/frontier/edgebound"
 	"github.com/singchia/frontier/pkg/frontier/exchange"
+	"github.com/singchia/frontier/pkg/frontier/frontlas"
 	"github.com/singchia/frontier/pkg/frontier/servicebound"
 	"github.com/singchia/go-timer/v2"
 	"k8s.io/klog/v2"
@@ -21,24 +22,29 @@ type Server struct {
 func NewServer(conf *config.Configuration, repo apis.Repo, mqm apis.MQM) (*Server, error) {
 	tmr := timer.NewTimer()
 
+	// informer
+	inf, err := frontlas.NewInformer(conf, tmr)
+	if err != nil {
+		klog.Errorf("new informer err: %s", err)
+		return nil, err
+	}
+
 	// exchange
 	exchange := exchange.NewExchange(conf, mqm)
 
 	// servicebound
-	servicebound, err := servicebound.NewServicebound(conf, repo, nil, exchange, mqm, tmr)
+	servicebound, err := servicebound.NewServicebound(conf, repo, inf, exchange, mqm, tmr)
 	if err != nil {
 		klog.Errorf("new servicebound err: %s", err)
 		return nil, err
 	}
-	klog.V(2).Infof("new servicebound succeed")
 
 	// edgebound
-	edgebound, err := edgebound.NewEdgebound(conf, repo, nil, exchange, tmr)
+	edgebound, err := edgebound.NewEdgebound(conf, repo, inf, exchange, tmr)
 	if err != nil {
 		klog.Errorf("new edgebound err: %s", err)
 		return nil, err
 	}
-	klog.V(2).Infof("new edgebound succeed")
 
 	// controlplane
 	controlplane, err := controlplane.NewControlPlane(conf, repo, servicebound, edgebound)
@@ -46,7 +52,6 @@ func NewServer(conf *config.Configuration, repo apis.Repo, mqm apis.MQM) (*Serve
 		klog.Errorf("new controlplane err: %s", err)
 		return nil, err
 	}
-	klog.V(2).Infof("new controlplane succeed")
 
 	return &Server{
 		tmr:          tmr,

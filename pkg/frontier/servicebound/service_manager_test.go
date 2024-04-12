@@ -69,3 +69,5 @@ func (inf *informer) ServiceOffline(serviceID uint64, service string, addr net.A
 }
 
 func (inf *informer) ServiceHeartbeat(serviceID uint64, service string, addr net.Addr) {}
+
+func (inf *informer) SetServiceCount(count int) {}

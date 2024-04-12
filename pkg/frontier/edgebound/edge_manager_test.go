@@ -71,3 +71,5 @@ func (inf *informer) EdgeOffline(edgeID uint64, meta []byte, addr net.Addr) {
 }
 
 func (inf *informer) EdgeHeartbeat(edgeID uint64, meta []byte, addr net.Addr) {}
+
+func (inf *informer) SetEdgeCount(count int) {}
