@@ -59,11 +59,13 @@ type EdgeInformer interface {
 	EdgeOnline(edgeID uint64, meta []byte, addr net.Addr)
 	EdgeOffline(edgeID uint64, meta []byte, addr net.Addr)
 	EdgeHeartbeat(edgeID uint64, meta []byte, addr net.Addr)
+	SetEdgeCount(count int)
 }
 type ServiceInformer interface {
 	ServiceOnline(serviceID uint64, service string, addr net.Addr)
 	ServiceOffline(serviceID uint64, service string, addr net.Addr)
 	ServiceHeartbeat(serviceID uint64, service string, addr net.Addr)
+	SetServiceCount(count int)
 }
 
 // repo
