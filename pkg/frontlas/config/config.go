@@ -1,6 +1,16 @@
 package config
 
-import "github.com/singchia/frontier/pkg/config"
+import (
+	"flag"
+	"fmt"
+	"os"
+
+	"github.com/jumboframes/armorigo/log"
+	"github.com/singchia/frontier/pkg/config"
+	"github.com/spf13/pflag"
+	"gopkg.in/yaml.v2"
+	"k8s.io/klog/v2"
+)
 
 // daemon related
 type RLimit struct {
@@ -182,5 +192,65 @@ type Configuration struct {
 }
 
 func Parse() (*Configuration, error) {
-	return nil, nil
+	var (
+		argConfigFile         = pflag.String("config", "", "config file, default not configured")
+		argArmorigoLogLevel   = pflag.String("loglevel", "info", "log level for armorigo log")
+		argDaemonRLimitNofile = pflag.Int("daemon-rlimit-nofile", -1, "SetRLimit for number of file of this daemon, default: -1 means ignore")
+		// TODO more command-line args
+
+		config *Configuration
+	)
+	pflag.Lookup("daemon-rlimit-nofile").NoOptDefVal = "1048576"
+
+	// set klog
+	klogFlags := flag.NewFlagSet("klog", flag.ExitOnError)
+	klog.InitFlags(klogFlags)
+
+	// sync the glog and klog flags.
+	pflag.CommandLine.VisitAll(func(f1 *pflag.Flag) {
+		f2 := klogFlags.Lookup(f1.Name)
+		if f2 != nil {
+			value := f1.Value.String()
+			if err := f2.Value.Set(value); err != nil {
+				klog.Fatal(err, "failed to set flag")
+				return
+			}
+		}
+	})
+
+	pflag.CommandLine.AddGoFlagSet(klogFlags)
+	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
+	pflag.Parse()
+
+	// armorigo log
+	level, err := log.ParseLevel(*argArmorigoLogLevel)
+	if err != nil {
+		fmt.Println("parse log level err:", err)
+		return nil, err
+	}
+	log.SetLevel(level)
+	log.SetOutput(os.Stdout)
+
+	// config file
+	if *argConfigFile != "" {
+		// TODO the command-line is prior to config file
+		data, err := os.ReadFile(*argConfigFile)
+		if err != nil {
+			return nil, err
+		}
+		config = &Configuration{}
+		if err = yaml.Unmarshal(data, config); err != nil {
+			return nil, err
+		}
+	}
+
+	if config == nil {
+		config = &Configuration{}
+	}
+	// daemon
+	config.Daemon.RLimit.NumFile = *argDaemonRLimitNofile
+	if config.Daemon.PProf.CPUProfileRate == 0 {
+		config.Daemon.PProf.CPUProfileRate = 10000
+	}
+	return config, nil
 }
