@@ -274,6 +274,7 @@ func Parse() (*Configuration, error) {
 		argConfigFile         = pflag.String("config", "", "config file, default not configured")
 		argArmorigoLogLevel   = pflag.String("loglevel", "info", "log level for armorigo log")
 		argDaemonRLimitNofile = pflag.Int("daemon-rlimit-nofile", -1, "SetRLimit for number of file of this daemon, default: -1 means ignore")
+		// TODO more command-line args
 
 		config *Configuration
 	)
