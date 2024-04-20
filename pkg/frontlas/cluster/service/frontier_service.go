@@ -4,7 +4,6 @@ import (
 	"context"
 
 	v1 "github.com/singchia/frontier/api/controlplane/frontlas/v1"
-	"github.com/singchia/frontier/pkg/frontlas/apis"
 	"github.com/singchia/frontier/pkg/frontlas/repo"
 	"k8s.io/klog/v2"
 )
@@ -92,7 +91,15 @@ func (cs *ClusterService) listFrontiers(_ context.Context, req *v1.ListFrontiers
 		}, nil
 	}
 
-	return nil, apis.ErrIllegalRequest
+	frontiers, err := cs.repo.GetAllFrontiers()
+	if err != nil {
+		klog.Errorf("cluster service list frontier, get all frontiers err: %s", err)
+		return nil, err
+	}
+	v1frontiers := transferFrontiers(frontiers)
+	return &v1.ListFrontiersResponse{
+		Frontiers: v1frontiers,
+	}, nil
 }
 
 func transferFrontiers(frontiers []*repo.Frontier) []*v1.Frontier {
