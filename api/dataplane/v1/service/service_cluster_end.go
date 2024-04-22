@@ -40,5 +40,33 @@ func (service *serviceClusterEnd) update() error {
 		return err
 	}
 
+	service.updating.Lock()
+	defer service.updating.Unlock()
+
+	alive := []string{}
+	service.frontiers.Range(func(key, value interface{}) bool {
+		frontierID := key.(string)
+		frontierNservice := value.(*frontierNservice)
+		for _, frontier := range rsp.Frontiers {
+			if frontierID == frontier.FrontierId {
+				if !frontierEqual(frontierNservice.frontier, frontier) {
+					frontierNservice.frontier = frontier
+					// servicebound addr changed, but we will reconnect later
+				}
+				alive = append(alive, frontierID)
+				return true
+			}
+		}
+
+		// out of date frontier
+		service.logger.Debugf("frontier: %v needs to be removed", key)
+		return true
+	})
+
 	return nil
+}
+
+func frontierEqual(a, b *clusterv1.Frontier) bool {
+	return a.AdvertisedSbAddr == b.AdvertisedEbAddr &&
+		a.FrontierId == b.FrontierId
 }
