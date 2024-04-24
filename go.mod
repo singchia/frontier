@@ -7,6 +7,7 @@ go 1.20
 require (
 	github.com/IBM/sarama v1.43.0
 	github.com/alicebob/miniredis/v2 v2.32.1
+	github.com/deckarep/golang-set/v2 v2.6.0
 	github.com/go-kratos/kratos/v2 v2.7.2
 	github.com/google/uuid v1.6.0
 	github.com/jumboframes/armorigo v0.4.0-rc.1
