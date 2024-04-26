@@ -58,8 +58,8 @@ func newServiceEnd(dialer client.Dialer, opts ...ServiceOption) (*serviceEnd, er
 }
 
 // Control Register
-func (service *serviceEnd) RegisterGetEdgeID(ctx context.Context, getEdgeID GetEdgeID) error {
-	return service.End.Register(ctx, apis.RPCGetEdgeID, func(ctx context.Context, req geminio.Request, rsp geminio.Response) {
+func (end *serviceEnd) RegisterGetEdgeID(ctx context.Context, getEdgeID GetEdgeID) error {
+	return end.End.Register(ctx, apis.RPCGetEdgeID, func(ctx context.Context, req geminio.Request, rsp geminio.Response) {
 		id, err := getEdgeID(req.Data())
 		if err != nil {
 			// we just deliver the err back
@@ -73,8 +73,8 @@ func (service *serviceEnd) RegisterGetEdgeID(ctx context.Context, getEdgeID GetE
 	})
 }
 
-func (service *serviceEnd) RegisterEdgeOnline(ctx context.Context, edgeOnline EdgeOnline) error {
-	return service.End.Register(ctx, apis.RPCEdgeOnline, func(ctx context.Context, req geminio.Request, rsp geminio.Response) {
+func (end *serviceEnd) RegisterEdgeOnline(ctx context.Context, edgeOnline EdgeOnline) error {
+	return end.End.Register(ctx, apis.RPCEdgeOnline, func(ctx context.Context, req geminio.Request, rsp geminio.Response) {
 		on := &apis.OnEdgeOnline{}
 		err := json.Unmarshal(req.Data(), on)
 		if err != nil {
@@ -92,8 +92,8 @@ func (service *serviceEnd) RegisterEdgeOnline(ctx context.Context, edgeOnline Ed
 	})
 }
 
-func (service *serviceEnd) RegisterEdgeOffline(ctx context.Context, edgeOffline EdgeOffline) error {
-	return service.End.Register(ctx, apis.RPCEdgeOffline, func(ctx context.Context, req geminio.Request, rsp geminio.Response) {
+func (end *serviceEnd) RegisterEdgeOffline(ctx context.Context, edgeOffline EdgeOffline) error {
+	return end.End.Register(ctx, apis.RPCEdgeOffline, func(ctx context.Context, req geminio.Request, rsp geminio.Response) {
 		off := &apis.OnEdgeOffline{}
 		err := json.Unmarshal(req.Data(), off)
 		if err != nil {
@@ -110,11 +110,11 @@ func (service *serviceEnd) RegisterEdgeOffline(ctx context.Context, edgeOffline 
 }
 
 // RPCer
-func (service *serviceEnd) NewRequest(data []byte) geminio.Request {
-	return service.End.NewRequest(data)
+func (end *serviceEnd) NewRequest(data []byte) geminio.Request {
+	return end.End.NewRequest(data)
 }
 
-func (service *serviceEnd) Call(ctx context.Context, edgeID uint64, method string, req geminio.Request) (geminio.Response, error) {
+func (end *serviceEnd) Call(ctx context.Context, edgeID uint64, method string, req geminio.Request) (geminio.Response, error) {
 	// we append the likely short one to slice
 	tail := make([]byte, 8)
 	binary.BigEndian.PutUint64(tail, edgeID)
@@ -127,7 +127,7 @@ func (service *serviceEnd) Call(ctx context.Context, edgeID uint64, method strin
 	req.SetCustom(custom)
 
 	// call real end
-	rsp, err := service.End.Call(ctx, method, req)
+	rsp, err := end.End.Call(ctx, method, req)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +136,7 @@ func (service *serviceEnd) Call(ctx context.Context, edgeID uint64, method strin
 }
 
 // It's just like the go rpc way
-func (service *serviceEnd) CallAsync(ctx context.Context, edgeID uint64, method string, req geminio.Request, ch chan *geminio.Call) (*geminio.Call, error) {
+func (end *serviceEnd) CallAsync(ctx context.Context, edgeID uint64, method string, req geminio.Request, ch chan *geminio.Call) (*geminio.Call, error) {
 	// we append the likely short one to slice
 	// the last 8 bytes is for frontier
 	tail := make([]byte, 8)
@@ -150,7 +150,7 @@ func (service *serviceEnd) CallAsync(ctx context.Context, edgeID uint64, method 
 	req.SetCustom(custom)
 
 	// call real end
-	call, err := service.End.CallAsync(ctx, method, req, ch)
+	call, err := end.End.CallAsync(ctx, method, req, ch)
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +158,7 @@ func (service *serviceEnd) CallAsync(ctx context.Context, edgeID uint64, method 
 	return call, nil
 }
 
-func (service *serviceEnd) Register(ctx context.Context, method string, rpc geminio.RPC) error {
+func (end *serviceEnd) Register(ctx context.Context, method string, rpc geminio.RPC) error {
 	wrap := func(_ context.Context, req geminio.Request, rsp geminio.Response) {
 		custom := req.Custom()
 		if len(custom) < 8 {
@@ -171,15 +171,15 @@ func (service *serviceEnd) Register(ctx context.Context, method string, rpc gemi
 		rpc(ctx, req, rsp)
 		return
 	}
-	return service.End.Register(ctx, method, wrap)
+	return end.End.Register(ctx, method, wrap)
 }
 
 // Messager
-func (service *serviceEnd) NewMessage(data []byte) geminio.Message {
-	return service.End.NewMessage(data)
+func (end *serviceEnd) NewMessage(data []byte) geminio.Message {
+	return end.End.NewMessage(data)
 }
 
-func (service *serviceEnd) Publish(ctx context.Context, edgeID uint64, msg geminio.Message) error {
+func (end *serviceEnd) Publish(ctx context.Context, edgeID uint64, msg geminio.Message) error {
 	tail := make([]byte, 8)
 	binary.BigEndian.PutUint64(tail, edgeID)
 	custom := msg.Custom()
@@ -191,13 +191,13 @@ func (service *serviceEnd) Publish(ctx context.Context, edgeID uint64, msg gemin
 	msg.SetCustom(custom)
 
 	// publish real end
-	err := service.End.Publish(ctx, msg)
+	err := end.End.Publish(ctx, msg)
 	msg.SetClientID(edgeID)
 	// TODO we need to set EdgeID to let user know
 	return err
 }
 
-func (service *serviceEnd) PublishAsync(ctx context.Context, edgeID uint64, msg geminio.Message, ch chan *geminio.Publish) (*geminio.Publish, error) {
+func (end *serviceEnd) PublishAsync(ctx context.Context, edgeID uint64, msg geminio.Message, ch chan *geminio.Publish) (*geminio.Publish, error) {
 	tail := make([]byte, 8)
 	binary.BigEndian.PutUint64(tail, edgeID)
 	custom := msg.Custom()
@@ -209,13 +209,13 @@ func (service *serviceEnd) PublishAsync(ctx context.Context, edgeID uint64, msg 
 	msg.SetCustom(custom)
 
 	// publish async
-	pub, err := service.End.PublishAsync(ctx, msg, ch)
+	pub, err := end.End.PublishAsync(ctx, msg, ch)
 	// TODO we need to set EdgeID to let user know
 	return pub, err
 }
 
-func (service *serviceEnd) Receive(ctx context.Context) (geminio.Message, error) {
-	msg, err := service.End.Receive(ctx)
+func (end *serviceEnd) Receive(ctx context.Context) (geminio.Message, error) {
+	msg, err := end.End.Receive(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -232,21 +232,21 @@ func (service *serviceEnd) Receive(ctx context.Context) (geminio.Message, error)
 }
 
 // Multiplexer
-func (service *serviceEnd) OpenStream(ctx context.Context, edgeID uint64) (geminio.Stream, error) {
+func (end *serviceEnd) OpenStream(ctx context.Context, edgeID uint64) (geminio.Stream, error) {
 	id := strconv.FormatUint(edgeID, 10)
 	opt := options.OpenStream()
 	opt.SetPeer(id)
-	return service.End.OpenStream(opt)
+	return end.End.OpenStream(opt)
 }
 
-func (service *serviceEnd) AcceptStream() (geminio.Stream, error) {
-	return service.End.AcceptStream()
+func (end *serviceEnd) AcceptStream() (geminio.Stream, error) {
+	return end.End.AcceptStream()
 }
 
-func (service *serviceEnd) ListStreams() []geminio.Stream {
-	return service.End.ListStreams()
+func (end *serviceEnd) ListStreams() []geminio.Stream {
+	return end.End.ListStreams()
 }
 
-func (service *serviceEnd) Close() error {
-	return service.End.Close()
+func (end *serviceEnd) Close() error {
+	return end.End.Close()
 }
