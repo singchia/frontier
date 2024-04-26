@@ -1,4 +1,4 @@
-module frontier.io/frontier
+module github.com/singchia/frontier
 
 go 1.21
 

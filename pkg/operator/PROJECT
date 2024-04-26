@@ -2,9 +2,19 @@
 # This file is used to track the info used to scaffold your project
 # and allow the plugins properly work.
 # More info: https://book.kubebuilder.io/reference/project-config.html
-domain: frontier.io
+domain: singchia.io
 layout:
 - go.kubebuilder.io/v4
-projectName: operator
-repo: frontier.io/frontier
+projectName: operator-new
+repo: github.com/singchia/frontier
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: singchia.io
+  group: frontier
+  kind: Frontier
+  path: github.com/singchia/frontier/api/v1alpha1
+  version: v1alpha1
 version: "3"
