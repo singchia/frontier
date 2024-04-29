@@ -400,3 +400,22 @@ func (end *serviceClusterEnd) Register(ctx context.Context, method string, rpc g
 	})
 	return err
 }
+
+// close
+func (end *serviceClusterEnd) Close() error {
+	close(end.closed)
+	close(end.acceptMsgCh)
+	close(end.acceptStreamCh)
+
+	var (
+		err error
+	)
+	end.frontiers.Range(func(key, value interface{}) bool {
+		closeerr := value.(*frontierNend).end.Close()
+		if closeerr != nil {
+			err = closeerr
+		}
+		return true
+	})
+	return err
+}

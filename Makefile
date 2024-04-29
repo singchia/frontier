@@ -29,8 +29,8 @@ install:
 	install -m 0755 ./frontier $(DESTDIR)$(BINDIR)
 	install -m 0755 ./pkg/frontier/config/frontier.yaml $(DESTDIR)$(CONFDIR)
 
-.PHONY: image
-image:
+.PHONY: image-frontier
+image-frontier:
 	docker buildx build -t frontier:${VERSION} -f images/Dockerfile.frontier .
 
 .PHONY: image-gen-api
