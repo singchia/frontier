@@ -1,31 +1,27 @@
-# permissions for end users to edit frontiers.
+# permissions for end users to view frontierclusters.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
     app.kubernetes.io/name: clusterrole
-    app.kubernetes.io/instance: frontier-editor-role
+    app.kubernetes.io/instance: frontiercluster-viewer-role
     app.kubernetes.io/component: rbac
-    app.kubernetes.io/created-by: operator-new
-    app.kubernetes.io/part-of: operator-new
+    app.kubernetes.io/created-by: frontier
+    app.kubernetes.io/part-of: frontier
     app.kubernetes.io/managed-by: kustomize
-  name: frontier-editor-role
+  name: frontiercluster-viewer-role
 rules:
 - apiGroups:
   - frontier.singchia.io
   resources:
-  - frontiers
+  - frontierclusters
   verbs:
-  - create
-  - delete
   - get
   - list
-  - patch
-  - update
   - watch
 - apiGroups:
   - frontier.singchia.io
   resources:
-  - frontiers/status
+  - frontierclusters/status
   verbs:
   - get

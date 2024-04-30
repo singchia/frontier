@@ -27,26 +27,26 @@ import (
 	frontierv1alpha1 "github.com/singchia/frontier/api/v1alpha1"
 )
 
-// FrontierReconciler reconciles a Frontier object
-type FrontierReconciler struct {
+// FrontierClusterReconciler reconciles a FrontierCluster object
+type FrontierClusterReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=frontier.singchia.io,resources=frontiers,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=frontier.singchia.io,resources=frontiers/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=frontier.singchia.io,resources=frontiers/finalizers,verbs=update
+//+kubebuilder:rbac:groups=frontier.singchia.io,resources=frontierclusters,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=frontier.singchia.io,resources=frontierclusters/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=frontier.singchia.io,resources=frontierclusters/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 // TODO(user): Modify the Reconcile function to compare the state specified by
-// the Frontier object against the actual cluster state, and then
+// the FrontierCluster object against the actual cluster state, and then
 // perform operations to make the cluster state reflect the state specified by
 // the user.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.2/pkg/reconcile
-func (r *FrontierReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *FrontierClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
 	// TODO(user): your logic here
@@ -55,8 +55,8 @@ func (r *FrontierReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *FrontierReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *FrontierClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&frontierv1alpha1.Frontier{}).
+		For(&frontierv1alpha1.FrontierCluster{}).
 		Complete(r)
 }

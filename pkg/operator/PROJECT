@@ -5,7 +5,7 @@
 domain: singchia.io
 layout:
 - go.kubebuilder.io/v4
-projectName: operator-new
+projectName: frontier
 repo: github.com/singchia/frontier
 resources:
 - api:
@@ -14,7 +14,7 @@ resources:
   controller: true
   domain: singchia.io
   group: frontier
-  kind: Frontier
+  kind: FrontierCluster
   path: github.com/singchia/frontier/api/v1alpha1
   version: v1alpha1
 version: "3"

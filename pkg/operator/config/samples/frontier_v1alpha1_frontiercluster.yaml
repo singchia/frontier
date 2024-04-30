@@ -1,9 +1,9 @@
 apiVersion: frontier.singchia.io/v1alpha1
-kind: Frontier
+kind: FrontierCluster
 metadata:
   labels:
-    app.kubernetes.io/name: operator-new
+    app.kubernetes.io/name: frontier
     app.kubernetes.io/managed-by: kustomize
-  name: frontier-sample
+  name: frontiercluster-sample
 spec:
   # TODO(user): Add fields here

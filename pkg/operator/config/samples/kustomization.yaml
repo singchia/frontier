@@ -1,4 +1,4 @@
 ## Append samples of your project ##
 resources:
-- frontier_v1alpha1_frontier.yaml
+- frontier_v1alpha1_frontiercluster.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples
