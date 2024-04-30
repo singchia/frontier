@@ -1,15 +1,32 @@
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  labels:
-    app.kubernetes.io/name: clusterrole
-    app.kubernetes.io/instance: manager-role
-    app.kubernetes.io/component: rbac
-    app.kubernetes.io/created-by: operator-new
-    app.kubernetes.io/part-of: operator-new
-    app.kubernetes.io/managed-by: kustomize
   name: manager-role
 rules:
-- apiGroups: [""]
-  resources: ["pods"]
-  verbs: ["get", "list", "watch"]
+- apiGroups:
+  - frontier.singchia.io
+  resources:
+  - frontierclusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - frontier.singchia.io
+  resources:
+  - frontierclusters/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - frontier.singchia.io
+  resources:
+  - frontierclusters/status
+  verbs:
+  - get
+  - patch
+  - update

@@ -23,17 +23,17 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// FrontierSpec defines the desired state of Frontier
-type FrontierSpec struct {
+// FrontierClusterSpec defines the desired state of FrontierCluster
+type FrontierClusterSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of Frontier. Edit frontier_types.go to remove/update
+	// Foo is an example field of FrontierCluster. Edit frontiercluster_types.go to remove/update
 	Foo string `json:"foo,omitempty"`
 }
 
-// FrontierStatus defines the observed state of Frontier
-type FrontierStatus struct {
+// FrontierClusterStatus defines the observed state of FrontierCluster
+type FrontierClusterStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 }
@@ -41,24 +41,24 @@ type FrontierStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// Frontier is the Schema for the frontiers API
-type Frontier struct {
+// FrontierCluster is the Schema for the frontierclusters API
+type FrontierCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   FrontierSpec   `json:"spec,omitempty"`
-	Status FrontierStatus `json:"status,omitempty"`
+	Spec   FrontierClusterSpec   `json:"spec,omitempty"`
+	Status FrontierClusterStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// FrontierList contains a list of Frontier
-type FrontierList struct {
+// FrontierClusterList contains a list of FrontierCluster
+type FrontierClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Frontier `json:"items"`
+	Items           []FrontierCluster `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&Frontier{}, &FrontierList{})
+	SchemeBuilder.Register(&FrontierCluster{}, &FrontierClusterList{})
 }

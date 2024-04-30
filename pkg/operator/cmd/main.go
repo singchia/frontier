@@ -122,11 +122,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controller.FrontierReconciler{
+	if err = (&controller.FrontierClusterReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Frontier")
+		setupLog.Error(err, "unable to create controller", "controller", "FrontierCluster")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder
