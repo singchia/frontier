@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -47,10 +48,20 @@ type FrontierClusterReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.2/pkg/reconcile
 func (r *FrontierClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	log := log.FromContext(ctx)
 
-	// TODO(user): your logic here
-
+	frontiercluster := &frontierv1alpha1.FrontierCluster{}
+	if err := r.Get(ctx, req.NamespacedName, frontiercluster); err != nil {
+		log.Error(err, "get frontier cluster error")
+		return ctrl.Result{}, err
+	}
+	data, _ := json.Marshal(frontiercluster)
+	log.Info("singchia watching", "frontiercluster", string(data))
+	//frontiercluster.Status.Replica = 1
+	if err := r.Status().Update(ctx, frontiercluster); err != nil {
+		log.Error(err, "unable to update status")
+		return ctrl.Result{}, err
+	}
 	return ctrl.Result{}, nil
 }
 
