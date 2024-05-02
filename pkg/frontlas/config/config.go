@@ -3,8 +3,10 @@ package config
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
 
+	armio "github.com/jumboframes/armorigo/io"
 	"github.com/jumboframes/armorigo/log"
 	"github.com/singchia/frontier/pkg/config"
 	"github.com/spf13/pflag"
@@ -253,4 +255,40 @@ func Parse() (*Configuration, error) {
 		config.Daemon.PProf.CPUProfileRate = 10000
 	}
 	return config, nil
+}
+
+func genDefaultConfig(writer io.Writer) error {
+	conf := &Configuration{
+		Daemon: Daemon{
+			RLimit: RLimit{
+				NumFile: 1024,
+			},
+			PProf: PProf{
+				Enable: true,
+				Addr:   "0.0.0.0:6061",
+			},
+		},
+		ControlPlane: ControlPlane{
+			Listen: config.Listen{
+				Network: "tcp",
+				Addr:    "0.0.0.0:30020",
+			},
+		},
+		FrontierManager: FrontierManager{
+			Listen: config.Listen{
+				Network: "tcp",
+				Addr:    "0.0.0.0:30021",
+			},
+		},
+		Redis: Redis{},
+	}
+	data, err := yaml.Marshal(conf)
+	if err != nil {
+		return err
+	}
+	_, err = armio.WriteAll(data, writer)
+	if err != nil {
+		return err
+	}
+	return nil
 }

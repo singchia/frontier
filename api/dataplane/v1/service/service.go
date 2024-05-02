@@ -73,5 +73,10 @@ type Dialer func() (net.Conn, error)
 
 // the service field specific the role for this Service, and then Edge can OpenStream to this service
 func NewService(dialer Dialer, opts ...ServiceOption) (Service, error) {
-	return newServiceEnd(client.Dialer(dialer), opts...)
+	return newRetryServiceEnd(client.Dialer(dialer), opts...)
+}
+
+// call this function when you deploy a frontier cluster
+func NewClusterService(frontlasAddr string, opts ...ServiceOption) (Service, error) {
+	return newclusterServiceEnd(frontlasAddr, opts...)
 }

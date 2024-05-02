@@ -1,0 +1,134 @@
+daemon:
+  rlimit:
+    enable: false
+    nofile: 102400
+  pprof:
+    enable: true
+    addr: 0.0.0.0:6060
+    cpu_profile_rate: 0
+edgebound:
+  listen:
+    network: tcp
+    addr: 0.0.0.0:30012
+    tls:
+      enable: false
+      mtls: false
+      ca_certs:
+      - ca1.cert
+      - ca2.cert
+      certs:
+      - cert: edgebound.cert
+        key: edgebound.key
+      insecure_skip_verify: false
+  bypass:
+    network: tcp
+    addr: 192.168.1.10:8443
+    tls:
+      enable: true
+      mtls: true
+      ca_certs:
+      - ca1.cert
+      certs:
+      - cert: frontier.cert
+        key: frontier.key
+      insecure_skip_verify: false
+  bypass_enable: false
+  edgeid_alloc_when_no_idservice_on: true
+servicebound:
+  listen:
+    network: tcp
+    addr: 0.0.0.0:30011
+    tls:
+      enable: false
+      mtls: false
+      ca_certs:
+      - ca1.cert
+      - ca2.cert
+      certs:
+      - cert: servicebound.cert
+        key: servicebound.key
+      insecure_skip_verify: false
+controlplane:
+  enable: false
+  listen:
+    network: tcp
+    addr: 0.0.0.0:30010
+dao:
+  debug: false
+frontlas:
+  enable: false
+  dial:
+    network: tcp
+    addr: 127.0.0.1:30021
+  metrics:
+    enable: false
+    interval: 0
+mqm:
+  kafka:
+    enable: false
+    addrs: []
+    producer:
+      topics: []
+      async: false
+      maxmessagebytes: 0
+      requiredacks: 0
+      timeout: 0
+      compression: none
+      compressionlevel: 0
+      idempotent: false
+      flush:
+        bytes: 0
+        messages: 0
+        frequency: 0
+        maxmessages: 0
+      retry:
+        max: 0
+        backoff: 0
+  amqp:
+    enable: false
+    addrs: []
+    vhost: ""
+    channelmax: 0
+    framesize: 0
+    heartbeat: 0
+    locale: ""
+    exchanges: []
+    queues: []
+    queuebindings: []
+    producer:
+      routingkeys: []
+      exchange: ""
+      mandatory: false
+      immediate: false
+      headers: {}
+      contenttype: ""
+      contentencoding: ""
+      deliverymode: 0
+      priority: 0
+      replyto: ""
+      expiration: ""
+      type: ""
+      userid: ""
+      appid: ""
+  nats:
+    enable: false
+    addrs: []
+    producer:
+      subjects: []
+    jetstream:
+      enable: false
+      name: ""
+      producer:
+        subjects: []
+  nsq:
+    enable: false
+    addrs: []
+    producer:
+      topics: []
+  redis:
+    enable: false
+    addrs: []
+    db: 0
+    password: ""
+    producer:
+      channels: []
