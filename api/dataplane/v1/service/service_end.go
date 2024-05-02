@@ -22,6 +22,45 @@ func newServiceEnd(dialer client.Dialer, opts ...ServiceOption) (*serviceEnd, er
 	for _, opt := range opts {
 		opt(sopt)
 	}
+	sopts := &client.EndOptions{}
+	if sopt.tmr != nil {
+		sopts.SetTimer(sopt.tmr)
+	}
+	if sopt.logger != nil {
+		sopts.SetLog(sopt.logger)
+	}
+	// meta
+	meta := &apis.Meta{}
+	if sopt.topics != nil {
+		// we deliver topics in meta
+		meta.Topics = sopt.topics
+	}
+	if sopt.service != "" {
+		meta.Service = sopt.service
+	}
+	data, err := json.Marshal(meta)
+	if err != nil {
+		return nil, err
+	}
+	sopts.SetMeta(data)
+	// delegate
+	if sopt.delegate != nil {
+		sopts.SetDelegate(sopt.delegate)
+	}
+	// new geminio end
+	end, err := client.NewEndWithDialer(dialer, sopts)
+	if err != nil {
+		return nil, err
+	}
+	return &serviceEnd{end}, nil
+}
+
+func newRetryServiceEnd(dialer client.Dialer, opts ...ServiceOption) (*serviceEnd, error) {
+	// options
+	sopt := &serviceOption{}
+	for _, opt := range opts {
+		opt(sopt)
+	}
 	sopts := &client.RetryEndOptions{
 		EndOptions: &client.EndOptions{},
 	}

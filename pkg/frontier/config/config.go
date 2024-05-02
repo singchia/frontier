@@ -56,6 +56,7 @@ type Servicebound struct {
 }
 
 type ControlPlane struct {
+	Enable bool          `yaml:"enable"`
 	Listen config.Listen `yaml:"listen"`
 }
 
@@ -337,23 +338,25 @@ func genDefaultConfig(writer io.Writer) error {
 	conf := &Configuration{
 		Daemon: Daemon{
 			RLimit: RLimit{
-				NumFile: 1024,
+				NumFile: 102400,
 			},
 			PProf: PProf{
 				Enable: true,
 				Addr:   "0.0.0.0:6060",
 			},
 		},
+		// default listen on 30010
 		ControlPlane: ControlPlane{
 			Listen: config.Listen{
 				Network: "tcp",
-				Addr:    "0.0.0.0:2430",
+				Addr:    "0.0.0.0:30010",
 			},
 		},
+		// default listen on 30011
 		Servicebound: Servicebound{
 			Listen: config.Listen{
 				Network: "tcp",
-				Addr:    "0.0.0.0:2431",
+				Addr:    "0.0.0.0:30011",
 				TLS: config.TLS{
 					Enable: false,
 					MTLS:   false,
@@ -370,10 +373,11 @@ func genDefaultConfig(writer io.Writer) error {
 				},
 			},
 		},
+		// default listen on 30012
 		Edgebound: Edgebound{
 			Listen: config.Listen{
 				Network: "tcp",
-				Addr:    "0.0.0.0:2432",
+				Addr:    "0.0.0.0:30012",
 				TLS: config.TLS{
 					Enable: false,
 					MTLS:   false,
@@ -411,6 +415,34 @@ func genDefaultConfig(writer io.Writer) error {
 		},
 		Dao: Dao{
 			Debug: false,
+		},
+		Frontlas: Frontlas{
+			Enable: false,
+			Dial: config.Dial{
+				Network: "tcp",
+				Addr:    "127.0.0.1:30021",
+				TLS: config.TLS{
+					Enable: false,
+					MTLS:   false,
+				},
+			},
+		},
+		MQM: MQM{
+			Kafka: Kafka{
+				Enable: false,
+			},
+			AMQP: AMQP{
+				Enable: false,
+			},
+			Nats: Nats{
+				Enable: false,
+			},
+			NSQ: NSQ{
+				Enable: false,
+			},
+			Redis: Redis{
+				Enable: false,
+			},
 		},
 	}
 	data, err := yaml.Marshal(conf)

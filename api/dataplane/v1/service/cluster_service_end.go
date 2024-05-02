@@ -2,8 +2,11 @@ package service
 
 import (
 	"context"
+	"encoding/binary"
+	"encoding/json"
 	"io"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -11,6 +14,7 @@ import (
 
 	mapset "github.com/deckarep/golang-set/v2"
 	clusterv1 "github.com/singchia/frontier/api/controlplane/frontlas/v1"
+	"github.com/singchia/frontier/pkg/frontier/apis"
 	"github.com/singchia/frontier/pkg/mapmap"
 	"github.com/singchia/geminio"
 	"github.com/singchia/geminio/delegate"
@@ -23,7 +27,7 @@ type frontierNend struct {
 	end      *serviceEnd
 }
 
-type serviceClusterEnd struct {
+type clusterServiceEnd struct {
 	*delegate.UnimplementedDelegate
 	cc clusterv1.ClusterServiceClient
 
@@ -46,14 +50,14 @@ type serviceClusterEnd struct {
 	closed chan struct{}
 }
 
-func newServiceClusterEnd(addr string, opts ...ServiceOption) (*serviceClusterEnd, error) {
+func newclusterServiceEnd(addr string, opts ...ServiceOption) (*clusterServiceEnd, error) {
 	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
 	}
 	cc := clusterv1.NewClusterServiceClient(conn)
 
-	end := &serviceClusterEnd{
+	end := &clusterServiceEnd{
 		cc:             cc,
 		serviceOption:  &serviceOption{},
 		rpcs:           map[string]geminio.RPC{},
@@ -73,7 +77,7 @@ func newServiceClusterEnd(addr string, opts ...ServiceOption) (*serviceClusterEn
 	return end, nil
 }
 
-func (end *serviceClusterEnd) start() {
+func (end *clusterServiceEnd) start() {
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 	for {
@@ -90,7 +94,7 @@ func (end *serviceClusterEnd) start() {
 	}
 }
 
-func (end *serviceClusterEnd) clear(frontierID string) {
+func (end *clusterServiceEnd) clear(frontierID string) {
 	end.updating.Lock()
 	defer end.updating.Unlock()
 
@@ -102,7 +106,7 @@ func (end *serviceClusterEnd) clear(frontierID string) {
 	end.edgefrontiers.DelValue(frontierID)
 }
 
-func (end *serviceClusterEnd) update() error {
+func (end *clusterServiceEnd) update() error {
 	rsp, err := end.cc.ListFrontiers(context.TODO(), &clusterv1.ListFrontiersRequest{})
 	if err != nil {
 		end.logger.Errorf("list frontiers err: %s", err)
@@ -166,7 +170,7 @@ FOUND:
 	return nil
 }
 
-func (end *serviceClusterEnd) lookup(edgeID uint64) (string, *serviceEnd, error) {
+func (end *clusterServiceEnd) lookup(edgeID uint64) (string, *serviceEnd, error) {
 	var (
 		frontier   *clusterv1.Frontier
 		serviceEnd *serviceEnd
@@ -207,7 +211,7 @@ func (end *serviceClusterEnd) lookup(edgeID uint64) (string, *serviceEnd, error)
 	return frontierID.(string), serviceEnd, nil
 }
 
-func (end *serviceClusterEnd) pickone() *serviceEnd {
+func (end *clusterServiceEnd) pickone() *serviceEnd {
 	var serviceEnd *serviceEnd
 	end.frontiers.Range(func(_, value interface{}) bool {
 		// return first one
@@ -222,7 +226,7 @@ func frontierEqual(a, b *clusterv1.Frontier) bool {
 		a.FrontierId == b.FrontierId
 }
 
-func (service *serviceClusterEnd) newServiceEnd(addr string) (*serviceEnd, error) {
+func (service *clusterServiceEnd) newServiceEnd(addr string) (*serviceEnd, error) {
 	dialer := func() (net.Conn, error) {
 		return net.Dial("tcp", addr)
 	}
@@ -271,7 +275,7 @@ ERR:
 }
 
 // multiplexer
-func (end *serviceClusterEnd) AcceptStream() (geminio.Stream, error) {
+func (end *clusterServiceEnd) AcceptStream() (geminio.Stream, error) {
 	st, ok := <-end.acceptStreamCh
 	if !ok {
 		return nil, io.EOF
@@ -279,7 +283,7 @@ func (end *serviceClusterEnd) AcceptStream() (geminio.Stream, error) {
 	return st, nil
 }
 
-func (end *serviceClusterEnd) OpenStream(ctx context.Context, edgeID uint64) (geminio.Stream, error) {
+func (end *clusterServiceEnd) OpenStream(ctx context.Context, edgeID uint64) (geminio.Stream, error) {
 	frontierID, serviceEnd, err := end.lookup(edgeID)
 	if err != nil {
 		return nil, err
@@ -292,7 +296,7 @@ func (end *serviceClusterEnd) OpenStream(ctx context.Context, edgeID uint64) (ge
 	return stream, nil
 }
 
-func (end *serviceClusterEnd) ListStreams() []geminio.Stream {
+func (end *clusterServiceEnd) ListStreams() []geminio.Stream {
 	streams := []geminio.Stream{}
 	end.frontiers.Range(func(_, value interface{}) bool {
 		sts := value.(*frontierNend).end.ListStreams()
@@ -305,7 +309,7 @@ func (end *serviceClusterEnd) ListStreams() []geminio.Stream {
 }
 
 // Messager
-func (end *serviceClusterEnd) NewMessage(data []byte) geminio.Message {
+func (end *clusterServiceEnd) NewMessage(data []byte) geminio.Message {
 	serviceEnd := end.pickone()
 	if serviceEnd == nil {
 		return nil
@@ -313,7 +317,7 @@ func (end *serviceClusterEnd) NewMessage(data []byte) geminio.Message {
 	return serviceEnd.NewMessage(data)
 }
 
-func (end *serviceClusterEnd) Publish(ctx context.Context, edgeID uint64, msg geminio.Message) error {
+func (end *clusterServiceEnd) Publish(ctx context.Context, edgeID uint64, msg geminio.Message) error {
 	fronterID, serviceEnd, err := end.lookup(edgeID)
 	if err != nil {
 		return err
@@ -326,7 +330,7 @@ func (end *serviceClusterEnd) Publish(ctx context.Context, edgeID uint64, msg ge
 	return nil
 }
 
-func (end *serviceClusterEnd) PublishAsync(ctx context.Context, edgeID uint64, msg geminio.Message, ch chan *geminio.Publish) (*geminio.Publish, error) {
+func (end *clusterServiceEnd) PublishAsync(ctx context.Context, edgeID uint64, msg geminio.Message, ch chan *geminio.Publish) (*geminio.Publish, error) {
 	fronterID, serviceEnd, err := end.lookup(edgeID)
 	if err != nil {
 		return nil, err
@@ -339,7 +343,7 @@ func (end *serviceClusterEnd) PublishAsync(ctx context.Context, edgeID uint64, m
 	return pub, err
 }
 
-func (end *serviceClusterEnd) Receive(ctx context.Context) (geminio.Message, error) {
+func (end *clusterServiceEnd) Receive(ctx context.Context) (geminio.Message, error) {
 	msg, ok := <-end.acceptMsgCh
 	if !ok {
 		return nil, io.EOF
@@ -348,7 +352,7 @@ func (end *serviceClusterEnd) Receive(ctx context.Context) (geminio.Message, err
 }
 
 // RPCer
-func (end *serviceClusterEnd) NewRequest(data []byte) geminio.Request {
+func (end *clusterServiceEnd) NewRequest(data []byte) geminio.Request {
 	serviceEnd := end.pickone()
 	if serviceEnd == nil {
 		return nil
@@ -356,7 +360,7 @@ func (end *serviceClusterEnd) NewRequest(data []byte) geminio.Request {
 	return serviceEnd.NewRequest(data)
 }
 
-func (end *serviceClusterEnd) Call(ctx context.Context, edgeID uint64, method string, req geminio.Request) (geminio.Response, error) {
+func (end *clusterServiceEnd) Call(ctx context.Context, edgeID uint64, method string, req geminio.Request) (geminio.Response, error) {
 	fronterID, serviceEnd, err := end.lookup(edgeID)
 	if err != nil {
 		return nil, err
@@ -369,7 +373,7 @@ func (end *serviceClusterEnd) Call(ctx context.Context, edgeID uint64, method st
 	return rsp, nil
 }
 
-func (end *serviceClusterEnd) CallAsync(ctx context.Context, edgeID uint64, method string, req geminio.Request, ch chan *geminio.Call) (*geminio.Call, error) {
+func (end *clusterServiceEnd) CallAsync(ctx context.Context, edgeID uint64, method string, req geminio.Request, ch chan *geminio.Call) (*geminio.Call, error) {
 	fronterID, serviceEnd, err := end.lookup(edgeID)
 	if err != nil {
 		return nil, err
@@ -382,7 +386,7 @@ func (end *serviceClusterEnd) CallAsync(ctx context.Context, edgeID uint64, meth
 	return call, nil
 }
 
-func (end *serviceClusterEnd) Register(ctx context.Context, method string, rpc geminio.RPC) error {
+func (end *clusterServiceEnd) Register(ctx context.Context, method string, rpc geminio.RPC) error {
 	end.appMtx.Lock()
 	end.rpcs[method] = rpc
 	end.appMtx.Unlock()
@@ -401,8 +405,35 @@ func (end *serviceClusterEnd) Register(ctx context.Context, method string, rpc g
 	return err
 }
 
+// net.Listener
+func (end *clusterServiceEnd) Accept() (net.Conn, error) {
+	st, ok := <-end.acceptStreamCh
+	if !ok {
+		return nil, io.EOF
+	}
+	return st, nil
+}
+
+func (end *clusterServiceEnd) Network() string {
+	return "tcp"
+}
+
+func (end *clusterServiceEnd) String() string {
+	addrs := []string{}
+	end.frontiers.Range(func(key, value interface{}) bool {
+		addr := value.(*frontierNend).end.Addr().String()
+		addrs = append(addrs, addr)
+		return true
+	})
+	return strings.Join(addrs, ";")
+}
+
+func (end *clusterServiceEnd) Addr() net.Addr {
+	return end
+}
+
 // close
-func (end *serviceClusterEnd) Close() error {
+func (end *clusterServiceEnd) Close() error {
 	close(end.closed)
 	close(end.acceptMsgCh)
 	close(end.acceptStreamCh)
@@ -418,4 +449,59 @@ func (end *serviceClusterEnd) Close() error {
 		return true
 	})
 	return err
+}
+
+// Control Register
+func (end *clusterServiceEnd) RegisterGetEdgeID(ctx context.Context, getEdgeID GetEdgeID) error {
+	// we call Register of clusterServiceEnd because we need rpcs record getEdgeID
+	// and also Register getEdgeID to all frontier
+	return end.Register(ctx, apis.RPCGetEdgeID, func(ctx context.Context, req geminio.Request, rsp geminio.Response) {
+		id, err := getEdgeID(req.Data())
+		if err != nil {
+			// we just deliver the err back
+			// get ID err will force close the edge unless EdgeIDAllocWhenNoIDServiceOn is configured
+			rsp.SetError(err)
+			return
+		}
+		hex := make([]byte, 8)
+		binary.BigEndian.PutUint64(hex, id)
+		rsp.SetData(hex)
+	})
+}
+
+func (end *clusterServiceEnd) RegisterEdgeOnline(ctx context.Context, edgeOnline EdgeOnline) error {
+	return end.Register(
+		ctx, apis.RPCEdgeOnline, func(ctx context.Context, req geminio.Request, rsp geminio.Response) {
+			on := &apis.OnEdgeOnline{}
+			err := json.Unmarshal(req.Data(), on)
+			if err != nil {
+				// shouldn't be here
+				rsp.SetError(err)
+				return
+			}
+			err = edgeOnline(on.EdgeID, on.Meta, on)
+			if err != nil {
+				// online err will force close the edge
+				rsp.SetError(err)
+				return
+			}
+			// if allowed, the edge will continue the connection
+		})
+}
+
+func (end *clusterServiceEnd) RegisterEdgeOffline(ctx context.Context, edgeOffline EdgeOffline) error {
+	return end.Register(ctx, apis.RPCEdgeOffline, func(ctx context.Context, req geminio.Request, rsp geminio.Response) {
+		off := &apis.OnEdgeOffline{}
+		err := json.Unmarshal(req.Data(), off)
+		if err != nil {
+			// shouldn't be here
+			rsp.SetError(err)
+			return
+		}
+		err = edgeOffline(off.EdgeID, off.Meta, off)
+		if err != nil {
+			rsp.SetError(err)
+			return
+		}
+	})
 }

@@ -18,12 +18,12 @@ type Listen struct {
 	Network        string `yaml:"network"`
 	Addr           string `yaml:"addr"`
 	AdvertisedAddr string `yaml:"advertised_addr,omitempty"`
-	TLS            TLS    `yaml:"tls"`
+	TLS            TLS    `yaml:"tls,omitempty"`
 }
 
 type Dial struct {
 	Network        string `yaml:"network"`
 	Addr           string `yaml:"addr"`
 	AdvertisedAddr string `yaml:"advertised_addr,omitempty"`
-	TLS            TLS    `yaml:"tls"`
+	TLS            TLS    `yaml:"tls,omitempty"`
 }

@@ -7,3 +7,4 @@ metadata:
   name: frontiercluster-sample
 spec:
   # TODO(user): Add fields here
+  replica: "1"
