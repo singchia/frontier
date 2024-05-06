@@ -47,9 +47,9 @@ func NewInformer(conf *config.Configuration, tmr timer.Timer) (*Informer, error)
 	if err != nil {
 		return nil, err
 	}
-	opt := client.NewEndOptions()
+	opt := client.NewRetryEndOptions()
 	opt.SetMeta(data)
-	end, err := client.NewRetryEndWithDialer(dialer)
+	end, err := client.NewRetryEndWithDialer(dialer, opt)
 	if err != nil {
 		klog.Errorf("frontlas new retry end err: %s", err)
 		return nil, err

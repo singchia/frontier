@@ -2,12 +2,10 @@ package config
 
 import (
 	"flag"
-	"fmt"
 	"io"
 	"os"
 
 	armio "github.com/jumboframes/armorigo/io"
-	"github.com/jumboframes/armorigo/log"
 	"github.com/singchia/frontier/pkg/config"
 	"github.com/spf13/pflag"
 	"gopkg.in/yaml.v2"
@@ -38,145 +36,88 @@ type ControlPlane struct {
 
 // TODO tls support
 type Redis struct {
-	Mode       string `yaml:"mode"` // standalone, sentinel or cluster
+	Mode string `yaml:"mode"` // standalone, sentinel or cluster
+
+	// Use the specified Username to authenticate the current connection
+	// with one of the connections defined in the ACL list when connecting
+	// to a Redis 6.0 instance, or greater, that is using the Redis ACL system.
+	Username string `yaml:"username,omitempty"`
+
+	// Optional password. Must match the password specified in the
+	// requirepass server configuration option (if connecting to a Redis 5.0 instance, or lower),
+	// or the User Password when connecting to a Redis 6.0 instance, or greater,
+	// that is using the Redis ACL system.
+	Password string `yaml:"password,omitempty"`
+
+	// Protocol 2 or 3. Use the version to negotiate RESP version with redis-server.
+	// Default is 3.
+	Protocol int `yaml:"protocol,omitempty"`
+
+	// ClientName will execute the `CLIENT SETNAME ClientName` command for each conn.
+	ClientName string `yaml:"clientname,omitempty"`
+
+	// connection retry settings
+	MaxRetries      int `yaml:"max_retries,omitempty"`
+	MinRetryBackoff int `yaml:"min_retry_backoff,omitempty"`
+	MaxRetryBackoff int `yaml:"max_retry_backoff,omitempty"`
+	// connection r/w settings
+	DialTimeout  int `yaml:"dial_timeout,omitempty"`
+	ReadTimeout  int `yaml:"read_timeout,omitempty"`
+	WriteTimeout int `yaml:"write_timeout,omitempty"`
+	// connection pool settings
+	PoolFIFO         bool   `yaml:"pool_fifo,omitempty"`
+	PoolSize         int    `yaml:"pool_size,omitempty"` // applies per cluster node and not for the whole cluster
+	PoolTimeout      int    `yaml:"pool_timeout,omitempty"`
+	MinIdleConns     int    `yaml:"min_idle_conns,omitempty"`
+	MaxIdleConns     int    `yaml:"max_idle,omitempty"`
+	MaxActiveConns   int    `yaml:"max_active_conns,omitempty"` // applies per cluster node and not for the whole cluster
+	ConnMaxIdleTime  int    `yaml:"conn_max_idle_time,omitempty"`
+	ConnMaxLifetime  int    `yaml:"conn_max_life_time,omitempty"`
+	DisableIndentity bool   `yaml:"disable_identity,omitempty"` // Disable set-lib on connect. Default is false.
+	IdentitySuffix   string `yaml:"identity_suffix,omitempty"`  // Add suffix to client name. Default is empty.
+
 	Standalone struct {
 		// The network type, either tcp or unix.
 		// Default is tcp.
-		Network string
+		Network string `yaml:"network"`
 		// host:port address.
-		Addr string
-		// Protocol 2 or 3. Use the version to negotiate RESP version with redis-server.
-		// Default is 3.
-		Protocol int
-		// Use the specified Username to authenticate the current connection
-		// with one of the connections defined in the ACL list when connecting
-		// to a Redis 6.0 instance, or greater, that is using the Redis ACL system.
-		Username string
-		// Optional password. Must match the password specified in the
-		// requirepass server configuration option (if connecting to a Redis 5.0 instance, or lower),
-		// or the User Password when connecting to a Redis 6.0 instance, or greater,
-		// that is using the Redis ACL system.
-		Password string
+		Addr string `yaml:"addr"`
 		// CredentialsProvider allows the username and password to be updated
 		// before reconnecting. It should return the current username and password.
-		DB int
-		// ClientName will execute the `CLIENT SETNAME ClientName` command for each conn.
-		ClientName string
-
-		// connection retry settings
-		MaxRetries      int
-		MinRetryBackoff int
-		MaxRetryBackoff int
-
-		// connection r/w settings
-		DialTimeout  int
-		ReadTimeout  int
-		WriteTimeout int
-
-		// connection pool settings
-		PoolFIFO        bool
-		PoolSize        int // applies per cluster node and not for the whole cluster
-		PoolTimeout     int
-		MinIdleConns    int
-		MaxIdleConns    int
-		MaxActiveConns  int // applies per cluster node and not for the whole cluster
-		ConnMaxIdleTime int
-		ConnMaxLifetime int
-
-		DisableIndentity bool   // Disable set-lib on connect. Default is false.
-		IdentitySuffix   string // Add suffix to client name. Default is empty.
-	}
+		DB int `yaml:"db"`
+	} `yaml:"standalone,omitempty"`
 	Sentinel struct {
 		Addrs      []string `yaml:"addrs"`
 		MasterName string   `yaml:"master_name"`
-		Protocol   int
-		Username   string
-		Password   string
-		DB         int
-		// ClientName will execute the `CLIENT SETNAME ClientName` command for each conn.
-		ClientName string
+		DB         int      `yaml:"db"`
 
 		// route settings
 		// Allows routing read-only commands to the closest master or replica node.
 		// This option only works with NewFailoverClusterClient.
-		RouteByLatency bool
+		RouteByLatency bool `yaml:"route_by_latency,omitempty"`
 		// Allows routing read-only commands to the random master or replica node.
 		// This option only works with NewFailoverClusterClient.
-		RouteRandomly bool
+		RouteRandomly bool `yaml:"route_randomly,omitempty"`
 		// Route all commands to replica read-only nodes.
-		ReplicaOnly bool
+		ReplicaOnly bool `yaml:"replica_only,omitempty"`
 
 		// Use replicas disconnected with master when cannot get connected replicas
 		// Now, this option only works in RandomReplicaAddr function.
-		UseDisconnectedReplicas bool
-
-		// connection retry settings
-		MaxRetries      int
-		MinRetryBackoff int
-		MaxRetryBackoff int
-
-		// connection r/w settings
-		DialTimeout  int
-		ReadTimeout  int
-		WriteTimeout int
-
-		// connection pool settings
-		PoolFIFO        bool
-		PoolSize        int // applies per cluster node and not for the whole cluster
-		PoolTimeout     int
-		MinIdleConns    int
-		MaxIdleConns    int
-		MaxActiveConns  int // applies per cluster node and not for the whole cluster
-		ConnMaxIdleTime int
-		ConnMaxLifetime int
-
-		DisableIndentity bool   // Disable set-lib on connect. Default is false.
-		IdentitySuffix   string // Add suffix to client name. Default is empty.
-	}
+		UseDisconnectedReplicas bool `yaml:"use_disconnected_replicas,omitempty"`
+	} `yaml:"sentinel,omitempty"`
 	Cluster struct {
-		Addrs    []string `yaml:"addrs"`
-		Protocol int
-		Username string
-		Password string
-
-		// ClientName will execute the `CLIENT SETNAME ClientName` command for each conn.
-		ClientName string
-
+		Addrs []string `yaml:"addrs"`
 		// The maximum number of retries before giving up. Command is retried
 		// on network errors and MOVED/ASK redirects.
 		// Default is 3 retries.
-		MaxRedirects int
-
+		MaxRedirects int `yaml:"max_redirects,omitempty"`
 		// Allows routing read-only commands to the closest master or slave node.
 		// It automatically enables ReadOnly.
-		RouteByLatency bool
+		RouteByLatency bool `yaml:"route_by_latency,omitempty"`
 		// Allows routing read-only commands to the random master or slave node.
 		// It automatically enables ReadOnly.
-		RouteRandomly bool
-
-		// connection retry settings
-		MaxRetries      int
-		MinRetryBackoff int
-		MaxRetryBackoff int
-
-		// connection r/w settings
-		DialTimeout  int
-		ReadTimeout  int
-		WriteTimeout int
-
-		// connection pool settings
-		PoolFIFO        bool
-		PoolSize        int // applies per cluster node and not for the whole cluster
-		PoolTimeout     int
-		MinIdleConns    int
-		MaxIdleConns    int
-		MaxActiveConns  int // applies per cluster node and not for the whole cluster
-		ConnMaxIdleTime int
-		ConnMaxLifetime int
-
-		DisableIndentity bool   // Disable set-lib on connect. Default is false.
-		IdentitySuffix   string // Add suffix to client name. Default is empty.
-	}
+		RouteRandomly bool `yaml:"route_randomly,omitempty"`
+	} `yaml:"cluster,omitempty"`
 }
 
 type FrontierManager struct {
@@ -196,7 +137,6 @@ type Configuration struct {
 func Parse() (*Configuration, error) {
 	var (
 		argConfigFile         = pflag.String("config", "", "config file, default not configured")
-		argArmorigoLogLevel   = pflag.String("loglevel", "info", "log level for armorigo log")
 		argDaemonRLimitNofile = pflag.Int("daemon-rlimit-nofile", -1, "SetRLimit for number of file of this daemon, default: -1 means ignore")
 		// TODO more command-line args
 
@@ -223,15 +163,6 @@ func Parse() (*Configuration, error) {
 	pflag.CommandLine.AddGoFlagSet(klogFlags)
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	pflag.Parse()
-
-	// armorigo log
-	level, err := log.ParseLevel(*argArmorigoLogLevel)
-	if err != nil {
-		fmt.Println("parse log level err:", err)
-		return nil, err
-	}
-	log.SetLevel(level)
-	log.SetOutput(os.Stdout)
 
 	// config file
 	if *argConfigFile != "" {
@@ -280,8 +211,14 @@ func genDefaultConfig(writer io.Writer) error {
 				Addr:    "0.0.0.0:30021",
 			},
 		},
-		Redis: Redis{},
+		Redis: Redis{
+			Mode: "standalone",
+		},
 	}
+	conf.Redis.Standalone.Network = "tcp"
+	conf.Redis.Standalone.Addr = "127.0.0.1:6379"
+	conf.Redis.Standalone.DB = 0
+
 	data, err := yaml.Marshal(conf)
 	if err != nil {
 		return err

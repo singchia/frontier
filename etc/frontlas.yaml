@@ -15,81 +15,8 @@ frontier_plane:
     network: tcp
     addr: 0.0.0.0:30021
 redis:
-  mode: ""
+  mode: standalone
   standalone:
-    network: ""
-    addr: ""
-    protocol: 0
-    username: ""
-    password: ""
+    network: tcp
+    addr: 127.0.0.1:6379
     db: 0
-    clientname: ""
-    maxretries: 0
-    minretrybackoff: 0
-    maxretrybackoff: 0
-    dialtimeout: 0
-    readtimeout: 0
-    writetimeout: 0
-    poolfifo: false
-    poolsize: 0
-    pooltimeout: 0
-    minidleconns: 0
-    maxidleconns: 0
-    maxactiveconns: 0
-    connmaxidletime: 0
-    connmaxlifetime: 0
-    disableindentity: false
-    identitysuffix: ""
-  sentinel:
-    addrs: []
-    master_name: ""
-    protocol: 0
-    username: ""
-    password: ""
-    db: 0
-    clientname: ""
-    routebylatency: false
-    routerandomly: false
-    replicaonly: false
-    usedisconnectedreplicas: false
-    maxretries: 0
-    minretrybackoff: 0
-    maxretrybackoff: 0
-    dialtimeout: 0
-    readtimeout: 0
-    writetimeout: 0
-    poolfifo: false
-    poolsize: 0
-    pooltimeout: 0
-    minidleconns: 0
-    maxidleconns: 0
-    maxactiveconns: 0
-    connmaxidletime: 0
-    connmaxlifetime: 0
-    disableindentity: false
-    identitysuffix: ""
-  cluster:
-    addrs: []
-    protocol: 0
-    username: ""
-    password: ""
-    clientname: ""
-    maxredirects: 0
-    routebylatency: false
-    routerandomly: false
-    maxretries: 0
-    minretrybackoff: 0
-    maxretrybackoff: 0
-    dialtimeout: 0
-    readtimeout: 0
-    writetimeout: 0
-    poolfifo: false
-    poolsize: 0
-    pooltimeout: 0
-    minidleconns: 0
-    maxidleconns: 0
-    maxactiveconns: 0
-    connmaxidletime: 0
-    connmaxlifetime: 0
-    disableindentity: false
-    identitysuffix: ""

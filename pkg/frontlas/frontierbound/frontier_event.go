@@ -20,6 +20,10 @@ const (
 )
 
 // delegates for frontier itself
+func (fm *FrontierManager) GetClientID(meta []byte) (uint64, error) {
+	return fm.idFactory.GetID(), nil
+}
+
 func (fm *FrontierManager) ConnOnline(d delegate.ConnDescriber) error {
 	instance := &gapis.FrontierInstance{}
 	err := json.Unmarshal(d.Meta(), instance)
@@ -27,6 +31,8 @@ func (fm *FrontierManager) ConnOnline(d delegate.ConnDescriber) error {
 		klog.Errorf("frontier manager conn online, json unmarshal err: %s", err)
 		return err
 	}
+	klog.V(1).Infof("frontier online, frontierID: %s", instance.FrontierID)
+
 	set, err := fm.repo.SetFrontierAndAlive(instance.FrontierID, &repo.Frontier{
 		FrontierID:                 instance.FrontierID,
 		AdvertisedServiceboundAddr: instance.AdvertisedServiceboundAddr,
@@ -52,6 +58,8 @@ func (fm *FrontierManager) ConnOffline(d delegate.ConnDescriber) error {
 		klog.Errorf("frontier manager conn offline, json unmarshal err: %s", err)
 		return err
 	}
+	klog.V(1).Infof("frontier offline, frontierID: %s", instance.FrontierID)
+
 	err = fm.repo.DeleteFrontier(instance.FrontierID)
 	if err != nil {
 		klog.Errorf("frontier manager conn offline, delete frontier: %s err: %s", instance.FrontierID, err)

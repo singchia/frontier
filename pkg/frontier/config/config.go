@@ -72,31 +72,31 @@ type Kafka struct {
 	// used by the Producer.
 	Producer struct {
 		// topics to notify frontier which topics to allow to publish
-		Topics []string
-		Async  bool
+		Topics []string `yaml:"topics"`
+		Async  bool     `yaml:"async"`
 		// The maximum permitted size of a message (defaults to 1000000). Should be
 		// set equal to or smaller than the broker's `message.max.bytes`.
-		MaxMessageBytes int
+		MaxMessageBytes int `yaml:"max_message_bytes,omitempty"`
 		// The level of acknowledgement reliability needed from the broker (defaults
 		// to WaitForLocal). Equivalent to the `request.required.acks` setting of the
 		// JVM producer.
-		RequiredAcks sarama.RequiredAcks
+		RequiredAcks sarama.RequiredAcks `yaml:"required_acks,omitempty"`
 		// The maximum duration the broker will wait the receipt of the number of
 		// RequiredAcks (defaults to 10 seconds). This is only relevant when
 		// RequiredAcks is set to WaitForAll or a number > 1. Only supports
 		// millisecond resolution, nanoseconds will be truncated. Equivalent to
 		// the JVM producer's `request.timeout.ms` setting.
-		Timeout int
+		Timeout int `yaml:"timeout,omitempty"`
 		// The type of compression to use on messages (defaults to no compression).
 		// Similar to `compression.codec` setting of the JVM producer.
-		Compression sarama.CompressionCodec
+		Compression sarama.CompressionCodec `yaml:"compression,omitempty"`
 		// The level of compression to use on messages. The meaning depends
 		// on the actual compression type used and defaults to default compression
 		// level for the codec.
-		CompressionLevel int
+		CompressionLevel int `yaml:"compression_level,omitempty"`
 		// If enabled, the producer will ensure that exactly one copy of each message is
 		// written.
-		Idempotent bool
+		Idempotent bool `yaml:"idepotent,omitempty"`
 
 		// The following config options control how often messages are batched up and
 		// sent to the broker. By default, messages are sent as fast as possible, and
@@ -105,28 +105,28 @@ type Kafka struct {
 		Flush struct {
 			// The best-effort number of bytes needed to trigger a flush. Use the
 			// global sarama.MaxRequestSize to set a hard upper limit.
-			Bytes int
+			Bytes int `yaml:"bytes,omitempty"`
 			// The best-effort number of messages needed to trigger a flush. Use
 			// `MaxMessages` to set a hard upper limit.
-			Messages int
+			Messages int `yaml:"messages,omitempty"`
 			// The best-effort frequency of flushes. Equivalent to
 			// `queue.buffering.max.ms` setting of JVM producer.
-			Frequency int
+			Frequency int `yaml:"frequency,omitempty"`
 			// The maximum number of messages the producer will send in a single
 			// broker request. Defaults to 0 for unlimited. Similar to
 			// `queue.buffering.max.messages` in the JVM producer.
-			MaxMessages int
-		}
+			MaxMessages int `yaml:"max_messages,omitempty"`
+		} `yaml:"flush,omitempty"`
 		Retry struct {
 			// The total number of times to retry sending a message (default 3).
 			// Similar to the `message.send.max.retries` setting of the JVM producer.
-			Max int
+			Max int `yaml:"max,omitempty"`
 			// How long to wait for the cluster to settle between retries
 			// (default 100ms). Similar to the `retry.backoff.ms` setting of the
 			// JVM producer.
-			Backoff int
-		}
-	}
+			Backoff int `yaml:"back_off,omitempty"`
+		} `yaml:"retry"`
+	} `yaml:"producer"`
 }
 
 type AMQP struct {
@@ -135,87 +135,85 @@ type AMQP struct {
 	Addrs []string `yaml:"addrs"`
 	// Vhost specifies the namespace of permissions, exchanges, queues and
 	// bindings on the server.  Dial sets this to the path parsed from the URL.
-	Vhost string
+	Vhost string `yaml:"vhost,omitempty"`
 	// 0 max channels means 2^16 - 1
-	ChannelMax int
+	ChannelMax int `yaml:"channel_max,omitempty"`
 	// 0 max bytes means unlimited
-	FrameSize int
+	FrameSize int `yaml:"frame_size,omitempty"`
 	// less than 1s uses the server's interval
-	Heartbeat int
+	Heartbeat int `yaml:"heartbeat,omitempty"`
 	// Connection locale that we expect to always be en_US
 	// Even though servers must return it as per the AMQP 0-9-1 spec,
 	// we are not aware of it being used other than to satisfy the spec requirements
-	Locale string
+	Locale string `yaml:"locale,omitempty"`
 	// exchange to declare
 	Exchanges []struct {
 		// exchange name to declare
-		Name string
+		Name string `yaml:"name"`
 		// direct topic fanout headers, default direct
-		Kind       string
-		Durable    bool
-		AutoDelete bool
-		Internal   bool
-		NoWait     bool
-	}
+		Kind       string `yaml:"kind,omitempty"`
+		Durable    bool   `yaml:"durable,omitempty"`
+		AutoDelete bool   `yaml:"auto_delete,omitempty"`
+		Internal   bool   `yaml:"internal,omitempty"`
+		NoWait     bool   `yaml:"nowait,omitempty"`
+	} `yaml:"exchanges,omitempty"`
 	// queues to declare, default nil
 	Queues []struct {
-		Name       string
-		Durable    bool
-		AutoDelete bool
-		Exclustive bool
-		NoWait     bool
+		Name       string `yaml:"name"`
+		Durable    bool   `yaml:"durable,omitempty"`
+		AutoDelete bool   `yaml:"auto_delete,omitempty"`
+		Exclustive bool   `yaml:"exclustive,omitempty"`
+		NoWait     bool   `yaml:"nowait,omitempty"`
 	}
 	// queue bindings to exchange, default nil
 	QueueBindings []struct {
-		QueueName    string
-		ExchangeName string
-		BindingKey   string
-		NoWait       bool
+		QueueName    string `yaml:"queue_name"`
+		ExchangeName string `yaml:"exchange_name,omitempty"`
+		BindingKey   string `yaml:"binding_key,omitempty"`
+		NoWait       bool   `yaml:"nowait,omitempty"`
 	}
 	Producer struct {
-		RoutingKeys []string // topics
-		Exchange    string
-		Mandatory   bool
-		Immediate   bool
-
+		RoutingKeys []string `yaml:"routing_keys"` // topics
+		Exchange    string   `yaml:"exchange"`
+		Mandatory   bool     `yaml:"mandatory,omitempty"`
+		Immediate   bool     `yaml:"immediate,omitempty"`
 		// message related
-		Headers map[string]interface{}
+		Headers map[string]interface{} `yaml:"headers,omitempty"`
 		// properties
-		ContentType     string // MIME content type
-		ContentEncoding string // MIME content encoding
-		DeliveryMode    uint8  // Transient (0 or 1) or Persistent (2)
-		Priority        uint8  // 0 to 9
-		ReplyTo         string // address to to reply to (ex: RPC)
-		Expiration      string // message expiration spec
-		Type            string // message type name
-		UserId          string // creating user id - ex: "guest"
-		AppId           string // creating application id
-
-	}
+		ContentType     string `yaml:"content_type,omitempty"`     // MIME content type
+		ContentEncoding string `yaml:"content_encoding,omitempty"` // MIME content encoding
+		DeliveryMode    uint8  `yaml:"delivery_mode,omitempty"`    // Transient (0 or 1) or Persistent (2)
+		Priority        uint8  `yaml:"priority,omitempty"`         // 0 to 9
+		ReplyTo         string `yaml:"reply_to,omitempty"`         // address to to reply to (ex: RPC)
+		Expiration      string `yaml:"expiration,omitempty"`       // message expiration spec
+		Type            string `yaml:"type,omitempty"`             // message type name
+		UserId          string `yaml:"user_id,omitempty"`          // creating user id - ex: "guest"
+		AppId           string `yaml:"app_id,omitempty"`           // creating application id
+	} `yaml:"producer,omitempty"`
 }
 
 type Nats struct {
 	Enable   bool     `yaml:"enable"`
 	Addrs    []string `yaml:"addrs"`
 	Producer struct {
-		Subjects []string // topics
-	}
+		Subjects []string `yaml:"subjects"` // topics
+	} `yaml:"producer,omitempty"`
 	JetStream struct {
 		// using jetstream instead of nats
 		Enable   bool   `yaml:"enable"`
 		Name     string `yaml:"name"`
 		Producer struct {
-			Subjects []string
-		}
-	}
+			Subjects []string `yaml:"subjects"`
+		} `yaml:"producer,omitempty"`
+	} `yaml:"jetstream,omitempty"`
 }
 
 type NSQ struct {
 	Enable   bool     `yaml:"enable"`
 	Addrs    []string `yaml:"addrs"`
 	Producer struct {
-		Topics []string
-	}
+		Topics []string `yaml:"topics"`
+	} `yaml:"producer"`
 }
 
 type Redis struct {
@@ -224,16 +222,16 @@ type Redis struct {
 	DB       int      `yaml:"db"`
 	Password string   `yaml:"password"`
 	Producer struct {
-		Channels []string
-	}
+		Channels []string `yaml:"channels"`
+	} `yaml:"producer"`
 }
 
 type MQM struct {
-	Kafka Kafka `yaml:"kafka"`
-	AMQP  AMQP  `yaml:"amqp"`
-	Nats  Nats  `yaml:"nats"`
-	NSQ   NSQ   `yaml:"nsq"`
-	Redis Redis `yaml:"redis"`
+	Kafka Kafka `yaml:"kafka,omitempty"`
+	AMQP  AMQP  `yaml:"amqp,omitempty"`
+	Nats  Nats  `yaml:"nats,omitempty"`
+	NSQ   NSQ   `yaml:"nsq,omitempty"`
+	Redis Redis `yaml:"redis,omitempty"`
 }
 
 // exchange
@@ -245,11 +243,11 @@ type Dao struct {
 
 // frontlas
 type Frontlas struct {
-	Enable  bool `yaml:"enable"`
-	Dial    config.Dial
+	Enable  bool        `yaml:"enable"`
+	Dial    config.Dial `yaml:"dial"`
 	Metrics struct {
-		Enable   bool
-		Interval int // for stats
+		Enable   bool `yaml:"enable"`
+		Interval int  `yaml:"interval"` // for stats
 	}
 }
 
@@ -264,7 +262,7 @@ type Configuration struct {
 
 	Dao Dao `yaml:"dao"`
 
-	Frontlas Frontlas
+	Frontlas Frontlas `yaml:"frontlas"`
 
 	MQM MQM `yaml:"mqm"`
 }
