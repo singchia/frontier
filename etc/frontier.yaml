@@ -1,4 +1,5 @@
 daemon:
+  frontier_id: frontier01
   rlimit:
     enable: false
     nofile: 102400

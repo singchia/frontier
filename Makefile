@@ -3,7 +3,7 @@ include ./Makefile.defs
 REGISTRY?=registry.hub.docker.com/singchia
 CC?=cc
 
-all: frontier frontlas examples
+all: frontier frontlas
 
 .PHONY: frontier
 frontier:

@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"net"
+	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/singchia/frontier/pkg/apis"
+	gconfig "github.com/singchia/frontier/pkg/config"
 	"github.com/singchia/frontier/pkg/frontier/config"
 	"github.com/singchia/frontier/pkg/utils"
 	"github.com/singchia/geminio"
@@ -27,6 +29,17 @@ type Informer struct {
 func NewInformer(conf *config.Configuration, tmr timer.Timer) (*Informer, error) {
 	dial := conf.Frontlas.Dial
 
+	sbAddr, ebAddr, err := getAdvertisedAddrs(conf.Servicebound.Listen, conf.Edgebound.Listen, dial)
+	// meta
+	ins := apis.FrontierInstance{
+		FrontierID:                 conf.Daemon.FrontierID,
+		AdvertisedServiceboundAddr: sbAddr,
+		AdvertisedEdgeboundAddr:    ebAddr,
+	}
+	data, err := json.Marshal(ins)
+	if err != nil {
+		return nil, err
+	}
 	dialer := func() (net.Conn, error) {
 		conn, err := utils.Dial(&dial)
 		if err != nil {
@@ -34,18 +47,6 @@ func NewInformer(conf *config.Configuration, tmr timer.Timer) (*Informer, error)
 			return nil, err
 		}
 		return conn, nil
-	}
-
-	// meta
-	ins := apis.FrontierInstance{
-		FrontierID:                 conf.Daemon.FrontierID,
-		AdvertisedServiceboundAddr: conf.Servicebound.Listen.AdvertisedAddr,
-		AdvertisedEdgeboundAddr:    conf.Edgebound.Listen.AdvertisedAddr,
-	}
-	// TODO if advertised addr empty and in k8s, get addr from PodIP
-	data, err := json.Marshal(ins)
-	if err != nil {
-		return nil, err
 	}
 	opt := client.NewRetryEndOptions()
 	opt.SetMeta(data)
@@ -90,6 +91,61 @@ func NewInformer(conf *config.Configuration, tmr timer.Timer) (*Informer, error)
 		end:  end,
 		conf: conf,
 	}, nil
+}
+
+// the advertised addrs should be specified
+func getAdvertisedAddrs(sblisten, eblisten gconfig.Listen, dial gconfig.Dial) (string, string, error) {
+	var (
+		once = &sync.Once{}
+		host string
+		err  error
+	)
+	getDefaultRouteHost := func() (string, error) {
+		once.Do(func() {
+			ip, rerr := utils.GetDefaultRouteIP(dial.Network, dial.Addr)
+			if err != nil {
+				err = rerr
+				return
+			}
+			host = ip.String()
+		})
+		return host, err
+	}
+	// advertised ip address
+	sbAddr := sblisten.AdvertisedAddr
+	ebAddr := eblisten.AdvertisedAddr
+	// TODO if advertised addr empty and in k8s, get addr from PodIP
+	// if PodIP is empty, then use conf.Servicebound.Listen.Addr instead
+	if sbAddr == "" {
+		sbAddr = sblisten.Addr
+	}
+	if ebAddr == "" {
+		ebAddr = eblisten.Addr
+	}
+	sbhost, sbport, err := net.SplitHostPort(sbAddr)
+	if err != nil {
+		return "", "", err
+	}
+	if net.ParseIP(sbhost).IsUnspecified() {
+		sbhost, err = getDefaultRouteHost()
+		if err != nil {
+			return "", "", err
+		}
+	}
+	sbAddr = net.JoinHostPort(sbhost, sbport)
+
+	ebhost, ebport, err := net.SplitHostPort(ebAddr)
+	if err != nil {
+		return "", "", err
+	}
+	if net.ParseIP(ebhost).IsUnspecified() {
+		ebhost, err = getDefaultRouteHost()
+		if err != nil {
+			return "", "", err
+		}
+	}
+	ebAddr = net.JoinHostPort(ebhost, ebport)
+	return sbAddr, ebAddr, nil
 }
 
 // edge events

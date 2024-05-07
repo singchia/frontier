@@ -18,5 +18,5 @@ if ret ~= 1 then
 end
 
 redis.call("EXPIRE", frontier_alive_key, tonumber(frontier_alive))
-redis.call("HSET", frontier_key, sb_addr_key, sb_addr, eb_addr_key, eb_addr_key, edge_count_key, tonumber(edge_count), service_count, tonumber(service_count))
+redis.call("HSET", frontier_key, sb_addr_key, sb_addr, eb_addr_key, eb_addr, edge_count_key, tonumber(edge_count), service_count_key, tonumber(service_count))
 return 1
