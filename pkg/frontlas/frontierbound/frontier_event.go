@@ -31,7 +31,7 @@ func (fm *FrontierManager) ConnOnline(d delegate.ConnDescriber) error {
 		klog.Errorf("frontier manager conn online, json unmarshal err: %s", err)
 		return err
 	}
-	klog.V(1).Infof("frontier online, frontierID: %s, advertised_servicebound_addr: %s, advertised_edgebount_addr: %s",
+	klog.V(1).Infof("frontier online, frontierID: %s, advertised_servicebound_addr: %s, advertised_edgebound_addr: %s",
 		instance.FrontierID, instance.AdvertisedServiceboundAddr, instance.AdvertisedEdgeboundAddr)
 
 	set, err := fm.repo.SetFrontierAndAlive(instance.FrontierID, &repo.Frontier{

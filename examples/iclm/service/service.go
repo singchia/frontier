@@ -72,7 +72,9 @@ func main() {
 		http.ListenAndServe("0.0.0.0:6062", nil)
 	}()
 	network := pflag.String("network", "tcp", "network to dial")
-	address := pflag.String("address", "127.0.0.1:2431", "address to dial")
+	address := pflag.String("address", "127.0.0.1:30011", "address to dial")
+	frontlasAddress := pflag.String("frontlas_address", "127.0.0.1:30020", "frontlas address to dial, mutex with address")
+	frontlas := pflag.Bool("frontlas", false, "frontlas or frontier")
 	loglevel := pflag.String("loglevel", "info", "log level, trace debug info warn error")
 	serviceName := pflag.String("service", "foo", "service name")
 	topics := pflag.String("topics", "", "topics to receive message, empty means without consuming")
@@ -81,9 +83,6 @@ func main() {
 	stats := pflag.Bool("stats", false, "print statistics or not")
 
 	pflag.Parse()
-	dialer := func() (net.Conn, error) {
-		return net.Dial(*network, *address)
-	}
 	// log
 	level, err := armlog.ParseLevel(*loglevel)
 	if err != nil {
@@ -99,7 +98,14 @@ func main() {
 		topicSlice = strings.Split(*topics, ",")
 		opt = append(opt, service.OptionServiceReceiveTopics(topicSlice))
 	}
-	srv, err = service.NewService(dialer, opt...)
+	if *frontlas {
+		srv, err = service.NewClusterService(*frontlasAddress, opt...)
+	} else {
+		dialer := func() (net.Conn, error) {
+			return net.Dial(*network, *address)
+		}
+		srv, err = service.NewService(dialer, opt...)
+	}
 	if err != nil {
 		log.Println("new end err:", err)
 		return

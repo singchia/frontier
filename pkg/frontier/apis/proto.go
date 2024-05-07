@@ -42,6 +42,6 @@ func (offline *OnEdgeOffline) String() string {
 // service -> frontier
 // meta carried when service inited
 type Meta struct {
-	Service string
-	Topics  []string
+	Service string   `json:"service"`
+	Topics  []string `json:"topics"`
 }
