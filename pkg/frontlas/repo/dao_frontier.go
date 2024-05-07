@@ -3,7 +3,6 @@ package repo
 import (
 	"context"
 	_ "embed"
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -233,7 +232,6 @@ func getAliveFrontierKey(frontier string) string {
 }
 
 func redisArrayToFrontiers(keys []string, array []interface{}) ([]*Frontier, error) {
-	fmt.Println(keys, array)
 	frontiers := make([]*Frontier, len(keys))
 	for i, elem := range array {
 		pairs, ok := elem.([]interface{})

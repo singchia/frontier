@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"context"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -395,8 +394,7 @@ func handleStream(stream geminio.Stream) {
 				value = ld.Data
 			}
 			if *printmessage {
-				edgeID := binary.BigEndian.Uint64(msg.Custom())
-				fmt.Printf("\n> receive msg, edgeID: %d streamID: %d data: %s\n", edgeID, msg.StreamID(), string(value))
+				fmt.Printf("\n> receive msg, edgeID: %d streamID: %d data: %s\n", msg.ClientID(), msg.StreamID(), string(value))
 				fmt.Print(">>> ")
 			}
 		}
