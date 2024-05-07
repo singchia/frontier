@@ -8,9 +8,9 @@ ARG TARGETARCH
 ENV GO111MODULE=on \
     GOPROXY=https://goproxy.io,direct
 
-WORKDIR /go/src/github.com/singchia/frontier
-RUN --mount=type=bind,readwrite,target=/go/src/github.com/singchia/frontier \
-    make DESTDIR=/tmp/install all install-frontier
+WORKDIR /go/src/github.com/singchia/frontlas
+RUN --mount=type=bind,readwrite,target=/go/src/github.com/singchia/frontlas \
+    make DESTDIR=/tmp/install all install-frontlas
 
 FROM alpine:3.14
 
@@ -21,9 +21,8 @@ RUN wget -q -O /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/s
 RUN wget https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.34-r0/glibc-2.34-r0.apk
 RUN apk add glibc-2.34-r0.apk
 
-EXPOSE 30010
-EXPOSE 30011
-EXPOSE 30012
+EXPOSE 30020
+EXPOSE 30021
 
-ENTRYPOINT ["/usr/bin/frontier"]
-CMD ["--config", "/usr/conf/frontier.yaml"]
+ENTRYPOINT ["/usr/bin/frontlas"]
+CMD ["--config", "/usr/conf/frontlas.yaml"]

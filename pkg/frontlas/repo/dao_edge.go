@@ -139,7 +139,7 @@ func (dao *Dao) SetEdgeAndAlive(edgeID uint64, edge *Edge, expiration time.Durat
 
 	pipeliner := dao.rds.TxPipeline()
 	// edge
-	pipeliner.Set(context.TODO(), getEdgeKey(edgeID), edgeData, -1)
+	pipeliner.Set(context.TODO(), getEdgeKey(edgeID), edgeData, 24*time.Hour)
 	// alive
 	pipeliner.Set(context.TODO(), getAliveEdgeKey(edgeID), 1, expiration)
 	// frontier edge_count

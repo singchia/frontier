@@ -120,7 +120,7 @@ func (dao *Dao) SetService(serviceID uint64, service *Service) error {
 		klog.Errorf("dao set service, json marshal err: %s", err)
 		return err
 	}
-	_, err = dao.rds.Set(context.TODO(), getServiceKey(serviceID), data, -1).Result()
+	_, err = dao.rds.Set(context.TODO(), getServiceKey(serviceID), string(data), -1).Result()
 	if err != nil {
 		klog.Errorf("dao set service, set err: %s", err)
 		return err
@@ -136,12 +136,12 @@ func (dao *Dao) SetServiceAndAlive(serviceID uint64, service *Service, expiratio
 	}
 
 	pipeliner := dao.rds.TxPipeline()
-	// service
-	pipeliner.Set(context.TODO(), getServiceKey(serviceID), serviceData, -1)
+	// service, // TODO set expiration
+	pipeliner.Set(context.TODO(), getServiceKey(serviceID), serviceData, 24*time.Hour)
 	// alive
 	pipeliner.Set(context.TODO(), getAliveServiceKey(serviceID), 1, expiration)
 	// frontier service_count
-	pipeliner.HIncrBy(context.TODO(), getServiceKey(serviceID), "service_count", 1)
+	pipeliner.HIncrBy(context.TODO(), getFrontierKey(service.FrontierID), "service_count", 1)
 
 	_, err = pipeliner.Exec(context.TODO())
 	if err != nil {

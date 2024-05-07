@@ -33,7 +33,7 @@ type LabelData struct {
 func main() {
 	methodSlice = []string{}
 	network := pflag.String("network", "tcp", "network to dial")
-	address := pflag.String("address", "127.0.0.1:2432", "address to dial")
+	address := pflag.String("address", "127.0.0.1:30012", "address to dial")
 	loglevel := pflag.String("loglevel", "info", "log level, trace debug info warn error")
 	meta := pflag.String("meta", "test", "meta to set on connection")
 	methods := pflag.String("methods", "", "method name, support echo, calculate")

@@ -287,5 +287,8 @@ func (end *serviceEnd) ListStreams() []geminio.Stream {
 }
 
 func (end *serviceEnd) Close() error {
-	return end.End.Close()
+	if end.End != nil {
+		return end.End.Close()
+	}
+	return nil
 }

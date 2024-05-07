@@ -16,7 +16,7 @@ func Dial(dial *config.Dial) (net.Conn, error) {
 		addr    string = dial.Addr
 	)
 
-	if dial.TLS.Enable {
+	if !dial.TLS.Enable {
 		conn, err := net.Dial(network, addr)
 		if err != nil {
 			return nil, err

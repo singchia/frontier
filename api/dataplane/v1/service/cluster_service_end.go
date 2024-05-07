@@ -62,6 +62,7 @@ func newclusterServiceEnd(addr string, opts ...ServiceOption) (*clusterServiceEn
 		serviceOption:  &serviceOption{},
 		rpcs:           map[string]geminio.RPC{},
 		topics:         mapset.NewSet[string](),
+		edgefrontiers:  mapmap.NewBiMap(),
 		acceptStreamCh: make(chan geminio.Stream, 128),
 		acceptMsgCh:    make(chan geminio.Message, 128),
 		closed:         make(chan struct{}),
@@ -74,6 +75,11 @@ func newclusterServiceEnd(addr string, opts ...ServiceOption) (*clusterServiceEn
 	if end.serviceOption.logger == nil {
 		end.serviceOption.logger = armlog.DefaultLog
 	}
+	err = end.update()
+	if err != nil {
+		return nil, err
+	}
+	go end.start()
 	return end, nil
 }
 
@@ -157,6 +163,7 @@ FOUND:
 				end.logger.Errorf("new service end err: %s", err)
 				continue
 			}
+			end.logger.Debugf("new service end succeed, frontierID: %s, addr: %s", new.FrontierId, new.AdvertisedSbAddr)
 			// new frontier
 			prev, ok := end.frontiers.Swap(new.FrontierId, &frontierNend{
 				frontier: new,
@@ -205,6 +212,7 @@ func (end *clusterServiceEnd) lookup(edgeID uint64) (string, *serviceEnd, error)
 		if ok {
 			found.(*frontierNend).end.Close()
 		}
+		end.logger.Debugf("new service end succeed, addr: %s", frontier.AdvertisedSbAddr)
 	} else {
 		serviceEnd = fe.(*frontierNend).end
 	}
@@ -222,7 +230,7 @@ func (end *clusterServiceEnd) pickone() *serviceEnd {
 }
 
 func frontierEqual(a, b *clusterv1.Frontier) bool {
-	return a.AdvertisedSbAddr == b.AdvertisedEbAddr &&
+	return a.AdvertisedSbAddr == b.AdvertisedSbAddr &&
 		a.FrontierId == b.FrontierId
 }
 
@@ -268,6 +276,7 @@ func (service *clusterServiceEnd) newServiceEnd(addr string) (*serviceEnd, error
 			goto ERR
 		}
 	}
+	return serviceEnd, nil
 
 ERR:
 	serviceEnd.Close()

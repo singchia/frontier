@@ -13,6 +13,7 @@ import (
 	"github.com/singchia/frontier/pkg/utils"
 	"github.com/singchia/geminio"
 	"github.com/singchia/geminio/delegate"
+	"github.com/singchia/geminio/pkg/id"
 	"github.com/singchia/geminio/server"
 	"github.com/singchia/go-timer/v2"
 	"k8s.io/klog/v2"
@@ -22,8 +23,9 @@ type FrontierManager struct {
 	*delegate.UnimplementedDelegate
 	conf *config.Configuration
 
-	repo *repo.Dao
-	tmr  timer.Timer
+	repo      *repo.Dao
+	tmr       timer.Timer
+	idFactory id.IDFactory
 
 	ln net.Listener
 }
@@ -32,9 +34,11 @@ func NewFrontierManager(conf *config.Configuration, dao *repo.Dao, tmr timer.Tim
 	listen := &conf.FrontierManager.Listen
 
 	fm := &FrontierManager{
-		conf:                  conf,
-		tmr:                   tmr,
-		repo:                  dao,
+		conf: conf,
+		tmr:  tmr,
+		repo: dao,
+		// a simple unix timestamp incemental id factory
+		idFactory:             id.DefaultIncIDCounter,
 		UnimplementedDelegate: &delegate.UnimplementedDelegate{},
 	}
 	ln, err := utils.Listen(listen)
@@ -42,6 +46,7 @@ func NewFrontierManager(conf *config.Configuration, dao *repo.Dao, tmr timer.Tim
 		klog.Errorf("frontier plane listen err: %s", err)
 		return nil, err
 	}
+	klog.V(1).Infof("server listening on: %v", ln.Addr())
 
 	fm.ln = ln
 	return fm, nil
@@ -68,6 +73,7 @@ func (fm *FrontierManager) handleConn(conn net.Conn) error {
 	opt.SetTimer(fm.tmr)
 	opt.SetDelegate(fm)
 	opt.SetLog(log.NewKLog())
+	opt.SetDelegate(fm)
 	end, err := server.NewEndWithConn(conn, opt)
 	if err != nil {
 		klog.Errorf("frontier manager handle conn, geminio server new err: %s", err)
