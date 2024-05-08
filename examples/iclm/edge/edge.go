@@ -36,7 +36,7 @@ func main() {
 	address := pflag.String("address", "127.0.0.1:30012", "address to dial")
 	loglevel := pflag.String("loglevel", "info", "log level, trace debug info warn error")
 	meta := pflag.String("meta", "test", "meta to set on connection")
-	methods := pflag.String("methods", "", "method name, support echo, calculate")
+	methods := pflag.String("methods", "", "method name, support echo")
 	label := pflag.String("label", "label-01", "label to message or rpc")
 
 	pflag.Parse()
@@ -64,6 +64,20 @@ func main() {
 	if *methods != "" {
 		methodSlice = strings.Split(*methods, ",")
 	}
+	go func() {
+		time.Sleep(200 * time.Millisecond)
+		// register
+		for _, method := range methodSlice {
+			switch method {
+			case "echo":
+				err = cli.Register(context.TODO(), "echo", echo)
+				if err != nil {
+					fmt.Printf("\n> register echo err: %s\n", err)
+					return
+				}
+			}
+		}
+	}()
 
 	// receive on edge
 	go func() {
@@ -73,7 +87,7 @@ func main() {
 				return
 			}
 			if err != nil {
-				fmt.Println("> receive err:", err)
+				fmt.Println("\n> receive err:", err)
 				fmt.Println(">>> ")
 				continue
 			}
@@ -89,29 +103,14 @@ func main() {
 			if err == io.EOF {
 				return
 			} else if err != nil {
-				fmt.Println("> accept stream err:", err)
+				fmt.Println("\n> accept stream err:", err)
 				fmt.Print(">>> ")
 				continue
 			}
-			fmt.Println("> accept stream", st.StreamID())
+			fmt.Println("\n> accept stream", st.StreamID())
 			fmt.Print(">>> ")
 			sns.Store(strconv.FormatUint(st.StreamID(), 10), st)
 			go handleStream(st)
-		}
-	}()
-
-	go func() {
-		time.Sleep(200 * time.Millisecond)
-		// register
-		for _, method := range methodSlice {
-			switch method {
-			case "echo":
-				err = cli.Register(context.TODO(), "echo", echo)
-				if err != nil {
-					armlog.Info("> register echo err:", err)
-					return
-				}
-			}
 		}
 	}()
 
@@ -291,7 +290,7 @@ func handleStream(stream geminio.Stream) {
 		for {
 			msg, err := stream.Receive(context.TODO())
 			if err != nil {
-				fmt.Println("\n> stream receive err:", err)
+				fmt.Printf("\n> streamID: %d receive err: %s\n", stream.StreamID(), err)
 				fmt.Print(">>> ")
 				return
 			}
@@ -305,11 +304,11 @@ func handleStream(stream geminio.Stream) {
 			data := make([]byte, 1024)
 			_, err := stream.Read(data)
 			if err != nil {
-				fmt.Println("\n> stream read err:", err)
+				fmt.Printf("\n> streamID: %d read err: %s\n", stream.StreamID(), err)
 				fmt.Print(">>> ")
 				return
 			}
-			fmt.Println("> read data:", stream.ClientID(),
+			fmt.Println("\n> read data:", stream.ClientID(),
 				string(data))
 			fmt.Print(">>> ")
 		}
@@ -331,7 +330,7 @@ func handleStream(stream geminio.Stream) {
 
 func echo(ctx context.Context, req geminio.Request, rsp geminio.Response) {
 	edgeID := req.ClientID()
-	fmt.Printf("\n> call rpc, method: %s edgeID: %d streamID: %d data: %s\n", "echo", edgeID, req.StreamID(), string(req.Data()))
+	fmt.Printf("\n> rpc called, method: %s edgeID: %d streamID: %d data: %s\n", "echo", edgeID, req.StreamID(), string(req.Data()))
 	fmt.Print(">>> ")
 	rsp.SetData(req.Data())
 }

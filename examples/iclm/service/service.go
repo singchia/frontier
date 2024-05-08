@@ -77,7 +77,7 @@ func main() {
 	loglevel := pflag.String("loglevel", "info", "log level, trace debug info warn error")
 	serviceName := pflag.String("service", "foo", "service name")
 	topics := pflag.String("topics", "", "topics to receive message, empty means without consuming")
-	methods := pflag.String("methods", "", "method name, support echo, calculate")
+	methods := pflag.String("methods", "", "method name, support echo")
 	printmessage = pflag.Bool("printmessage", false, "whether print message out")
 	stats := pflag.Bool("stats", false, "print statistics or not")
 
@@ -159,7 +159,7 @@ func main() {
 				return
 			}
 			if err != nil {
-				fmt.Println("> receive err:", err)
+				fmt.Println("\n> receive err:", err)
 				fmt.Print(">>> ")
 				continue
 			}
@@ -185,10 +185,11 @@ func main() {
 			if err == io.EOF {
 				return
 			} else if err != nil {
-				fmt.Println("> accept stream err:", err)
+				fmt.Println("\n> accept stream err:", err)
 				continue
 			}
-			fmt.Println("> accept stream", st.ClientID(), st.StreamID())
+			fmt.Println("\n> accept stream", st.ClientID(), st.StreamID())
+			fmt.Print(">>> ")
 			sns.Store(strconv.FormatUint(st.StreamID(), 10), st)
 			go handleStream(st)
 		}
@@ -381,7 +382,7 @@ func handleStream(stream geminio.Stream) {
 		for {
 			msg, err := stream.Receive(context.TODO())
 			if err != nil {
-				log.Println("\n> stream receive err:", err)
+				fmt.Printf("\n> streamID: %d receive err: %s\n", stream.StreamID(), err)
 				fmt.Print(">>> ")
 				return
 			}
@@ -404,7 +405,7 @@ func handleStream(stream geminio.Stream) {
 			data := make([]byte, 1024)
 			_, err := stream.Read(data)
 			if err != nil {
-				log.Println("\n> read err:", err)
+				fmt.Printf("\n> streamID: %d read err: %s\n", stream.StreamID(), err)
 				fmt.Print(">>> ")
 				return
 			}
@@ -472,7 +473,7 @@ func echo(ctx context.Context, req geminio.Request, rsp geminio.Response) {
 		value = ld.Data
 	}
 	if *printmessage {
-		fmt.Printf("\n> call rpc, method: %s edgeID: %d streamID: %d data: %s\n", "echo", edgeID, req.StreamID(), string(value))
+		fmt.Printf("\n> rpc called, method: %s edgeID: %d streamID: %d data: %s\n", "echo", req.ClientID(), req.StreamID(), string(value))
 		fmt.Print(">>> ")
 	}
 	rsp.SetData(value)

@@ -14,6 +14,9 @@ frontier_plane:
   listen:
     network: tcp
     addr: 0.0.0.0:30021
+  expiration:
+    service_meta: 30
+    edge_meta: 30
 redis:
   mode: standalone
   standalone:

@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/singchia/frontier/pkg/frontlas/apis"
 	"k8s.io/klog/v2"
 )
 
@@ -138,8 +137,9 @@ func (dao *Dao) SetEdgeAndAlive(edgeID uint64, edge *Edge, expiration time.Durat
 	}
 
 	pipeliner := dao.rds.TxPipeline()
-	// edge
-	pipeliner.Set(context.TODO(), getEdgeKey(edgeID), edgeData, 24*time.Hour)
+	// edge meta TODO expiration to custom
+	pipeliner.Set(context.TODO(), getEdgeKey(edgeID), edgeData,
+		time.Duration(dao.conf.FrontierManager.Expiration.ServiceMeta)*time.Second)
 	// alive
 	pipeliner.Set(context.TODO(), getAliveEdgeKey(edgeID), 1, expiration)
 	// frontier edge_count
@@ -154,13 +154,22 @@ func (dao *Dao) SetEdgeAndAlive(edgeID uint64, edge *Edge, expiration time.Durat
 }
 
 func (dao *Dao) ExpireEdge(edgeID uint64, expiration time.Duration) error {
-	ok, err := dao.rds.Expire(context.TODO(), getAliveEdgeKey(edgeID), expiration).Result()
+	pipeliner := dao.rds.TxPipeline()
+	// edge meta TODO expiration to custom
+	pipeliner.Expire(context.TODO(), getEdgeKey(edgeID),
+		time.Duration(dao.conf.FrontierManager.Expiration.ServiceMeta)*time.Second)
+	// edge alive
+	pipeliner.Expire(context.TODO(), getAliveEdgeKey(edgeID), expiration)
+
+	cmds, err := pipeliner.Exec(context.TODO())
 	if err != nil {
-		klog.Errorf("dao expire edge, expire err: %s", err)
+		klog.Errorf("dao expire edge, pipeliner err: %s", err)
 		return err
 	}
-	if !ok {
-		return apis.ErrExpireFailed
+	for _, cmd := range cmds {
+		if cmd.Err() != nil {
+			return cmd.Err()
+		}
 	}
 	return nil
 }

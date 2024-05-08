@@ -121,7 +121,11 @@ type Redis struct {
 }
 
 type FrontierManager struct {
-	Listen config.Listen `yaml:"listen"`
+	Listen     config.Listen `yaml:"listen"`
+	Expiration struct {
+		ServiceMeta int `yaml:"service_meta"` // service meta expiration in redis, in seconds, default 86400s
+		EdgeMeta    int `yaml:"edge_meta"`    // edge meta expiration in redis, in seconds, default 86400s
+	} `yaml:"expiration,omitempty"`
 }
 
 type Configuration struct {
@@ -218,6 +222,8 @@ func genDefaultConfig(writer io.Writer) error {
 	conf.Redis.Standalone.Network = "tcp"
 	conf.Redis.Standalone.Addr = "127.0.0.1:6379"
 	conf.Redis.Standalone.DB = 0
+	conf.FrontierManager.Expiration.EdgeMeta = 30
+	conf.FrontierManager.Expiration.ServiceMeta = 30
 
 	data, err := yaml.Marshal(conf)
 	if err != nil {
