@@ -28,15 +28,16 @@ type FrontierClusterSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of FrontierCluster. Edit frontiercluster_types.go to remove/update
-	Replica string `json:"replica"`
+	Frontiers  int `json:"frontiers"`
+	Frontlases int `json:"frontlases"`
 }
 
 // FrontierClusterStatus defines the observed state of FrontierCluster
 type FrontierClusterStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Replica int `json:"replica"`
+	CurrentFrontiers  int `json:"current_frontier"`
+	CurrentFrontlases int `json:"current_frontlases"`
 }
 
 //+kubebuilder:object:root=true
@@ -47,8 +48,8 @@ type FrontierCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec FrontierClusterSpec `json:"spec,omitempty"`
-	//Status FrontierClusterStatus `json:"status,omitempty"`
+	Spec   FrontierClusterSpec   `json:"spec,omitempty"`
+	Status FrontierClusterStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true

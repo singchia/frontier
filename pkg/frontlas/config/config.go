@@ -206,13 +206,13 @@ func genDefaultConfig(writer io.Writer) error {
 		ControlPlane: ControlPlane{
 			Listen: config.Listen{
 				Network: "tcp",
-				Addr:    "0.0.0.0:30020",
+				Addr:    "0.0.0.0:30021",
 			},
 		},
 		FrontierManager: FrontierManager{
 			Listen: config.Listen{
 				Network: "tcp",
-				Addr:    "0.0.0.0:30021",
+				Addr:    "0.0.0.0:30022",
 			},
 		},
 		Redis: Redis{

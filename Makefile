@@ -67,11 +67,31 @@ image-gen-api:
 image-gen-swagger:
 	docker buildx build -t frontier-gen-swagger:${VERSION} -f images/Dockerfile.controlplane-swagger .
 
+# push
+.PHONY: push
+push: push-frontier push-frontlas
+
+.PHONY: push-frontier
+push-frontier:
+	docker push ${REGISTRY}/frontier:${VERSION}
+
+.PHONY: push-frontlas
+push-frontlas:
+	docker push ${REGISTRY}/frontlas:${VERSION}
+
 # container
+.PHONY: container
+container: container-frontier container-frontlas
+
 .PHONY: container-frontier
 container-frontier:
 	docker rm -f frontier
-	docker run -d --name frontier -p 2431:2431 -p 2432:2432 frontier:${VERSION} --config /usr/conf/frontier.yaml -v 1
+	docker run -d --name frontier -p 30011:30011 -p 30012:30012 ${REGISTRY}/frontier:${VERSION} --config /usr/conf/frontier.yaml -v 1
+
+.PHONY: container-frontlas
+container-frontlas:
+	docker rm -f frontlas
+	docker run -d --name frontlas -p 30021:30021 -p 30022:30022 frontlas:${VERSION} --config /usr/conf/frontlas.yaml -v 1
 
 # api
 .PHONY: api-frontier

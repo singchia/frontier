@@ -39,12 +39,27 @@ spec:
           spec:
             description: FrontierClusterSpec defines the desired state of FrontierCluster
             properties:
-              replica:
-                description: Foo is an example field of FrontierCluster. Edit frontiercluster_types.go
-                  to remove/update
-                type: string
+              frontiers:
+                type: integer
+              frontlases:
+                type: integer
             required:
-            - replica
+            - frontiers
+            - frontlases
+            type: object
+          status:
+            description: FrontierClusterStatus defines the observed state of FrontierCluster
+            properties:
+              current_frontier:
+                description: |-
+                  INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
+                  Important: Run "make" to regenerate code after modifying this file
+                type: integer
+              current_frontlases:
+                type: integer
+            required:
+            - current_frontier
+            - current_frontlases
             type: object
         type: object
     served: true

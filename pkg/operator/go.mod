@@ -1,4 +1,4 @@
-module github.com/singchia/frontier
+module github.com/singchia/frontier/operator
 
 go 1.21
 

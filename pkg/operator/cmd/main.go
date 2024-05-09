@@ -34,8 +34,8 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	frontierv1alpha1 "github.com/singchia/frontier/api/v1alpha1"
-	"github.com/singchia/frontier/internal/controller"
+	frontierv1alpha1 "github.com/singchia/frontier/operator/api/v1alpha1"
+	"github.com/singchia/frontier/operator/internal/controller"
 	//+kubebuilder:scaffold:imports
 )
 

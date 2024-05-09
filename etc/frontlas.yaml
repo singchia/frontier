@@ -9,11 +9,11 @@ daemon:
 control_plane:
   listen:
     network: tcp
-    addr: 0.0.0.0:30020
+    addr: 0.0.0.0:30021
 frontier_plane:
   listen:
     network: tcp
-    addr: 0.0.0.0:30021
+    addr: 0.0.0.0:30022
   expiration:
     service_meta: 30
     edge_meta: 30

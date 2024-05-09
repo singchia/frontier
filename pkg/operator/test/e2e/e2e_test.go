@@ -24,7 +24,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/singchia/frontier/test/utils"
+	"github.com/singchia/frontier/operator/test/utils"
 )
 
 const namespace = "frontier-system"
