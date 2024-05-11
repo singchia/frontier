@@ -49,12 +49,16 @@ type TLS struct {
 }
 
 type Servicebound struct {
-	Port int `json:"port"`
+	Port        int                `json:"port"`
+	ServiceName string             `json:"service"`
+	ServiceType corev1.ServiceType `json:"serviceType"` // typically edgebound should and default be ClusterIP
 }
 
 type Edgebound struct {
-	Port int `json:"port"`
-	TLS  TLS `json:"tls"`
+	Port        int                `json:"port"`
+	ServiceName string             `json:"serviceName"`
+	ServiceType corev1.ServiceType `json:"serviceType"` // typically edgebound should and default be NodePort
+	TLS         TLS                `json:"tls"`
 }
 
 type Frontier struct {
@@ -64,7 +68,9 @@ type Frontier struct {
 }
 
 type ControlPlane struct {
-	Port int `json:"port"` // control plane for service
+	Port        int                `json:"port"` // control plane for service
+	ServiceName string             `json:"service"`
+	ServiceType corev1.ServiceType `json:"serviceType"` // typically edgebound should and default be ClusterIP
 }
 
 type RedisType string
@@ -100,8 +106,8 @@ type FrontierClusterSpec struct {
 type FrontierClusterStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	CurrentFrontierReplicas  int `json:"current_frontier_replicas"`
-	CurrentFrontlasReplicass int `json:"current_frontlas_replicas"`
+	CurrentFrontierReplicas  int `json:"currentFrontierReplicas"`
+	CurrentFrontlasReplicass int `json:"currentFrontlasReplicas"`
 }
 
 //+kubebuilder:object:root=true
