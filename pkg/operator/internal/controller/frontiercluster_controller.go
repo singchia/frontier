@@ -25,12 +25,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	frontierv1alpha1 "github.com/singchia/frontier/operator/api/v1alpha1"
+	kubeclient "github.com/singchia/frontier/operator/pkg/kube/client"
 )
 
 // FrontierClusterReconciler reconciles a FrontierCluster object
 type FrontierClusterReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	client kubeclient.Client
 }
 
 //+kubebuilder:rbac:groups=frontier.singchia.io,resources=frontierclusters,verbs=get;list;watch;create;update;patch;delete
