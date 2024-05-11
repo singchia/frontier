@@ -18,20 +18,21 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	frontierv1alpha1 "github.com/singchia/frontier/api/v1alpha1"
+	frontierv1alpha1 "github.com/singchia/frontier/operator/api/v1alpha1"
+	kubeclient "github.com/singchia/frontier/operator/pkg/kube/client"
 )
 
 // FrontierClusterReconciler reconciles a FrontierCluster object
 type FrontierClusterReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	client kubeclient.Client
 }
 
 //+kubebuilder:rbac:groups=frontier.singchia.io,resources=frontierclusters,verbs=get;list;watch;create;update;patch;delete
@@ -55,9 +56,7 @@ func (r *FrontierClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		log.Error(err, "get frontier cluster error")
 		return ctrl.Result{}, err
 	}
-	data, _ := json.Marshal(frontiercluster)
-	log.Info("singchia watching", "frontiercluster", string(data))
-	//frontiercluster.Status.Replica = 1
+
 	if err := r.Status().Update(ctx, frontiercluster); err != nil {
 		log.Error(err, "unable to update status")
 		return ctrl.Result{}, err

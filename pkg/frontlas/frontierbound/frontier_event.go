@@ -100,7 +100,8 @@ func (fm *FrontierManager) EdgeOnline(ctx context.Context, req geminio.Request, 
 		UpdateTime: time.Now().Unix(),
 	}, edgeHeartbeatInterval)
 	if err != nil {
-		klog.Errorf("frontier manager edge online, set edge and alive err: %s", err)
+		klog.Errorf("frontier manager edge online, set edge and alive err: %s, frontierID: %s, edgeID: %d",
+			err, edgeOnline.FrontierID, edgeOnline.EdgeID)
 		rsp.SetError(err)
 		return
 	}
@@ -116,7 +117,7 @@ func (fm *FrontierManager) EdgeOffline(ctx context.Context, req geminio.Request,
 	}
 	err = fm.repo.DeleteEdge(edgeOffline.EdgeID)
 	if err != nil {
-		klog.Errorf("frontier manager edge offline, delete edge err: %s", err)
+		klog.Errorf("frontier manager edge offline, delete edge err: %s, edgeID: %d", err, edgeOffline.EdgeID)
 		rsp.SetError(err)
 		return
 	}
@@ -132,7 +133,7 @@ func (fm *FrontierManager) EdgeHeartbeat(ctx context.Context, req geminio.Reques
 	}
 	err = fm.repo.ExpireEdge(edgeHB.EdgeID, edgeHeartbeatInterval)
 	if err != nil {
-		klog.Errorf("frontier manager edge heartbeat, expire edge err: %s", err)
+		klog.Errorf("frontier manager edge heartbeat, expire edge err: %s, edgeID: %d", err, edgeHB.EdgeID)
 		rsp.SetError(err)
 		return
 	}
@@ -154,7 +155,8 @@ func (fm *FrontierManager) ServiceOnline(ctx context.Context, req geminio.Reques
 		UpdateTime: time.Now().Unix(),
 	}, serviceHeartbeatInterval)
 	if err != nil {
-		klog.Errorf("frontier manager service online, set service and alive err: %s", err)
+		klog.Errorf("frontier manager service online, set service and alive err: %s, frontierID: %s, serviceID: %d",
+			err, serviceOnline.FrontierID, serviceOnline.ServiceID)
 		rsp.SetError(err)
 		return
 	}
@@ -170,7 +172,7 @@ func (fm *FrontierManager) ServiceOffline(ctx context.Context, req geminio.Reque
 	}
 	err = fm.repo.DeleteService(serviceOffline.ServiceID)
 	if err != nil {
-		klog.Errorf("frontier manager service offline, delete service err: %s", err)
+		klog.Errorf("frontier manager service offline, delete service err: %s, serviceID: %d", err, serviceOffline.ServiceID)
 		rsp.SetError(err)
 		return
 	}
@@ -186,7 +188,7 @@ func (fm *FrontierManager) ServiceHeartbeat(ctx context.Context, req geminio.Req
 	}
 	err = fm.repo.ExpireService(serviceHB.ServiceID, serviceHeartbeatInterval)
 	if err != nil {
-		klog.Errorf("frontier manager service heartbeat, expire service err: %s", err)
+		klog.Errorf("frontier manager service heartbeat, expire service err: %s, serviceID: %d", err, serviceHB.ServiceID)
 		rsp.SetError(err)
 		return
 	}
@@ -203,7 +205,7 @@ func (fm *FrontierManager) FrontierStats(ctx context.Context, req geminio.Reques
 	}
 	err = fm.repo.SetFrontierCount(stats.FrontierID, stats.EdgeCount, stats.ServiceCount)
 	if err != nil {
-		klog.Errorf("frontier manager frontier stats, set frontier count err: %s", err)
+		klog.Errorf("frontier manager frontier stats, set frontier count err: %s, frontierID: %s", err, stats.FrontierID)
 		rsp.SetError(err)
 		return
 	}

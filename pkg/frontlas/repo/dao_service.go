@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/singchia/frontier/pkg/frontlas/apis"
 	"k8s.io/klog/v2"
 )
 
@@ -136,8 +135,9 @@ func (dao *Dao) SetServiceAndAlive(serviceID uint64, service *Service, expiratio
 	}
 
 	pipeliner := dao.rds.TxPipeline()
-	// service, // TODO set expiration
-	pipeliner.Set(context.TODO(), getServiceKey(serviceID), serviceData, 24*time.Hour)
+	// service meta TODO expiration to custom
+	pipeliner.Set(context.TODO(), getServiceKey(serviceID), serviceData,
+		time.Duration(dao.conf.FrontierManager.Expiration.ServiceMeta)*time.Second)
 	// alive
 	pipeliner.Set(context.TODO(), getAliveServiceKey(serviceID), 1, expiration)
 	// frontier service_count
@@ -152,20 +152,29 @@ func (dao *Dao) SetServiceAndAlive(serviceID uint64, service *Service, expiratio
 }
 
 func (dao *Dao) ExpireService(serviceID uint64, expiration time.Duration) error {
-	ok, err := dao.rds.Expire(context.TODO(), getAliveServiceKey(serviceID), expiration).Result()
+	pipeliner := dao.rds.TxPipeline()
+	// service meta TODO expiration to custom
+	pipeliner.Expire(context.TODO(), getServiceKey(serviceID),
+		time.Duration(dao.conf.FrontierManager.Expiration.ServiceMeta)*time.Second)
+	// service alive
+	pipeliner.Expire(context.TODO(), getAliveServiceKey(serviceID), expiration)
+
+	cmds, err := pipeliner.Exec(context.TODO())
 	if err != nil {
-		klog.Errorf("dao expire service, expire err: %s", err)
+		klog.Errorf("dao expire service, pipeliner err: %s", err)
 		return err
 	}
-	if !ok {
-		return apis.ErrExpireFailed
+	for _, cmd := range cmds {
+		if cmd.Err() != nil {
+			return cmd.Err()
+		}
 	}
 	return nil
 }
 
 func (dao *Dao) DeleteService(serviceID uint64) error {
 	_, err := dao.rds.Eval(context.TODO(), deleteFrontierScript,
-		[]string{getServiceKey(serviceID), getAliveServiceKey(serviceID), servicesKeyPrefix}).Result()
+		[]string{getServiceKey(serviceID), getAliveServiceKey(serviceID), frontiersKeyPrefix}).Result()
 	if err != nil {
 		klog.Errorf("dao delete service, eval err: %s", err)
 		return err

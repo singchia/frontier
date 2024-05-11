@@ -23,7 +23,7 @@ func (bm *BiMap) Set(key, value any) {
 
 	bm.kv[key] = value
 	ks, ok := bm.vk[value]
-	if ok {
+	if !ok {
 		ks = map[any]struct{}{}
 	}
 	ks[key] = struct{}{}

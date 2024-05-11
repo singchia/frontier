@@ -27,7 +27,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	frontierv1alpha1 "github.com/singchia/frontier/api/v1alpha1"
+	frontierv1alpha1 "github.com/singchia/frontier/operator/api/v1alpha1"
 )
 
 var _ = Describe("FrontierCluster Controller", func() {

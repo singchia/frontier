@@ -39,12 +39,107 @@ spec:
           spec:
             description: FrontierClusterSpec defines the desired state of FrontierCluster
             properties:
-              replica:
-                description: Foo is an example field of FrontierCluster. Edit frontiercluster_types.go
-                  to remove/update
-                type: string
+              frontier:
+                properties:
+                  edgebound:
+                    properties:
+                      port:
+                        type: integer
+                      tls:
+                        description: TLS is the configuration used to set up TLS encryption
+                        properties:
+                          caCertificateSecretRef:
+                            description: |-
+                              CaCertificateSecret is a reference to a Secret containing the certificate for the CA which signed the server certificates
+                              The certificate is expected to be available under the key "ca.crt"
+                            properties:
+                              name:
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
+                                type: string
+                            type: object
+                            x-kubernetes-map-type: atomic
+                          certificateKeySecretRef:
+                            description: |-
+                              CertificateKeySecret is a reference to a Secret containing a private key and certificate to use for TLS.
+                              The key and cert are expected to be PEM encoded and available at "tls.key" and "tls.crt".
+                              This is the same format used for the standard "kubernetes.io/tls" Secret type, but no specific type is required.
+                              Alternatively, an entry tls.pem, containing the concatenation of cert and key, can be provided.
+                              If all of tls.pem, tls.crt and tls.key are present, the tls.pem one needs to be equal to the concatenation of tls.crt and tls.key
+                            properties:
+                              name:
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
+                                type: string
+                            type: object
+                            x-kubernetes-map-type: atomic
+                          enabled:
+                            type: boolean
+                          mtls:
+                            description: CaCertificate is needed when mtls is set
+                            type: boolean
+                          optional:
+                            description: Optional configures if TLS should be required
+                              or optional for connections
+                            type: boolean
+                        required:
+                        - enabled
+                        - mtls
+                        type: object
+                    required:
+                    - port
+                    - tls
+                    type: object
+                  replicas:
+                    type: integer
+                  servicebound:
+                    properties:
+                      port:
+                        type: integer
+                    required:
+                    - port
+                    type: object
+                required:
+                - edgebound
+                - replicas
+                - servicebound
+                type: object
+              frontlas:
+                properties:
+                  controlplane:
+                    properties:
+                      port:
+                        type: integer
+                    required:
+                    - port
+                    type: object
+                  replicas:
+                    type: integer
+                required:
+                - controlplane
+                - replicas
+                type: object
             required:
-            - replica
+            - frontier
+            - frontlas
+            type: object
+          status:
+            description: FrontierClusterStatus defines the observed state of FrontierCluster
+            properties:
+              current_frontier_replicas:
+                description: |-
+                  INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
+                  Important: Run "make" to regenerate code after modifying this file
+                type: integer
+              current_frontlas_replicas:
+                type: integer
+            required:
+            - current_frontier_replicas
+            - current_frontlas_replicas
             type: object
         type: object
     served: true

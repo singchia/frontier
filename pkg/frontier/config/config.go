@@ -418,7 +418,7 @@ func genDefaultConfig(writer io.Writer) error {
 			Enable: false,
 			Dial: config.Dial{
 				Network: "tcp",
-				Addr:    "127.0.0.1:30021",
+				Addr:    "127.0.0.1:30022",
 				TLS: config.TLS{
 					Enable: false,
 					MTLS:   false,
