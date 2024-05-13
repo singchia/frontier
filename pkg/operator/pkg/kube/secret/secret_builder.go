@@ -65,7 +65,7 @@ func (b *builder) SetDataType(dataType corev1.SecretType) *builder {
 	return b
 }
 
-func (b builder) Build() corev1.Secret {
+func (b *builder) Build() corev1.Secret {
 	return corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            b.name,

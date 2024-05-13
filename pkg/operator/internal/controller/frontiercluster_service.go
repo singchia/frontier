@@ -12,7 +12,7 @@ func (r *FrontierClusterReconciler) ensureService(ctx context.Context, fc v1alph
 	// servicebound
 	sbServiceName, sbServiceType, port := fc.FrontierServiceboundServicePort()
 	label := map[string]string{
-		"app": sbServiceName,
+		"app": fc.Name,
 	}
 	sbService := service.Builder().
 		SetName(sbServiceName).
