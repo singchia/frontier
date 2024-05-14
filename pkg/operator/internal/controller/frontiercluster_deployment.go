@@ -33,14 +33,15 @@ const (
 
 func (r *FrontierClusterReconciler) ensureDeployment(ctx context.Context, fc v1alpha1.FrontierCluster) (bool, error) {
 	log := log.FromContext(ctx)
-	log.Info("Creating/Updating Frontier Deployment")
-	if err := r.ensureFrontierDeployment(ctx, fc); err != nil {
-		return false, fmt.Errorf("error creating/updating frontier Deployment: %s", err)
-	}
 
 	log.Info("Create/Updating Frontlas Deployment")
 	if err := r.ensureFrontlasDeployment(ctx, fc); err != nil {
 		return false, fmt.Errorf("error creating/updating frontlas Deployment: %s", err)
+	}
+
+	log.Info("Creating/Updating Frontier Deployment")
+	if err := r.ensureFrontierDeployment(ctx, fc); err != nil {
+		return false, fmt.Errorf("error creating/updating frontier Deployment: %s", err)
 	}
 
 	currentFrontierDeployment, err := r.client.GetDeployment(ctx, fc.FrontierDeploymentNamespacedName())
