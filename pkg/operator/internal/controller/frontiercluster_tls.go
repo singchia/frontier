@@ -31,13 +31,13 @@ func (r *FrontierClusterReconciler) ensureTLS(ctx context.Context, fc v1alpha1.F
 	if fc.Spec.Frontier.Edgebound.TLS.Enabled {
 		log.Info("Edgebound TLS is enable, creating/updating TLS certificate and key")
 		if err := r.ensureEBCertKeySecret(ctx, r.client, fc); err != nil {
-			return fmt.Errorf("count not ensure certkey secret: %s", err)
+			return fmt.Errorf("Could not ensure certkey secret: %s", err)
 		}
 
 		if fc.Spec.Frontier.Edgebound.TLS.MTLS {
 			log.Info("Edgebound TLS is enabled, creating/updating CA secret")
 			if err := r.ensureEBCASecret(ctx, r.client, fc); err != nil {
-				return fmt.Errorf("cound not ensure CA secret: %s", err)
+				return fmt.Errorf("Could not ensure CA secret: %s", err)
 			}
 		}
 	}
@@ -52,8 +52,8 @@ func (r *FrontierClusterReconciler) ensureEBCASecret(ctx context.Context, getUpd
 	}
 
 	operatorEBCASecret := secret.Builder().
-		SetName(fc.EBTLSCASecretNamespacedName().Name).
-		SetNamespace(fc.EBTLSCASecretNamespacedName().Namespace).
+		SetName(fc.EBTLSOperatorCASecretNamespacedName().Name).
+		SetNamespace(fc.EBTLSOperatorCASecretNamespacedName().Namespace).
 		SetField("ca.crt", ca).
 		SetOwnerReferences(fc.GetOwnerReferences()).
 		Build()
@@ -69,8 +69,8 @@ func (r *FrontierClusterReconciler) ensureEBCertKeySecret(ctx context.Context, g
 	}
 
 	operatorEBCertKeySecret := secret.Builder().
-		SetName(fc.EBTLSCASecretNamespacedName().Name).
-		SetNamespace(fc.EBTLSCASecretNamespacedName().Namespace).
+		SetName(fc.EBTLSOperatorCertKeyNamespacedName().Name).
+		SetNamespace(fc.EBTLSOperatorCertKeyNamespacedName().Namespace).
 		SetField("tls.crt", cert).
 		SetField("tls.key", key).
 		SetDataType(corev1.SecretTypeTLS).

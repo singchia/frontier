@@ -3,6 +3,7 @@ package config
 import (
 	"flag"
 	"io"
+	"net"
 	"os"
 
 	armio "github.com/jumboframes/armorigo/io"
@@ -188,6 +189,15 @@ func Parse() (*Configuration, error) {
 	config.Daemon.RLimit.NumFile = *argDaemonRLimitNofile
 	if config.Daemon.PProf.CPUProfileRate == 0 {
 		config.Daemon.PProf.CPUProfileRate = 10000
+	}
+	// env
+	cpPort := os.Getenv("FRONTLAS_CONTROLPLANE_PORT")
+	if cpPort != "" {
+		host, _, err := net.SplitHostPort(config.ControlPlane.Listen.Addr)
+		if err != nil {
+			return nil, err
+		}
+		config.ControlPlane.Listen.Addr = net.JoinHostPort(host, cpPort)
 	}
 	return config, nil
 }

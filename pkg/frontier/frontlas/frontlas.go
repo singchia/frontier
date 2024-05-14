@@ -151,7 +151,7 @@ func getAdvertisedAddrs(sblisten, eblisten gconfig.Listen, dial gconfig.Dial) (s
 // edge events
 func (informer *Informer) EdgeOnline(edgeID uint64, meta []byte, addr net.Addr) {
 	msg := apis.EdgeOnline{
-		FrontierID: informer.conf.Daemon.FrontierID, // TODO emtpy then takes k8s env
+		FrontierID: informer.conf.Daemon.FrontierID, // emtpy then takes k8s env
 		EdgeID:     edgeID,
 		Addr:       addr.String(),
 	}
@@ -168,7 +168,7 @@ func (informer *Informer) EdgeOnline(edgeID uint64, meta []byte, addr net.Addr) 
 
 func (informer *Informer) EdgeOffline(edgeID uint64, meta []byte, addr net.Addr) {
 	msg := apis.EdgeOffline{
-		FrontierID: informer.conf.Daemon.FrontierID, // TODO emtpy then takes k8s env
+		FrontierID: informer.conf.Daemon.FrontierID, // emtpy then takes k8s env
 		EdgeID:     edgeID,
 	}
 	data, err := json.Marshal(msg)
@@ -201,7 +201,7 @@ func (informer *Informer) EdgeHeartbeat(edgeID uint64, meta []byte, addr net.Add
 // service events
 func (informer *Informer) ServiceOnline(serviceID uint64, meta string, addr net.Addr) {
 	msg := apis.ServiceOnline{
-		FrontierID: informer.conf.Daemon.FrontierID, // TODO emtpy then takes k8s env
+		FrontierID: informer.conf.Daemon.FrontierID, // emtpy then takes k8s env
 		ServiceID:  serviceID,
 		Service:    string(meta),
 		Addr:       addr.String(),
@@ -219,7 +219,7 @@ func (informer *Informer) ServiceOnline(serviceID uint64, meta string, addr net.
 
 func (informer *Informer) ServiceOffline(serviceID uint64, meta string, addr net.Addr) {
 	msg := apis.ServiceOffline{
-		FrontierID: informer.conf.Daemon.FrontierID, // TODO emtpy then takes k8s env
+		FrontierID: informer.conf.Daemon.FrontierID, // emtpy then takes k8s env
 		ServiceID:  serviceID,
 	}
 	data, err := json.Marshal(msg)
@@ -235,7 +235,7 @@ func (informer *Informer) ServiceOffline(serviceID uint64, meta string, addr net
 
 func (informer *Informer) ServiceHeartbeat(serviceID uint64, meta string, addr net.Addr) {
 	msg := apis.ServiceHeartbeat{
-		FrontierID: informer.conf.Daemon.FrontierID, // TODO emtpy then takes k8s env
+		FrontierID: informer.conf.Daemon.FrontierID, // emtpy then takes k8s env
 		ServiceID:  serviceID,
 	}
 	data, err := json.Marshal(msg)

@@ -4,7 +4,10 @@ import (
 	"context"
 
 	"github.com/singchia/frontier/operator/pkg/kube/configmap"
+	"github.com/singchia/frontier/operator/pkg/kube/deployment"
 	"github.com/singchia/frontier/operator/pkg/kube/secret"
+	"github.com/singchia/frontier/operator/pkg/kube/service"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -15,6 +18,8 @@ type Client interface {
 
 	configmap.GetUpdateCreateDeleter
 	secret.GetUpdateCreateDeleter
+	service.GetUpdateCreateDeleter
+	deployment.GetUpdateCreateDeleter
 }
 
 type client struct {
@@ -25,6 +30,37 @@ func NewClient(c k8sclient.Client) Client {
 	return client{
 		Client: c,
 	}
+}
+
+// wrapper for service
+// GetService provides a thin wrapper and client.Client to access corev1.Service types
+func (c client) GetService(ctx context.Context, objectKey k8sclient.ObjectKey) (corev1.Service, error) {
+	s := corev1.Service{}
+	if err := c.Get(ctx, objectKey, &s); err != nil {
+		return corev1.Service{}, err
+	}
+	return s, nil
+}
+
+// UpdateService provides a thin wrapper and client.Client to update corev1.Service types
+func (c client) UpdateService(ctx context.Context, service corev1.Service) error {
+	return c.Update(ctx, &service)
+}
+
+// CreateService provides a thin wrapper and client.Client to create corev1.Service types
+func (c client) CreateService(ctx context.Context, service corev1.Service) error {
+	return c.Create(ctx, &service)
+}
+
+// DeleteService provides a thin wrapper around client.Client to delete corev1.Service types
+func (c client) DeleteService(ctx context.Context, objectKey k8sclient.ObjectKey) error {
+	svc := corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      objectKey.Name,
+			Namespace: objectKey.Namespace,
+		},
+	}
+	return c.Delete(ctx, &svc)
 }
 
 // wrapper for secret
@@ -87,4 +123,38 @@ func (c client) DeleteConfigMap(ctx context.Context, key k8sclient.ObjectKey) er
 		},
 	}
 	return c.Delete(ctx, &cm)
+}
+
+// wrapper for deployment
+// GetDeployment provides a thin wrapper and client.Client to access appsv1.Deployment types
+func (c client) GetDeployment(ctx context.Context, objectKey k8sclient.ObjectKey) (appsv1.Deployment, error) {
+	sts := appsv1.Deployment{}
+	if err := c.Get(ctx, objectKey, &sts); err != nil {
+		return appsv1.Deployment{}, err
+	}
+	return sts, nil
+}
+
+// UpdateDeployment provides a thin wrapper and client.Client to update appsv1.Deployment types
+// the updated Deployment is returned
+func (c client) UpdateDeployment(ctx context.Context, sts appsv1.Deployment) (appsv1.Deployment, error) {
+	stsToUpdate := &sts
+	err := c.Update(ctx, stsToUpdate)
+	return *stsToUpdate, err
+}
+
+// CreateDeployment provides a thin wrapper and client.Client to create appsv1.Deployment types
+func (c client) CreateDeployment(ctx context.Context, sts appsv1.Deployment) error {
+	return c.Create(ctx, &sts)
+}
+
+// DeleteDeployment provides a thin wrapper and client.Client to delete appsv1.Deployment types
+func (c client) DeleteDeployment(ctx context.Context, objectKey k8sclient.ObjectKey) error {
+	sts := appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      objectKey.Name,
+			Namespace: objectKey.Namespace,
+		},
+	}
+	return c.Delete(ctx, &sts)
 }
