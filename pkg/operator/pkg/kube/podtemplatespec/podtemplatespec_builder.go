@@ -56,7 +56,7 @@ func (b *builder) SetMatchLabels(matchLabels map[string]string) *builder {
 	return b
 }
 
-func (b *builder) AddContainer(name string, container corev1.Container) *builder {
+func (b *builder) AddContainer(container corev1.Container) *builder {
 	b.containers = append(b.containers, container)
 	return b
 }

@@ -52,8 +52,8 @@ func (r *FrontierClusterReconciler) ensureEBCASecret(ctx context.Context, getUpd
 	}
 
 	operatorEBCASecret := secret.Builder().
-		SetName(fc.EBTLSCASecretNamespacedName().Name).
-		SetNamespace(fc.EBTLSCASecretNamespacedName().Namespace).
+		SetName(fc.EBTLSOperatorCASecretNamespacedName().Name).
+		SetNamespace(fc.EBTLSOperatorCASecretNamespacedName().Namespace).
 		SetField("ca.crt", ca).
 		SetOwnerReferences(fc.GetOwnerReferences()).
 		Build()
@@ -69,8 +69,8 @@ func (r *FrontierClusterReconciler) ensureEBCertKeySecret(ctx context.Context, g
 	}
 
 	operatorEBCertKeySecret := secret.Builder().
-		SetName(fc.EBTLSCASecretNamespacedName().Name).
-		SetNamespace(fc.EBTLSCASecretNamespacedName().Namespace).
+		SetName(fc.EBTLSOperatorCertKeyNamespacedName().Name).
+		SetNamespace(fc.EBTLSOperatorCertKeyNamespacedName().Namespace).
 		SetField("tls.crt", cert).
 		SetField("tls.key", key).
 		SetDataType(corev1.SecretTypeTLS).

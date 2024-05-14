@@ -49,28 +49,29 @@ type TLS struct {
 }
 
 type Servicebound struct {
-	Port        int                `json:"port"`
-	ServiceName string             `json:"service"`
-	ServiceType corev1.ServiceType `json:"serviceType"` // typically edgebound should and default be ClusterIP
+	Port        int                `json:"port,omitempty"`
+	ServiceName string             `json:"service,omitempty"`
+	ServiceType corev1.ServiceType `json:"serviceType,omitempty"` // typically edgebound should and default be ClusterIP
 }
 
 type Edgebound struct {
-	Port        int                `json:"port"`
-	ServiceName string             `json:"serviceName"`
-	ServiceType corev1.ServiceType `json:"serviceType"` // typically edgebound should and default be NodePort
-	TLS         TLS                `json:"tls"`
+	Port        int                `json:"port,omitempty"`
+	ServiceName string             `json:"serviceName,omitempty"`
+	ServiceType corev1.ServiceType `json:"serviceType,omitempty"` // typically edgebound should and default be NodePort
+	TLS         TLS                `json:"tls,omitempty"`
 }
 
 type Frontier struct {
-	Replicas     int          `json:"replicas"` // frontier replicas, default 1
-	Servicebound Servicebound `json:"servicebound"`
-	Edgebound    Edgebound    `json:"edgebound"`
+	Replicas     int                 `json:"replicas,omitempty"` // frontier replicas, default 1
+	Servicebound Servicebound        `json:"servicebound"`
+	Edgebound    Edgebound           `json:"edgebound"`
+	NodeAffinity corev1.NodeAffinity `json:"nodeAffinity,omitempty"`
 }
 
 type ControlPlane struct {
-	Port        int                `json:"port"` // control plane for service
-	ServiceName string             `json:"service"`
-	ServiceType corev1.ServiceType `json:"serviceType"` // typically edgebound should and default be ClusterIP
+	Port        int                `json:"port,omitempty"` // control plane for service
+	ServiceName string             `json:"service,omitempty"`
+	ServiceType corev1.ServiceType `json:"serviceType,omitempty"` // typically edgebound should and default be ClusterIP
 }
 
 type RedisType string
@@ -85,12 +86,13 @@ type Redis struct {
 	Addrs     []string  `json:"addrs"`
 	User      string    `json:"user,omitempty"`
 	Password  string    `json:"password,omitempty"`
-	RedisType RedisType `json:"redis_type"`
+	RedisType RedisType `json:"redisType"`
 }
 
 type Frontlas struct {
-	Replicas     int          `json:"replicas"` // frontlas replicas, default 1
-	ControlPlane ControlPlane `json:"controlplane"`
+	Replicas     int                 `json:"replicas,omitempty"` // frontlas replicas, default 1
+	ControlPlane ControlPlane        `json:"controlplane,omitempty"`
+	NodeAffinity corev1.NodeAffinity `json:"nodeAffinity,omitempty"`
 }
 
 // FrontierClusterSpec defines the desired state of FrontierCluster
@@ -102,12 +104,27 @@ type FrontierClusterSpec struct {
 	Frontlas Frontlas `json:"frontlas"`
 }
 
+type Phase string
+
+const (
+	Running            Phase = "Running"
+	Failed             Phase = "Failed"
+	Pending            Phase = "Pending"
+	defaultPasswordKey       = "password"
+
+	// Keep in sync with controllers/prometheus.go
+	defaultPrometheusPort = 9216
+)
+
 // FrontierClusterStatus defines the observed state of FrontierCluster
 type FrontierClusterStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	CurrentFrontierReplicas  int `json:"currentFrontierReplicas"`
-	CurrentFrontlasReplicass int `json:"currentFrontlasReplicas"`
+	// TODO scale 1 a time
+	// CurrentFrontierReplicas  int `json:"currentFrontierReplicas"`
+	// CurrentFrontlasReplicass int `json:"currentFrontlasReplicas"`
+	Phase   Phase  `json:"phase"`
+	Message string `json:"message,omitemtpy"`
 }
 
 //+kubebuilder:object:root=true

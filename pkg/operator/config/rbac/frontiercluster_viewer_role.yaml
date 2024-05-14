@@ -12,16 +12,42 @@ metadata:
   name: frontiercluster-viewer-role
 rules:
 - apiGroups:
-  - frontier.singchia.io
+  - ""
   resources:
-  - frontierclusters
+  - pods
+  - services
+  - secrets
   verbs:
+  - create
+  - delete
   - get
   - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - frontier.singchia.io
   resources:
+  - frontierclusters
   - frontierclusters/status
+  - frontierclusters/spec
   verbs:
+  - create
+  - delete
   - get
+  - list
+  - patch
+  - update
+  - watch

@@ -12,7 +12,7 @@ func (r *FrontierClusterReconciler) ensureService(ctx context.Context, fc v1alph
 	// servicebound
 	sbServiceName, sbServiceType, port := fc.FrontierServiceboundServicePort()
 	label := map[string]string{
-		"app": fc.Name,
+		"app": fc.Name + "-frontier",
 	}
 	sbService := service.Builder().
 		SetName(sbServiceName).
@@ -20,10 +20,10 @@ func (r *FrontierClusterReconciler) ensureService(ctx context.Context, fc v1alph
 		SetSelector(label).
 		SetLabels(label).
 		SetServiceType(sbServiceType).
-		SetClusterIP("None").
 		SetPublishNotReadyAddresses(true).
 		SetOwnerReferences(fc.GetOwnerReferences()).
-		AddPort(&port).Build()
+		AddPort(&port).
+		Build()
 
 	if err := service.CreateOrUpdate(ctx, r.client, sbService); err != nil {
 		return fmt.Errorf("Could not ensure servicebound service: %s", err)
@@ -32,7 +32,7 @@ func (r *FrontierClusterReconciler) ensureService(ctx context.Context, fc v1alph
 	// edgebound
 	ebServiceName, ebServiceType, port := fc.FrontierEdgeboundServicePort()
 	label = map[string]string{
-		"app": ebServiceName,
+		"app": fc.Name + "-frontier",
 	}
 	ebService := service.Builder().
 		SetName(ebServiceName).
@@ -40,10 +40,10 @@ func (r *FrontierClusterReconciler) ensureService(ctx context.Context, fc v1alph
 		SetSelector(label).
 		SetLabels(label).
 		SetServiceType(ebServiceType).
-		SetClusterIP("None").
 		SetPublishNotReadyAddresses(true).
 		SetOwnerReferences(fc.GetOwnerReferences()).
-		AddPort(&port).Build()
+		AddPort(&port).
+		Build()
 
 	if err := service.CreateOrUpdate(ctx, r.client, ebService); err != nil {
 		return fmt.Errorf("Could not ensure edgebound service: %s", err)
@@ -52,7 +52,7 @@ func (r *FrontierClusterReconciler) ensureService(ctx context.Context, fc v1alph
 	// controlplane
 	cpServiceName, cpServiceType, port := fc.FrontlasControlPlaneServicePort()
 	label = map[string]string{
-		"app": cpServiceName,
+		"app": fc.Name + "-frontlas",
 	}
 	cpService := service.Builder().
 		SetName(cpServiceName).
@@ -60,7 +60,6 @@ func (r *FrontierClusterReconciler) ensureService(ctx context.Context, fc v1alph
 		SetSelector(label).
 		SetLabels(label).
 		SetServiceType(cpServiceType).
-		SetClusterIP("None").
 		SetPublishNotReadyAddresses(true).
 		SetOwnerReferences(fc.GetOwnerReferences()).
 		AddPort(&port).Build()

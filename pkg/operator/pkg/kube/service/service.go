@@ -51,13 +51,14 @@ type GetUpdateCreateDeleter interface {
 
 // CreateOrUpdate creates the Service if it doesn't exist, other wise it updates it
 func CreateOrUpdate(ctx context.Context, getUpdateCreator GetUpdateCreator, service corev1.Service) error {
-	_, err := getUpdateCreator.GetService(ctx, types.NamespacedName{Name: service.Name, Namespace: service.Namespace})
+	oldservice, err := getUpdateCreator.GetService(ctx, types.NamespacedName{Name: service.Name, Namespace: service.Namespace})
 	if err != nil {
 		if ServiceNotExist(err) {
 			return getUpdateCreator.CreateService(ctx, service)
 		}
 		return err
 	}
+	service.ResourceVersion = oldservice.ResourceVersion
 	return getUpdateCreator.UpdateService(ctx, service)
 }
 

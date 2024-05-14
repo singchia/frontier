@@ -105,12 +105,18 @@ func (fc *FrontierCluster) EBTLSOperatorCertKeyNamespacedName() types.Namespaced
 }
 
 // deployment name
-func (fc *FrontierCluster) FrontierDeploymentName() string {
-	return fc.Name + "-frontier"
+func (fc *FrontierCluster) FrontierDeploymentNamespacedName() types.NamespacedName {
+	return types.NamespacedName{
+		Name:      fc.Name + "-frontier",
+		Namespace: fc.Namespace,
+	}
 }
 
-func (fc *FrontierCluster) FrontlasDeploymentName() string {
-	return fc.Name + "-frontlas"
+func (fc *FrontierCluster) FrontlasDeploymentNamespacedName() types.NamespacedName {
+	return types.NamespacedName{
+		Name:      fc.Name + "-frontlas",
+		Namespace: fc.Namespace,
+	}
 }
 
 // replicas

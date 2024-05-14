@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net"
 	"os"
 
 	"github.com/IBM/sarama"
@@ -328,6 +329,27 @@ func Parse() (*Configuration, error) {
 	config.Daemon.RLimit.NumFile = *argDaemonRLimitNofile
 	if config.Daemon.PProf.CPUProfileRate == 0 {
 		config.Daemon.PProf.CPUProfileRate = 10000
+	}
+	// env
+	sbPort := os.Getenv("FRONTIER_SERVICEBOUND_PORT")
+	if sbPort != "" {
+		host, _, err := net.SplitHostPort(config.Servicebound.Listen.Addr)
+		if err != nil {
+			return nil, err
+		}
+		config.Servicebound.Listen.Addr = net.JoinHostPort(host, sbPort)
+	}
+	ebPort := os.Getenv("FRONTIER_EDGEBOUND_PORT")
+	if ebPort != "" {
+		host, _, err := net.SplitHostPort(config.Edgebound.Listen.Addr)
+		if err != nil {
+			return nil, err
+		}
+		config.Edgebound.Listen.Addr = net.JoinHostPort(host, ebPort)
+	}
+	nodeName := os.Getenv("NODE_NAME")
+	if nodeName != "" {
+		config.Daemon.FrontierID = "frontier-" + nodeName
 	}
 	return config, nil
 }
