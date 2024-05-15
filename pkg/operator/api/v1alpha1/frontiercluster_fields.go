@@ -3,6 +3,7 @@ package v1alpha1
 import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 func (fc *FrontierCluster) FrontierServiceboundServicePort() (string, corev1.ServiceType, corev1.ServicePort) {
@@ -14,10 +15,14 @@ func (fc *FrontierCluster) FrontierServiceboundServicePort() (string, corev1.Ser
 	if fc.Spec.Frontier.Servicebound.Port != 0 {
 		port.Port = int32(fc.Spec.Frontier.Servicebound.Port)
 	}
+	port.TargetPort = intstr.FromInt32(port.Port)
 	// service type
 	serviceType := corev1.ServiceTypeClusterIP
 	if fc.Spec.Frontier.Servicebound.ServiceType != "" {
 		serviceType = fc.Spec.Frontier.Servicebound.ServiceType
+		if serviceType == corev1.ServiceTypeNodePort {
+			port.NodePort = port.Port
+		}
 	}
 
 	// service name
@@ -37,10 +42,14 @@ func (fc *FrontierCluster) FrontierEdgeboundServicePort() (string, corev1.Servic
 	if fc.Spec.Frontier.Edgebound.Port != 0 {
 		port.Port = int32(fc.Spec.Frontier.Edgebound.Port)
 	}
+	port.TargetPort = intstr.FromInt32(port.Port)
 	// service type
 	serviceType := corev1.ServiceTypeNodePort
 	if fc.Spec.Frontier.Edgebound.ServiceType != "" {
 		serviceType = fc.Spec.Frontier.Edgebound.ServiceType
+	}
+	if serviceType == corev1.ServiceTypeNodePort {
+		port.NodePort = port.Port
 	}
 	// service name
 	serviceName := fc.Spec.Frontier.Edgebound.ServiceName
@@ -50,26 +59,37 @@ func (fc *FrontierCluster) FrontierEdgeboundServicePort() (string, corev1.Servic
 	return fc.Name + "-edgebound-svc", serviceType, port
 }
 
-func (fc *FrontierCluster) FrontlasControlPlaneServicePort() (string, corev1.ServiceType, corev1.ServicePort) {
+func (fc *FrontierCluster) FrontlasServicePort() (string, corev1.ServiceType, corev1.ServicePort, corev1.ServicePort) {
 	// port
-	port := corev1.ServicePort{
-		Port: 30012,
+	cpport := corev1.ServicePort{
+		Port: 40011,
 		Name: fc.Name + "-controlplane",
 	}
 	if fc.Spec.Frontlas.ControlPlane.Port != 0 {
-		port.Port = int32(fc.Spec.Frontlas.ControlPlane.Port)
+		cpport.Port = int32(fc.Spec.Frontlas.ControlPlane.Port)
+	}
+	cpport.TargetPort = intstr.FromInt32(cpport.Port)
+
+	fpport := corev1.ServicePort{
+		Port:       40012,
+		TargetPort: intstr.FromInt32(40012),
+		Name:       fc.Name + "-frontierplane",
 	}
 	// service type
-	serviceType := corev1.ServiceTypeNodePort
+	serviceType := corev1.ServiceTypeClusterIP
 	if fc.Spec.Frontlas.ControlPlane.ServiceType != "" {
 		serviceType = fc.Spec.Frontlas.ControlPlane.ServiceType
+		if serviceType == corev1.ServiceTypeNodePort {
+			cpport.NodePort = cpport.Port
+			fpport.NodePort = fpport.Port
+		}
 	}
 	// service name
 	serviceName := fc.Spec.Frontlas.ControlPlane.ServiceName
 	if serviceName != "" {
-		return serviceName, serviceType, port
+		return serviceName, serviceType, cpport, fpport
 	}
-	return fc.Name + "-controlplane-svc", serviceType, port
+	return fc.Name + "-frontlas-svc", serviceType, cpport, fpport
 }
 
 // EBTLSCASecretNamespacedName will get the namespaced name of the Secret containing the CA certificate

@@ -23,10 +23,16 @@ func NewServer(conf *config.Configuration, repo apis.Repo, mqm apis.MQM) (*Serve
 	tmr := timer.NewTimer()
 
 	// informer
-	inf, err := frontlas.NewInformer(conf, tmr)
-	if err != nil {
-		klog.Errorf("new informer err: %s", err)
-		return nil, err
+	var (
+		inf *frontlas.Informer
+		err error
+	)
+	if conf.Frontlas.Enable {
+		inf, err = frontlas.NewInformer(conf, tmr)
+		if err != nil {
+			klog.Errorf("new informer err: %s", err)
+			return nil, err
+		}
 	}
 
 	// exchange

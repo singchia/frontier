@@ -9,11 +9,11 @@ daemon:
 control_plane:
   listen:
     network: tcp
-    addr: 0.0.0.0:30021
+    addr: 0.0.0.0:40011
 frontier_plane:
   listen:
     network: tcp
-    addr: 0.0.0.0:30022
+    addr: 0.0.0.0:40012
   expiration:
     service_meta: 30
     edge_meta: 30
@@ -21,5 +21,5 @@ redis:
   mode: standalone
   standalone:
     network: tcp
-    addr: 127.0.0.1:6379
+    addr: redis:6379
     db: 0

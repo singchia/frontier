@@ -60,7 +60,7 @@ frontlas:
   enable: false
   dial:
     network: tcp
-    addr: 127.0.0.1:30022
+    addr: 127.0.0.1:40012
   metrics:
     enable: false
     interval: 0

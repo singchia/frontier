@@ -517,8 +517,28 @@ spec:
                         type: object
                         x-kubernetes-map-type: atomic
                     type: object
+                  redis:
+                    properties:
+                      addrs:
+                        items:
+                          type: string
+                        type: array
+                      db:
+                        type: integer
+                      password:
+                        type: string
+                      redisType:
+                        type: string
+                      user:
+                        type: string
+                    required:
+                    - addrs
+                    - redisType
+                    type: object
                   replicas:
                     type: integer
+                required:
+                - redis
                 type: object
             required:
             - frontier

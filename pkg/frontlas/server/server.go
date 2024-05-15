@@ -31,6 +31,7 @@ func NewServer(conf *config.Configuration, repo *repo.Dao) (*Server, error) {
 		klog.Errorf("new cluster err: %s", err)
 		return nil, err
 	}
+	cluster.SetReady()
 
 	return &Server{
 		tmr:     tmr,

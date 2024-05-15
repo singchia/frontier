@@ -31,7 +31,9 @@ func (em *edgeManager) online(end geminio.End) error {
 		}
 	}
 	em.edges[end.ClientID()] = end
-	em.informer.SetEdgeCount(len(em.edges))
+	if em.informer != nil {
+		em.informer.SetEdgeCount(len(em.edges))
+	}
 	em.mtx.Unlock()
 
 	if sync != nil {
@@ -69,7 +71,9 @@ func (em *edgeManager) offline(edgeID uint64, addr net.Addr) error {
 	} else {
 		klog.Warningf("edge offline, edgeID: %d not found in cache", edgeID)
 	}
-	em.informer.SetEdgeCount(len(em.edges))
+	if em.informer != nil {
+		em.informer.SetEdgeCount(len(em.edges))
+	}
 	em.mtx.Unlock()
 
 	defer func() {

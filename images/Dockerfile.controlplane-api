@@ -3,6 +3,9 @@ FROM golang:1.18-alpine
 # Install curl and unzip, which are required to add protoc.
 RUN apk add --no-cache curl unzip protoc protobuf-dev
 
+ENV GO111MODULE=on \
+    GOPROXY=https://goproxy.io,direct
+
 RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@latest \
     && go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest \
     && go install github.com/go-kratos/kratos/cmd/kratos/v2@latest \
@@ -16,5 +19,5 @@ RUN curl --location https://github.com/googleapis/api-common-protos/archive/refs
     && tar zxvf 1.50.0.tar.gz \
     && cp -R /usr/src/protoc/api-common-protos-1.50.0/ /protos/
 
-WORKDIR /api/controlplane/frontier/v1
+WORKDIR /api/controlplane/v1
 CMD protoc --proto_path=./ --proto_path=/protos/ --go_out=paths=source_relative:./ --go-http_out=paths=source_relative:./ --go-grpc_out=paths=source_relative:./ --go-errors_out=paths=source_relative:./ --experimental_allow_proto3_optional=true ./*.proto

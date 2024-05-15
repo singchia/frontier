@@ -33,7 +33,9 @@ func (sm *serviceManager) online(end geminio.End, meta *apis.Meta) error {
 		}
 	}
 	sm.services[end.ClientID()] = end
-	sm.informer.SetServiceCount(len(sm.services))
+	if sm.informer != nil {
+		sm.informer.SetServiceCount(len(sm.services))
+	}
 
 	if sync != nil {
 		// unlikely here
@@ -71,7 +73,9 @@ func (sm *serviceManager) offline(serviceID uint64, addr net.Addr) error {
 	} else {
 		klog.Warningf("service offline, serviceID: %d not found in cache", serviceID)
 	}
-	sm.informer.SetServiceCount(len(sm.services))
+	if sm.informer != nil {
+		sm.informer.SetServiceCount(len(sm.services))
+	}
 
 	defer func() {
 		if legacy {
