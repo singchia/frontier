@@ -1,6 +1,6 @@
 include ./Makefile.defs
 
-REGISTRY?=registry.hub.docker.com/singchia
+REGISTRY?=singchia
 CC?=cc
 
 all: frontier frontlas
@@ -47,8 +47,8 @@ install-frontier:
 install-frontlas:
 	install -m 0755 -d $(DESTDIR)$(BINDIR)
 	install -m 0755 -d $(DESTDIR)$(CONFDIR)
-	install -m 0755 ./bin/frontier $(DESTDIR)$(BINDIR)
-	install -m 0755 ./etc/frontier.yaml $(DESTDIR)$(CONFDIR)
+	install -m 0755 ./bin/frontlas $(DESTDIR)$(BINDIR)
+	install -m 0755 ./etc/frontlas.yaml $(DESTDIR)$(CONFDIR)
 
 # image
 .PHONY: image-frontier
@@ -91,16 +91,16 @@ container-frontier:
 .PHONY: container-frontlas
 container-frontlas:
 	docker rm -f frontlas
-	docker run -d --name frontlas -p 30021:30021 -p 30022:30022 frontlas:${VERSION} --config /usr/conf/frontlas.yaml -v 1
+	docker run -d --name frontlas -p 40011:40011 -p 40012:40012 ${REGISTRY}/frontlas:${VERSION} --config /usr/conf/frontlas.yaml -v 1
 
 # api
 .PHONY: api-frontier
 api-frontier:
-	docker run --rm -v ${PWD}/api/controlplane/frontier/v1:/api/controlplane/frontier/v1 image-gen-api:${VERSION}
+	docker run --rm -v ${PWD}/api/controlplane/frontier/v1:/api/controlplane/v1 image-gen-api:${VERSION}
 
 .PHONY: api-frontlas
 api-frontlas:
-	docker run --rm -v ${PWD}/api/controlplane/frontlas/v1:/api/controlplane/frontlas/v1 image-gen-api:${VERSION}
+	docker run --rm -v ${PWD}/api/controlplane/frontlas/v1:/api/controlplane/v1 image-gen-api:${VERSION}
 
 # bench
 .PHONY: bench

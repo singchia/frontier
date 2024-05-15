@@ -72,7 +72,7 @@ func main() {
 	}()
 	network := pflag.String("network", "tcp", "network to dial")
 	address := pflag.String("address", "127.0.0.1:30011", "address to dial")
-	frontlasAddress := pflag.String("frontlas_address", "127.0.0.1:30021", "frontlas address to dial, mutex with address")
+	frontlasAddress := pflag.String("frontlas_address", "127.0.0.1:40011", "frontlas address to dial, mutually exclusive with address")
 	frontlas := pflag.Bool("frontlas", false, "frontlas or frontier")
 	loglevel := pflag.String("loglevel", "info", "log level, trace debug info warn error")
 	serviceName := pflag.String("service", "foo", "service name")

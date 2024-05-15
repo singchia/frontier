@@ -83,16 +83,19 @@ const (
 )
 
 type Redis struct {
-	Addrs     []string  `json:"addrs"`
-	User      string    `json:"user,omitempty"`
-	Password  string    `json:"password,omitempty"`
-	RedisType RedisType `json:"redisType"`
+	Addrs      []string  `json:"addrs"`
+	DB         int       `json:"db,omitempty"`
+	User       string    `json:"user,omitempty"`
+	Password   string    `json:"password,omitempty"`
+	RedisType  RedisType `json:"redisType"`
+	MasterName string    `json:"masterName,omitempty"`
 }
 
 type Frontlas struct {
 	Replicas     int                 `json:"replicas,omitempty"` // frontlas replicas, default 1
 	ControlPlane ControlPlane        `json:"controlplane,omitempty"`
 	NodeAffinity corev1.NodeAffinity `json:"nodeAffinity,omitempty"`
+	Redis        Redis               `json:"redis"`
 }
 
 // FrontierClusterSpec defines the desired state of FrontierCluster

@@ -351,6 +351,11 @@ func Parse() (*Configuration, error) {
 	if nodeName != "" {
 		config.Daemon.FrontierID = "frontier-" + nodeName
 	}
+	frontlasAddr := os.Getenv("FRONTLAS_ADDR")
+	if frontlasAddr != "" {
+		config.Frontlas.Enable = true
+		config.Frontlas.Dial.Addr = frontlasAddr
+	}
 	return config, nil
 }
 
@@ -440,7 +445,7 @@ func genDefaultConfig(writer io.Writer) error {
 			Enable: false,
 			Dial: config.Dial{
 				Network: "tcp",
-				Addr:    "127.0.0.1:30022",
+				Addr:    "127.0.0.1:40012",
 				TLS: config.TLS{
 					Enable: false,
 					MTLS:   false,

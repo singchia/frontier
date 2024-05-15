@@ -5,6 +5,8 @@ import (
 	"io"
 	"net"
 	"os"
+	"strconv"
+	"strings"
 
 	armio "github.com/jumboframes/armorigo/io"
 	"github.com/singchia/frontier/pkg/config"
@@ -190,7 +192,7 @@ func Parse() (*Configuration, error) {
 	if config.Daemon.PProf.CPUProfileRate == 0 {
 		config.Daemon.PProf.CPUProfileRate = 10000
 	}
-	// env
+	// env, set only exists
 	cpPort := os.Getenv("FRONTLAS_CONTROLPLANE_PORT")
 	if cpPort != "" {
 		host, _, err := net.SplitHostPort(config.ControlPlane.Listen.Addr)
@@ -198,6 +200,38 @@ func Parse() (*Configuration, error) {
 			return nil, err
 		}
 		config.ControlPlane.Listen.Addr = net.JoinHostPort(host, cpPort)
+	}
+	redisType := os.Getenv("REDIS_TYPE")
+	redisAddrs := os.Getenv("REDIS_ADDRS")
+	redisUser := os.Getenv("REDIS_USER")
+	redisPassword := os.Getenv("REDIS_PASSWORD")
+	redisDB := os.Getenv("REDIS_DB")
+	redisMasterName := os.Getenv("MASTER_NAME")
+	switch redisType {
+	case "standalone":
+		addrs := strings.Split(redisAddrs, ",")
+		db, err := strconv.Atoi(redisDB)
+		if err != nil {
+			return nil, err
+		}
+		config.Redis.Standalone.DB = db
+		config.Redis.Standalone.Addr = addrs[0]
+		config.Redis.Username = redisUser
+		config.Redis.Password = redisPassword
+		config.Redis.Mode = redisType
+	case "sentinel":
+		addrs := strings.Split(redisAddrs, ",")
+		config.Redis.Sentinel.Addrs = addrs
+		config.Redis.Sentinel.MasterName = redisMasterName
+		config.Redis.Username = redisUser
+		config.Redis.Password = redisPassword
+		config.Redis.Mode = redisType
+	case "cluster":
+		addrs := strings.Split(redisAddrs, ",")
+		config.Redis.Cluster.Addrs = addrs
+		config.Redis.Username = redisUser
+		config.Redis.Password = redisPassword
+		config.Redis.Mode = redisType
 	}
 	return config, nil
 }
@@ -216,13 +250,13 @@ func genDefaultConfig(writer io.Writer) error {
 		ControlPlane: ControlPlane{
 			Listen: config.Listen{
 				Network: "tcp",
-				Addr:    "0.0.0.0:30021",
+				Addr:    "0.0.0.0:40011",
 			},
 		},
 		FrontierManager: FrontierManager{
 			Listen: config.Listen{
 				Network: "tcp",
-				Addr:    "0.0.0.0:30022",
+				Addr:    "0.0.0.0:40012",
 			},
 		},
 		Redis: Redis{

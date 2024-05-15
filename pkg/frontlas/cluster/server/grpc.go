@@ -8,13 +8,14 @@ import (
 	v1 "github.com/singchia/frontier/api/controlplane/frontlas/v1"
 )
 
-func NewGRPCServer(ln net.Listener, svc v1.ClusterServiceServer) *grpc.Server {
+func NewGRPCServer(ln net.Listener, clustersvc v1.ClusterServiceServer, healthsvc v1.HealthServer) *grpc.Server {
 	// new server
 	opts := []grpc.ServerOption{
 		grpc.Middleware(recovery.Recovery()),
 		grpc.Listener(ln),
 	}
 	srv := grpc.NewServer(opts...)
-	v1.RegisterClusterServiceServer(srv, svc)
+	v1.RegisterClusterServiceServer(srv, clustersvc)
+	v1.RegisterHealthServer(srv, healthsvc)
 	return srv
 }

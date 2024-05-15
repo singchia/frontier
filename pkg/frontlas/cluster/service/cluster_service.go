@@ -9,14 +9,17 @@ import (
 
 type ClusterService struct {
 	v1.UnimplementedClusterServiceServer
+	v1.UnimplementedHealthServer
 
 	// repo
-	repo *repo.Dao
+	repo      *repo.Dao
+	readiness Readiness
 }
 
-func NewClusterService(repo *repo.Dao) *ClusterService {
+func NewClusterService(repo *repo.Dao, readiness Readiness) *ClusterService {
 	cs := &ClusterService{
-		repo: repo,
+		repo:      repo,
+		readiness: readiness,
 	}
 	return cs
 }

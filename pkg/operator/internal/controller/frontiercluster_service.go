@@ -50,7 +50,7 @@ func (r *FrontierClusterReconciler) ensureService(ctx context.Context, fc v1alph
 	}
 
 	// controlplane
-	cpServiceName, cpServiceType, port := fc.FrontlasControlPlaneServicePort()
+	cpServiceName, cpServiceType, cpport, fpport := fc.FrontlasServicePort()
 	label = map[string]string{
 		"app": fc.Name + "-frontlas",
 	}
@@ -62,7 +62,9 @@ func (r *FrontierClusterReconciler) ensureService(ctx context.Context, fc v1alph
 		SetServiceType(cpServiceType).
 		SetPublishNotReadyAddresses(true).
 		SetOwnerReferences(fc.GetOwnerReferences()).
-		AddPort(&port).Build()
+		AddPort(&cpport).
+		AddPort(&fpport).
+		Build()
 
 	if err := service.CreateOrUpdate(ctx, r.client, cpService); err != nil {
 		return fmt.Errorf("Could not ensure controlplane service: %s", err)

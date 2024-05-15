@@ -13,6 +13,7 @@ type builder struct {
 	command         []string
 	args            []string
 	envs            []corev1.EnvVar
+	readinessProbe  *corev1.Probe
 
 	volumeMounts []corev1.VolumeMount
 	ports        []corev1.ContainerPort
@@ -63,6 +64,11 @@ func (b *builder) SetPorts(ports []corev1.ContainerPort) *builder {
 	return b
 }
 
+func (b *builder) SetReadinessProbe(readinessProbe *corev1.Probe) *builder {
+	b.readinessProbe = readinessProbe
+	return b
+}
+
 func (b *builder) Build() corev1.Container {
 	return corev1.Container{
 		Name:            b.name,
@@ -74,6 +80,7 @@ func (b *builder) Build() corev1.Container {
 		Env:             b.envs,
 		VolumeMounts:    b.volumeMounts,
 		Ports:           b.ports,
+		ReadinessProbe:  b.readinessProbe,
 	}
 }
 
