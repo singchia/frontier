@@ -269,7 +269,7 @@ func (r *FrontierClusterReconciler) ensureFrontlasDeployment(ctx context.Context
 		SetServiceName(service).
 		SetLabels(labels).
 		SetMatchLabels(labels).
-		SetReplicas(fc.FrontierReplicas()).
+		SetReplicas(fc.FrontlasReplicas()).
 		SetPodTemplateSpec(podTemplateSpec).
 		SetOwnerReference(fc.GetOwnerReferences()).
 		Build()

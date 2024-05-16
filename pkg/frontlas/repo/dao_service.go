@@ -19,7 +19,10 @@ const (
 )
 
 //go:embed lua/service_delete.lua
-var deleteFrontierScript string
+var deleteServiceScript string
+
+//go:embed lua/service_create.lua
+var createServiceScript string
 
 func (dao *Dao) GetAllServiceIDs() ([]uint64, error) {
 	results, err := dao.rds.Keys(context.TODO(), frontiersKeyPrefixAll).Result()
@@ -133,17 +136,15 @@ func (dao *Dao) SetServiceAndAlive(serviceID uint64, service *Service, expiratio
 		klog.Errorf("dao set service and alive, json marshal err: %s", err)
 		return err
 	}
-
-	pipeliner := dao.rds.TxPipeline()
-	// service meta TODO expiration to custom
-	pipeliner.Set(context.TODO(), getServiceKey(serviceID), serviceData,
-		time.Duration(dao.conf.FrontierManager.Expiration.ServiceMeta)*time.Second)
-	// alive
-	pipeliner.Set(context.TODO(), getAliveServiceKey(serviceID), 1, expiration)
-	// frontier service_count
-	pipeliner.HIncrBy(context.TODO(), getFrontierKey(service.FrontierID), "service_count", 1)
-
-	_, err = pipeliner.Exec(context.TODO())
+	_, err = dao.rds.Eval(context.TODO(), createServiceScript,
+		[]string{
+			getServiceKey(serviceID),
+			service.FrontierID,
+			getAliveServiceKey(serviceID),
+			getFrontierKey(service.FrontierID)},
+		serviceData,
+		time.Duration(dao.conf.FrontierManager.Expiration.ServiceMeta),
+		int(expiration.Seconds())).Result()
 	if err != nil {
 		klog.Errorf("dao set service and alive, pipeliner exec err: %s", err)
 		return err
@@ -172,9 +173,13 @@ func (dao *Dao) ExpireService(serviceID uint64, expiration time.Duration) error 
 	return nil
 }
 
-func (dao *Dao) DeleteService(serviceID uint64) error {
-	_, err := dao.rds.Eval(context.TODO(), deleteFrontierScript,
-		[]string{getServiceKey(serviceID), getAliveServiceKey(serviceID), frontiersKeyPrefix}).Result()
+func (dao *Dao) DeleteService(serviceID uint64, frontierID string) error {
+	_, err := dao.rds.Eval(context.TODO(), deleteServiceScript,
+		[]string{
+			getServiceKey(serviceID),
+			frontierID,
+			getAliveServiceKey(serviceID),
+			frontiersKeyPrefix}).Result()
 	if err != nil {
 		klog.Errorf("dao delete service, eval err: %s", err)
 		return err

@@ -243,9 +243,14 @@ func (service *clusterServiceEnd) newServiceEnd(addr string) (*serviceEnd, error
 		OptionServiceDelegate(service.serviceOption.delegate),
 		OptionServiceName(service.serviceOption.service),
 		OptionServiceReceiveTopics(service.serviceOption.topics),
-		OptionServiceTimer(service.serviceOption.tmr))
+		OptionServiceTimer(service.serviceOption.tmr),
+		OptionServiceID(service.serviceOption.serviceID))
 	if err != nil {
 		return nil, err
+	}
+	if service.serviceOption.serviceID == 0 {
+		// record serviceID for later using
+		service.serviceOption.serviceID = serviceEnd.ClientID()
 	}
 	go func() {
 		for {

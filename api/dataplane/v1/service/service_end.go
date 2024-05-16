@@ -29,6 +29,9 @@ func newServiceEnd(dialer client.Dialer, opts ...ServiceOption) (*serviceEnd, er
 	if sopt.logger != nil {
 		sopts.SetLog(sopt.logger)
 	}
+	if sopt.serviceID != 0 {
+		sopts.SetClientID(sopt.serviceID)
+	}
 	// meta
 	meta := &apis.Meta{}
 	if sopt.topics != nil {

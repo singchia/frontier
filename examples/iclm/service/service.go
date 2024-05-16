@@ -18,6 +18,7 @@ import (
 	"time"
 
 	armlog "github.com/jumboframes/armorigo/log"
+	"github.com/jumboframes/armorigo/sigaction"
 	"github.com/singchia/frontier/api/dataplane/v1/service"
 	"github.com/singchia/geminio"
 	"github.com/spf13/pflag"
@@ -33,6 +34,8 @@ var (
 	topicSlice   []string
 	printmessage *bool
 	srv          service.Service
+	sig          *sigaction.Signal
+	nostdin      *bool
 
 	labels    map[string]int64 = map[string]int64{}
 	labelsMtx sync.RWMutex
@@ -79,6 +82,7 @@ func main() {
 	topics := pflag.String("topics", "", "topics to receive message, empty means without consuming")
 	methods := pflag.String("methods", "", "method name, support echo")
 	printmessage = pflag.Bool("printmessage", false, "whether print message out")
+	nostdin = pflag.Bool("nostdin", false, "nostdin mode, no stdin will be accepted")
 	stats := pflag.Bool("stats", false, "print statistics or not")
 
 	pflag.Parse()
@@ -160,7 +164,7 @@ func main() {
 			}
 			if err != nil {
 				fmt.Println("\n> receive err:", err)
-				fmt.Print(">>> ")
+				printPreempt()
 				continue
 			}
 			msg.Done()
@@ -173,7 +177,7 @@ func main() {
 			}
 			if *printmessage {
 				fmt.Printf("\n> receive msg, edgeID: %d streamID: %d data: %s\n", msg.ClientID(), msg.StreamID(), string(value))
-				fmt.Print(">>> ")
+				printPreempt()
 			}
 		}
 	}()
@@ -189,33 +193,34 @@ func main() {
 				continue
 			}
 			fmt.Println("\n> accept stream", st.ClientID(), st.StreamID())
-			fmt.Print(">>> ")
+			printPreempt()
 			sns.Store(strconv.FormatUint(st.StreamID(), 10), st)
 			go handleStream(st)
 		}
 	}()
 
-	cursor := "1"
-	fmt.Print(">>> ")
+	if !*nostdin {
+		cursor := "1"
+		printPreempt()
 
-	// the command-line protocol
-	// 1. close
-	// 2. quit
-	// 3. open {edgeID}
-	// 4. close {streamID}
-	// 5. switch {streamID}
-	// 6. publish {msg} #note to switch to stream first
-	// 7. publish {edgeID} {msg}
-	// 8. call {method} {req} #note to switch to stream first
-	// 9. call {edgeID} {method} {req}
-	scanner := bufio.NewScanner(os.Stdin)
-	for scanner.Scan() {
-		text := scanner.Text()
-		parts := strings.Split(text, " ")
-		switch len(parts) {
-		case 1:
-			if parts[0] == "help" {
-				fmt.Println(`the command-line protocol
+		// the command-line protocol
+		// 1. close
+		// 2. quit
+		// 3. open {edgeID}
+		// 4. close {streamID}
+		// 5. switch {streamID}
+		// 6. publish {msg} #note to switch to stream first
+		// 7. publish {edgeID} {msg}
+		// 8. call {method} {req} #note to switch to stream first
+		// 9. call {edgeID} {method} {req}
+		scanner := bufio.NewScanner(os.Stdin)
+		for scanner.Scan() {
+			text := scanner.Text()
+			parts := strings.Split(text, " ")
+			switch len(parts) {
+			case 1:
+				if parts[0] == "help" {
+					fmt.Println(`the command-line protocol
 	1. close
 	2. quit
 	3. open {edgeID}
@@ -225,154 +230,157 @@ func main() {
 	7. publish {clientId} {msg}
 	8. call {method} {req} #note to switch to stream first
 	9. call {clientId} {method} {req}`)
-				goto NEXT
-			}
-			// 1. close
-			if parts[0] == "close" || parts[0] == "quit" {
-				srv.Close()
-				goto END
-			}
-			if parts[0] == "count" {
-				count := 0
-				edges.Range(func(key, value interface{}) bool {
-					count++
-					return true
-				})
-				fmt.Println("> count:", count)
-				goto NEXT
-			}
-		case 2:
-			// 1. open {edgeID}
-			// 2. close {streamID}
-			// 3. switch {streamID}
-			// 4. publish {msg}
-			if parts[0] == "open" {
-				edgeID, err := strconv.ParseUint(parts[1], 10, 64)
-				if err != nil {
-					fmt.Println("> illegal edgeID", err, parts[1])
 					goto NEXT
 				}
-				// 1. open edgeID
-				st, err := srv.OpenStream(context.TODO(), edgeID)
-				if err != nil {
-					fmt.Println("> open stream err", err)
+				// 1. close
+				if parts[0] == "close" || parts[0] == "quit" {
+					srv.Close()
+					goto END
+				}
+				if parts[0] == "count" {
+					count := 0
+					edges.Range(func(key, value interface{}) bool {
+						count++
+						return true
+					})
+					fmt.Println("> count:", count)
 					goto NEXT
 				}
-				fmt.Println("> open stream success:", edgeID, st.StreamID())
-				sns.Store(strconv.FormatUint(st.StreamID(), 10), st)
-				go handleStream(st)
-				goto NEXT
-			}
-			if parts[0] == "close" {
-				stream := parts[1]
-				sn, ok := sns.LoadAndDelete(stream)
-				if !ok {
-					fmt.Printf("> stream id: %s not found\n", stream)
+			case 2:
+				// 1. open {edgeID}
+				// 2. close {streamID}
+				// 3. switch {streamID}
+				// 4. publish {msg}
+				if parts[0] == "open" {
+					edgeID, err := strconv.ParseUint(parts[1], 10, 64)
+					if err != nil {
+						fmt.Println("> illegal edgeID", err, parts[1])
+						goto NEXT
+					}
+					// 1. open edgeID
+					st, err := srv.OpenStream(context.TODO(), edgeID)
+					if err != nil {
+						fmt.Println("> open stream err", err)
+						goto NEXT
+					}
+					fmt.Println("> open stream success:", edgeID, st.StreamID())
+					sns.Store(strconv.FormatUint(st.StreamID(), 10), st)
+					go handleStream(st)
 					goto NEXT
 				}
-				sn.(geminio.Stream).Close()
-				fmt.Println("> close stream success:", stream)
-				goto NEXT
-			}
-			if parts[0] == "switch" {
-				session := parts[1]
-				if session == "1" {
+				if parts[0] == "close" {
+					stream := parts[1]
+					sn, ok := sns.LoadAndDelete(stream)
+					if !ok {
+						fmt.Printf("> stream id: %s not found\n", stream)
+						goto NEXT
+					}
+					sn.(geminio.Stream).Close()
+					fmt.Println("> close stream success:", stream)
+					goto NEXT
+				}
+				if parts[0] == "switch" {
+					session := parts[1]
+					if session == "1" {
+						cursor = session
+						fmt.Println("> swith stream success:", session)
+						goto NEXT
+					}
+					_, ok := sns.Load(session)
+					if !ok {
+						fmt.Println("> swith stream failed, not found:", session)
+						goto NEXT
+					}
 					cursor = session
 					fmt.Println("> swith stream success:", session)
 					goto NEXT
 				}
-				_, ok := sns.Load(session)
-				if !ok {
-					fmt.Println("> swith stream failed, not found:", session)
-					goto NEXT
-				}
-				cursor = session
-				fmt.Println("> swith stream success:", session)
-				goto NEXT
-			}
-			if cursor != "1" && (parts[0] == "publish") {
-				sn, ok := sns.Load(cursor)
-				if !ok {
-					fmt.Printf("> stream: %s not found\n", cursor)
-					goto NEXT
-				}
-				stream := sn.(geminio.Stream)
+				if cursor != "1" && (parts[0] == "publish") {
+					sn, ok := sns.Load(cursor)
+					if !ok {
+						fmt.Printf("> stream: %s not found\n", cursor)
+						goto NEXT
+					}
+					stream := sn.(geminio.Stream)
 
+					if parts[0] == "publish" {
+						msg := stream.NewMessage([]byte(parts[1]))
+						err := stream.Publish(context.TODO(), msg)
+						if err != nil {
+							fmt.Println("> publish err:", err)
+							goto NEXT
+						}
+						fmt.Println("> publish success")
+						goto NEXT
+					}
+				}
+			case 3:
+				// 1. publish {edgeID} {msg}
+				// 2. call {method} {req} if switch to stream
+				if cursor != "1" {
+					// in stream
+					sn, ok := sns.Load(cursor)
+					if !ok {
+						fmt.Printf("> stream: %s not found\n", cursor)
+						goto NEXT
+					}
+					stream := sn.(geminio.Stream)
+					if parts[0] == "call" {
+						req := stream.NewRequest([]byte(parts[2]))
+						rsp, err := stream.Call(context.TODO(), string(parts[1]), req)
+						if err != nil {
+							fmt.Println("> call err:", err)
+							goto NEXT
+						}
+						fmt.Println("\n> call success, ret:", string(rsp.Data()))
+						goto NEXT
+					}
+				}
 				if parts[0] == "publish" {
-					msg := stream.NewMessage([]byte(parts[1]))
-					err := stream.Publish(context.TODO(), msg)
+					edgeID, err := strconv.ParseUint(parts[1], 10, 64)
 					if err != nil {
-						fmt.Println("> publish err:", err)
+						log.Println("> illegal edge id", err, parts[1])
+						goto NEXT
+					}
+					msg := srv.NewMessage([]byte(parts[2]))
+					err = srv.Publish(context.TODO(), edgeID, msg)
+					if err != nil {
+						log.Println("> publish err:", err)
 						goto NEXT
 					}
 					fmt.Println("> publish success")
 					goto NEXT
 				}
-			}
-		case 3:
-			// 1. publish {edgeID} {msg}
-			// 2. call {method} {req} if switch to stream
-			if cursor != "1" {
-				// in stream
-				sn, ok := sns.Load(cursor)
-				if !ok {
-					fmt.Printf("> stream: %s not found\n", cursor)
-					goto NEXT
-				}
-				stream := sn.(geminio.Stream)
+			case 4:
+				// call {edgeID} {method} {req}
 				if parts[0] == "call" {
-					req := stream.NewRequest([]byte(parts[2]))
-					rsp, err := stream.Call(context.TODO(), string(parts[1]), req)
+					edgeID, err := strconv.ParseUint(parts[1], 10, 64)
 					if err != nil {
-						fmt.Println("> call err:", err)
+						log.Println("> illegal edge id", err, parts[1])
 						goto NEXT
 					}
-					fmt.Println("\n> call success, ret:", string(rsp.Data()))
+					req := srv.NewRequest([]byte(parts[3]))
+					rsp, err := srv.Call(context.TODO(), edgeID, parts[2], req)
+					if err != nil {
+						log.Println("> call err:", err)
+						goto NEXT
+					}
+					log.Println("> call success, ret:", string(rsp.Data()))
 					goto NEXT
 				}
 			}
-			if parts[0] == "publish" {
-				edgeID, err := strconv.ParseUint(parts[1], 10, 64)
-				if err != nil {
-					log.Println("> illegal edge id", err, parts[1])
-					goto NEXT
-				}
-				msg := srv.NewMessage([]byte(parts[2]))
-				err = srv.Publish(context.TODO(), edgeID, msg)
-				if err != nil {
-					log.Println("> publish err:", err)
-					goto NEXT
-				}
-				fmt.Println("> publish success")
-				goto NEXT
+			log.Println("illegal operation")
+		NEXT:
+			if cursor != "1" {
+				fmt.Printf("[%20s] >>> ", cursor)
+			} else {
+				printPreempt()
 			}
-		case 4:
-			// call {edgeID} {method} {req}
-			if parts[0] == "call" {
-				edgeID, err := strconv.ParseUint(parts[1], 10, 64)
-				if err != nil {
-					log.Println("> illegal edge id", err, parts[1])
-					goto NEXT
-				}
-				req := srv.NewRequest([]byte(parts[3]))
-				rsp, err := srv.Call(context.TODO(), edgeID, parts[2], req)
-				if err != nil {
-					log.Println("> call err:", err)
-					goto NEXT
-				}
-				log.Println("> call success, ret:", string(rsp.Data()))
-				goto NEXT
-			}
-		}
-		log.Println("illegal operation")
-	NEXT:
-		if cursor != "1" {
-			fmt.Printf("[%20s] >>> ", cursor)
-		} else {
-			fmt.Print(">>> ")
 		}
 	}
 
+	sig = sigaction.NewSignal()
+	sig.Wait(context.TODO())
 END:
 	time.Sleep(10 * time.Second)
 }
@@ -383,7 +391,7 @@ func handleStream(stream geminio.Stream) {
 			msg, err := stream.Receive(context.TODO())
 			if err != nil {
 				fmt.Printf("\n> streamID: %d receive err: %s\n", stream.StreamID(), err)
-				fmt.Print(">>> ")
+				printPreempt()
 				return
 			}
 			msg.Done()
@@ -396,7 +404,7 @@ func handleStream(stream geminio.Stream) {
 			}
 			if *printmessage {
 				fmt.Printf("\n> receive msg, edgeID: %d streamID: %d data: %s\n", msg.ClientID(), msg.StreamID(), string(value))
-				fmt.Print(">>> ")
+				printPreempt()
 			}
 		}
 	}()
@@ -406,12 +414,12 @@ func handleStream(stream geminio.Stream) {
 			_, err := stream.Read(data)
 			if err != nil {
 				fmt.Printf("\n> streamID: %d read err: %s\n", stream.StreamID(), err)
-				fmt.Print(">>> ")
+				printPreempt()
 				return
 			}
 			fmt.Println("> read data:", stream.ClientID(),
 				string(data))
-			fmt.Print(">>> ")
+			printPreempt()
 		}
 	}()
 	go func() {
@@ -452,14 +460,14 @@ func getID(meta []byte) (uint64, error) {
 
 func online(edgeID uint64, meta []byte, addr net.Addr) error {
 	fmt.Printf("\n> online, edgeID: %d, addr: %s\n", edgeID, addr.String())
-	fmt.Print(">>> ")
+	printPreempt()
 	edges.Store(edgeID, struct{}{})
 	return nil
 }
 
 func offline(edgeID uint64, meta []byte, addr net.Addr) error {
 	fmt.Printf("\n> offline, edgeID: %d, addr: %s\n", edgeID, addr.String())
-	fmt.Print(">>> ")
+	printPreempt()
 	edges.Delete(edgeID)
 	return nil
 }
@@ -474,7 +482,13 @@ func echo(ctx context.Context, req geminio.Request, rsp geminio.Response) {
 	}
 	if *printmessage {
 		fmt.Printf("\n> rpc called, method: %s edgeID: %d streamID: %d data: %s\n", "echo", req.ClientID(), req.StreamID(), string(value))
-		fmt.Print(">>> ")
+		printPreempt()
 	}
 	rsp.SetData(value)
+}
+
+func printPreempt() {
+	if !*nostdin {
+		printPreempt()
+	}
 }

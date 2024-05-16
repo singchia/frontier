@@ -5,12 +5,16 @@ go 1.21
 require (
 	github.com/onsi/ginkgo/v2 v2.14.0
 	github.com/onsi/gomega v1.30.0
+	github.com/stretchr/testify v1.8.4
 	k8s.io/apimachinery v0.29.0
 	k8s.io/client-go v0.29.0
 	sigs.k8s.io/controller-runtime v0.17.2
 )
 
-require github.com/hashicorp/errwrap v1.0.0 // indirect
+require (
+	github.com/hashicorp/errwrap v1.0.0 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
+)
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
