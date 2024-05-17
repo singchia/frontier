@@ -23,7 +23,7 @@ var (
 
 func main() {
 	network := pflag.String("network", "tcp", "network to dial")
-	address := pflag.String("address", "127.0.0.1:2432", "address to dial")
+	address := pflag.String("address", "127.0.0.1:30012", "address to dial")
 	loglevel := pflag.String("loglevel", "info", "log level, trace debug info warn error")
 	count := pflag.Int("count", 10000, "messages to publish")
 	topic := pflag.String("topic", "test", "topic to specific")

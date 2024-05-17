@@ -50,12 +50,12 @@ service:
       - name: servicebound
         type: ClusterIP
         targetPort: servicebound
-        port: 2431
+        port: 30011
     nodePort:
       - name: edgebound
         type: NodePort
         targetPort: edgebound
-        port: 2432
+        port: 30012
 
 ingress:
   enabled: false

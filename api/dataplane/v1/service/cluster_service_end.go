@@ -234,23 +234,23 @@ func frontierEqual(a, b *clusterv1.Frontier) bool {
 		a.FrontierId == b.FrontierId
 }
 
-func (service *clusterServiceEnd) newServiceEnd(addr string) (*serviceEnd, error) {
+func (end *clusterServiceEnd) newServiceEnd(addr string) (*serviceEnd, error) {
 	dialer := func() (net.Conn, error) {
 		return net.Dial("tcp", addr)
 	}
 	serviceEnd, err := newServiceEnd(dialer,
-		OptionServiceLog(service.serviceOption.logger),
-		OptionServiceDelegate(service.serviceOption.delegate),
-		OptionServiceName(service.serviceOption.service),
-		OptionServiceReceiveTopics(service.serviceOption.topics),
-		OptionServiceTimer(service.serviceOption.tmr),
-		OptionServiceID(service.serviceOption.serviceID))
+		OptionServiceLog(end.serviceOption.logger),
+		OptionServiceDelegate(end.serviceOption.delegate),
+		OptionServiceName(end.serviceOption.service),
+		OptionServiceReceiveTopics(end.serviceOption.topics),
+		OptionServiceTimer(end.serviceOption.tmr),
+		OptionServiceID(end.serviceOption.serviceID))
 	if err != nil {
 		return nil, err
 	}
-	if service.serviceOption.serviceID == 0 {
+	if end.serviceOption.serviceID == 0 {
 		// record serviceID for later using
-		service.serviceOption.serviceID = serviceEnd.ClientID()
+		end.serviceOption.serviceID = serviceEnd.ClientID()
 	}
 	go func() {
 		for {
@@ -258,7 +258,7 @@ func (service *clusterServiceEnd) newServiceEnd(addr string) (*serviceEnd, error
 			if err != nil {
 				return
 			}
-			service.acceptStreamCh <- st
+			end.acceptStreamCh <- st
 		}
 	}()
 	go func() {
@@ -267,15 +267,15 @@ func (service *clusterServiceEnd) newServiceEnd(addr string) (*serviceEnd, error
 			if err != nil {
 				return
 			}
-			service.acceptMsgCh <- msg
+			end.acceptMsgCh <- msg
 		}
 	}()
 
-	service.appMtx.RLock()
-	defer service.appMtx.RUnlock()
+	end.appMtx.RLock()
+	defer end.appMtx.RUnlock()
 
 	// rpcs
-	for method, rpc := range service.rpcs {
+	for method, rpc := range end.rpcs {
 		err = serviceEnd.Register(context.TODO(), method, rpc)
 		if err != nil {
 			goto ERR

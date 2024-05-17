@@ -16,7 +16,7 @@ import (
 
 func main() {
 	network := pflag.String("network", "tcp", "network to dial")
-	address := pflag.String("address", "127.0.0.1:2431", "address to dial")
+	address := pflag.String("address", "127.0.0.1:30011", "address to dial")
 	serviceName := pflag.String("service", "foo", "service name")
 	loglevel := pflag.String("loglevel", "info", "log level, trace debug info warn error")
 	printmessage := pflag.Bool("printmessage", false, "whether print message out")

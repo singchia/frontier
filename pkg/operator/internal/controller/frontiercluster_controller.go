@@ -101,7 +101,9 @@ func (r *FrontierClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			withPendingPhase(10))
 	}
 
-	res, err := status.Update(ctx, r.client.Status(), &frontiercluster, statusOptions().withRunningPhase())
+	res, err := status.Update(ctx, r.client.Status(), &frontiercluster, statusOptions().
+		withMessage(Info, "Good to go!").
+		withRunningPhase())
 	if err != nil {
 		log.Error(err, "Error updating the status of FrontierCluster resource")
 		return res, err

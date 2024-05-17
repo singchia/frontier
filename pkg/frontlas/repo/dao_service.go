@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -131,12 +132,8 @@ func (dao *Dao) SetService(serviceID uint64, service *Service) error {
 }
 
 func (dao *Dao) SetServiceAndAlive(serviceID uint64, service *Service, expiration time.Duration) error {
-	serviceData, err := json.Marshal(service)
-	if err != nil {
-		klog.Errorf("dao set service and alive, json marshal err: %s", err)
-		return err
-	}
-	_, err = dao.rds.Eval(context.TODO(), createServiceScript,
+	serviceData := fmt.Sprintf("service: %s, frontier_id: %s, addr: %s, update_time: %d", service.Service, service.FrontierID, service.Addr, service.UpdateTime)
+	_, err := dao.rds.Eval(context.TODO(), createServiceScript,
 		[]string{
 			getServiceKey(serviceID),
 			service.FrontierID,

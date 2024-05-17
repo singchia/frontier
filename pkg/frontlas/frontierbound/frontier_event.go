@@ -20,7 +20,7 @@ const (
 )
 
 // delegates for frontier itself
-func (fm *FrontierManager) GetClientID(meta []byte) (uint64, error) {
+func (fm *FrontierManager) GetClientID(_ uint64, meta []byte) (uint64, error) {
 	return fm.idFactory.GetID(), nil
 }
 

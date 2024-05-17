@@ -121,7 +121,7 @@ func main() {
 			case "echo":
 				err = srv.Register(context.TODO(), "echo", echo)
 				if err != nil {
-					log.Println("> register echo err:", err)
+					fmt.Println("> register echo err:", err)
 					return
 				}
 			}
@@ -130,17 +130,17 @@ func main() {
 	// pre register functions for edges events
 	err = srv.RegisterGetEdgeID(context.TODO(), getID)
 	if err != nil {
-		log.Println("> end register getID err:", err)
+		fmt.Println("> end register getID err:", err)
 		return
 	}
 	err = srv.RegisterEdgeOnline(context.TODO(), online)
 	if err != nil {
-		log.Println("> end register online err:", err)
+		fmt.Println("> end register online err:", err)
 		return
 	}
 	err = srv.RegisterEdgeOffline(context.TODO(), offline)
 	if err != nil {
-		log.Println("> end register offline err:", err)
+		fmt.Println("> end register offline err:", err)
 		return
 	}
 
@@ -164,7 +164,7 @@ func main() {
 			}
 			if err != nil {
 				fmt.Println("\n> receive err:", err)
-				printPreempt()
+				printPrompt()
 				continue
 			}
 			msg.Done()
@@ -176,8 +176,8 @@ func main() {
 				value = ld.Data
 			}
 			if *printmessage {
-				fmt.Printf("\n> receive msg, edgeID: %d streamID: %d data: %s\n", msg.ClientID(), msg.StreamID(), string(value))
-				printPreempt()
+				fmt.Printf("> receive msg, edgeID: %d streamID: %d data: %s\n", msg.ClientID(), msg.StreamID(), string(value))
+				printPrompt()
 			}
 		}
 	}()
@@ -193,7 +193,7 @@ func main() {
 				continue
 			}
 			fmt.Println("\n> accept stream", st.ClientID(), st.StreamID())
-			printPreempt()
+			printPrompt()
 			sns.Store(strconv.FormatUint(st.StreamID(), 10), st)
 			go handleStream(st)
 		}
@@ -201,7 +201,7 @@ func main() {
 
 	if !*nostdin {
 		cursor := "1"
-		printPreempt()
+		printPrompt()
 
 		// the command-line protocol
 		// 1. close
@@ -339,13 +339,13 @@ func main() {
 				if parts[0] == "publish" {
 					edgeID, err := strconv.ParseUint(parts[1], 10, 64)
 					if err != nil {
-						log.Println("> illegal edge id", err, parts[1])
+						fmt.Println("> illegal edge id", err, parts[1])
 						goto NEXT
 					}
 					msg := srv.NewMessage([]byte(parts[2]))
 					err = srv.Publish(context.TODO(), edgeID, msg)
 					if err != nil {
-						log.Println("> publish err:", err)
+						fmt.Println("> publish err:", err)
 						goto NEXT
 					}
 					fmt.Println("> publish success")
@@ -356,16 +356,16 @@ func main() {
 				if parts[0] == "call" {
 					edgeID, err := strconv.ParseUint(parts[1], 10, 64)
 					if err != nil {
-						log.Println("> illegal edge id", err, parts[1])
+						log.Print("\n> illegal edge id", err, parts[1])
 						goto NEXT
 					}
 					req := srv.NewRequest([]byte(parts[3]))
 					rsp, err := srv.Call(context.TODO(), edgeID, parts[2], req)
 					if err != nil {
-						log.Println("> call err:", err)
+						log.Print("\n> call err:", err)
 						goto NEXT
 					}
-					log.Println("> call success, ret:", string(rsp.Data()))
+					fmt.Println("> call success, ret:", string(rsp.Data()))
 					goto NEXT
 				}
 			}
@@ -374,7 +374,7 @@ func main() {
 			if cursor != "1" {
 				fmt.Printf("[%20s] >>> ", cursor)
 			} else {
-				printPreempt()
+				printPrompt()
 			}
 		}
 	}
@@ -390,8 +390,8 @@ func handleStream(stream geminio.Stream) {
 		for {
 			msg, err := stream.Receive(context.TODO())
 			if err != nil {
-				fmt.Printf("\n> streamID: %d receive err: %s\n", stream.StreamID(), err)
-				printPreempt()
+				fmt.Printf("> streamID: %d receive err: %s\n", stream.StreamID(), err)
+				printPrompt()
 				return
 			}
 			msg.Done()
@@ -403,8 +403,8 @@ func handleStream(stream geminio.Stream) {
 				value = ld.Data
 			}
 			if *printmessage {
-				fmt.Printf("\n> receive msg, edgeID: %d streamID: %d data: %s\n", msg.ClientID(), msg.StreamID(), string(value))
-				printPreempt()
+				fmt.Printf("> receive msg, edgeID: %d streamID: %d data: %s\n", msg.ClientID(), msg.StreamID(), string(value))
+				printPrompt()
 			}
 		}
 	}()
@@ -413,13 +413,13 @@ func handleStream(stream geminio.Stream) {
 			data := make([]byte, 1024)
 			_, err := stream.Read(data)
 			if err != nil {
-				fmt.Printf("\n> streamID: %d read err: %s\n", stream.StreamID(), err)
-				printPreempt()
+				fmt.Printf("> streamID: %d read err: %s\n", stream.StreamID(), err)
+				printPrompt()
 				return
 			}
-			fmt.Println("> read data:", stream.ClientID(),
+			fmt.Println("\n> read data:", stream.ClientID(),
 				string(data))
-			printPreempt()
+			printPrompt()
 		}
 	}()
 	go func() {
@@ -429,7 +429,7 @@ func handleStream(stream geminio.Stream) {
 			case "echo":
 				err := stream.Register(context.TODO(), "echo", echo)
 				if err != nil {
-					log.Println("> register echo err:", err)
+					fmt.Println("> register echo err:", err)
 					return
 				}
 			}
@@ -459,15 +459,15 @@ func getID(meta []byte) (uint64, error) {
 }
 
 func online(edgeID uint64, meta []byte, addr net.Addr) error {
-	fmt.Printf("\n> online, edgeID: %d, addr: %s\n", edgeID, addr.String())
-	printPreempt()
+	fmt.Printf("> online, edgeID: %d, addr: %s\n", edgeID, addr.String())
+	printPrompt()
 	edges.Store(edgeID, struct{}{})
 	return nil
 }
 
 func offline(edgeID uint64, meta []byte, addr net.Addr) error {
-	fmt.Printf("\n> offline, edgeID: %d, addr: %s\n", edgeID, addr.String())
-	printPreempt()
+	fmt.Printf("> offline, edgeID: %d, addr: %s\n", edgeID, addr.String())
+	printPrompt()
 	edges.Delete(edgeID)
 	return nil
 }
@@ -481,14 +481,14 @@ func echo(ctx context.Context, req geminio.Request, rsp geminio.Response) {
 		value = ld.Data
 	}
 	if *printmessage {
-		fmt.Printf("\n> rpc called, method: %s edgeID: %d streamID: %d data: %s\n", "echo", req.ClientID(), req.StreamID(), string(value))
-		printPreempt()
+		fmt.Printf("> rpc called, method: %s edgeID: %d streamID: %d data: %s\n", "echo", req.ClientID(), req.StreamID(), string(value))
+		printPrompt()
 	}
 	rsp.SetData(value)
 }
 
-func printPreempt() {
+func printPrompt() {
 	if !*nostdin {
-		printPreempt()
+		fmt.Print(">>> ")
 	}
 }

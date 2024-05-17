@@ -11,7 +11,6 @@ import (
 
 type Versioned interface {
 	client.Object
-	GetMongoDBVersionForAnnotation() string
 	NamespacedName() types.NamespacedName
 	IsChangingVersion() bool
 }
@@ -21,10 +20,6 @@ type patchValue struct {
 	Path  string      `json:"path"`
 	Value interface{} `json:"value"`
 }
-
-const (
-	LastAppliedMongoDBVersion = "mongodb.com/v1.lastAppliedMongoDBVersion"
-)
 
 func GetAnnotation(object client.Object, key string) string {
 	value, ok := object.GetAnnotations()[key]
@@ -73,12 +68,4 @@ func SetAnnotations(ctx context.Context, object client.Object, annotations map[s
 	}
 	object.SetAnnotations(currentObject.GetAnnotations())
 	return nil
-}
-
-func UpdateLastAppliedMongoDBVersion(ctx context.Context, mdb Versioned, kubeclient client.Client) error {
-	annotations := map[string]string{
-		LastAppliedMongoDBVersion: mdb.GetMongoDBVersionForAnnotation(),
-	}
-
-	return SetAnnotations(ctx, mdb, annotations, kubeclient)
 }
