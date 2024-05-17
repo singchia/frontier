@@ -20,7 +20,7 @@ const (
 )
 
 // delegates for frontier itself
-func (fm *FrontierManager) GetClientID(meta []byte) (uint64, error) {
+func (fm *FrontierManager) GetClientID(_ uint64, meta []byte) (uint64, error) {
 	return fm.idFactory.GetID(), nil
 }
 
@@ -170,7 +170,7 @@ func (fm *FrontierManager) ServiceOffline(ctx context.Context, req geminio.Reque
 		rsp.SetError(err)
 		return
 	}
-	err = fm.repo.DeleteService(serviceOffline.ServiceID)
+	err = fm.repo.DeleteService(serviceOffline.ServiceID, serviceOffline.FrontierID)
 	if err != nil {
 		klog.Errorf("frontier manager service offline, delete service err: %s, serviceID: %d", err, serviceOffline.ServiceID)
 		rsp.SetError(err)

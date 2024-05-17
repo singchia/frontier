@@ -157,7 +157,9 @@ func (sm *serviceManager) Heartbeat(d delegate.ConnDescriber) error {
 }
 
 // actually the meta is service
-func (sm *serviceManager) GetClientID(meta []byte) (uint64, error) {
-	// TODO
+func (sm *serviceManager) GetClientID(wantedID uint64, meta []byte) (uint64, error) {
+	if wantedID != 0 {
+		return wantedID, nil
+	}
 	return sm.idFactory.GetID(), nil
 }

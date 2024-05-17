@@ -26,29 +26,35 @@ frontlas-linux:
 .PHONY: examples
 examples:
 	make -C examples
+	mv examples/iclm/bin/* ./bin/
 
 # clean
 .PHONY: clean
 clean:
-	rm ./bin/frontier || true
-	rm ./bin/frontlas || true
+	rm ./bin/* || true
 	make clean -C examples
 	make clean -C test/bench
 
 # install
 .PHONY: install-frontier
-install-frontier:
+install-frontier: frontier
 	install -m 0755 -d $(DESTDIR)$(BINDIR)
 	install -m 0755 -d $(DESTDIR)$(CONFDIR)
 	install -m 0755 ./bin/frontier $(DESTDIR)$(BINDIR)
 	install -m 0755 ./etc/frontier.yaml $(DESTDIR)$(CONFDIR)
 
 .PHONY: install-frontlas
-install-frontlas:
+install-frontlas: frontlas
 	install -m 0755 -d $(DESTDIR)$(BINDIR)
 	install -m 0755 -d $(DESTDIR)$(CONFDIR)
 	install -m 0755 ./bin/frontlas $(DESTDIR)$(BINDIR)
 	install -m 0755 ./etc/frontlas.yaml $(DESTDIR)$(CONFDIR)
+
+.PHONY: install-example-iclm
+install-example-iclm: examples
+	install -m 0755 -d $(DESTDIR)$(BINDIR)
+	install -m 0755 ./bin/iclm_service $(DESTDIR)$(BINDIR)
+	install -m 0755 ./bin/iclm_edge $(DESTDIR)$(BINDIR)
 
 # image
 .PHONY: image-frontier
@@ -67,6 +73,10 @@ image-gen-api:
 image-gen-swagger:
 	docker buildx build -t frontier-gen-swagger:${VERSION} -f images/Dockerfile.controlplane-swagger .
 
+.PHONY: image-example-iclm
+image-example-iclm:
+	docker buildx build -t ${REGISTRY}/iclm_service:${VERSION} -f images/Dockerfile.example_iclm_service .
+
 # push
 .PHONY: push
 push: push-frontier push-frontlas
@@ -78,6 +88,10 @@ push-frontier:
 .PHONY: push-frontlas
 push-frontlas:
 	docker push ${REGISTRY}/frontlas:${VERSION}
+
+.PHONY: push-example-iclm
+push-example-iclm:
+	docker push ${REGISTRY}/iclm_service:${VERSION} 
 
 # container
 .PHONY: container

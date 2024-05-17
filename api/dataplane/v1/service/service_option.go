@@ -20,7 +20,8 @@ type serviceOption struct {
 	// to tell frontier what service we are
 	service string
 	// delegate to know online offline stuff
-	delegate Delegate
+	delegate  Delegate
+	serviceID uint64
 }
 
 type ServiceOption func(*serviceOption)
@@ -54,5 +55,11 @@ func OptionServiceName(service string) ServiceOption {
 func OptionServiceDelegate(delegate Delegate) ServiceOption {
 	return func(opt *serviceOption) {
 		opt.delegate = delegate
+	}
+}
+
+func OptionServiceID(serviceID uint64) ServiceOption {
+	return func(opt *serviceOption) {
+		opt.serviceID = serviceID
 	}
 }

@@ -73,7 +73,6 @@ func (fm *FrontierManager) handleConn(conn net.Conn) error {
 	opt.SetTimer(fm.tmr)
 	opt.SetDelegate(fm)
 	opt.SetLog(log.NewKLog())
-	opt.SetDelegate(fm)
 	end, err := server.NewEndWithConn(conn, opt)
 	if err != nil {
 		klog.Errorf("frontier manager handle conn, geminio server new err: %s", err)

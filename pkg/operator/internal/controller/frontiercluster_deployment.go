@@ -53,6 +53,21 @@ func (r *FrontierClusterReconciler) ensureDeployment(ctx context.Context, fc v1a
 		return false, fmt.Errorf("error creating/updating frontlas Deployment: %s", err)
 	}
 
+	currentFrontlasDeployment, err := r.client.GetDeployment(ctx, fc.FrontlasDeploymentNamespacedName())
+	if err != nil {
+		return false, fmt.Errorf("error getting Deployment: %s", err)
+	}
+	frontlasIsReady := deployment.IsReady(currentFrontlasDeployment, fc.FrontlasReplicas())
+	if !frontlasIsReady {
+		log.Info("frontlas deployment is not ready",
+			"expectedReplicas", fc.FrontierReplicas(),
+			"updatedReplicas", currentFrontlasDeployment.Status.UpdatedReplicas,
+			"readyReplicas", currentFrontlasDeployment.Status.ReadyReplicas,
+			"generation", currentFrontlasDeployment.Generation,
+			"observedGeneration", currentFrontlasDeployment.Status.ObservedGeneration)
+		return false, nil
+	}
+
 	log.Info("Creating/Updating Frontier Deployment")
 	if err := r.ensureFrontierDeployment(ctx, fc); err != nil {
 		return false, fmt.Errorf("error creating/updating frontier Deployment: %s", err)
@@ -63,12 +78,15 @@ func (r *FrontierClusterReconciler) ensureDeployment(ctx context.Context, fc v1a
 		return false, fmt.Errorf("error getting Deployment: %s", err)
 	}
 	frontierIsReady := deployment.IsReady(currentFrontierDeployment, fc.FrontierReplicas())
-
-	currentFrontlasDeployment, err := r.client.GetDeployment(ctx, fc.FrontlasDeploymentNamespacedName())
-	if err != nil {
-		return false, fmt.Errorf("error getting Deployment: %s", err)
+	if !frontierIsReady {
+		log.Info("frontier deployment is not ready",
+			"expectedReplicas", fc.FrontierReplicas(),
+			"updatedReplicas", currentFrontierDeployment.Status.UpdatedReplicas,
+			"readyReplicas", currentFrontierDeployment.Status.ReadyReplicas,
+			"generation", currentFrontierDeployment.Generation,
+			"observedGeneration", currentFrontierDeployment.Status.ObservedGeneration)
+		return false, nil
 	}
-	frontlasIsReady := deployment.IsReady(currentFrontlasDeployment, fc.FrontlasReplicas())
 
 	return frontierIsReady && frontlasIsReady, nil
 }
@@ -269,7 +287,7 @@ func (r *FrontierClusterReconciler) ensureFrontlasDeployment(ctx context.Context
 		SetServiceName(service).
 		SetLabels(labels).
 		SetMatchLabels(labels).
-		SetReplicas(fc.FrontierReplicas()).
+		SetReplicas(fc.FrontlasReplicas()).
 		SetPodTemplateSpec(podTemplateSpec).
 		SetOwnerReference(fc.GetOwnerReferences()).
 		Build()

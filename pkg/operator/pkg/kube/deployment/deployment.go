@@ -75,6 +75,5 @@ func GetAndUpdate(ctx context.Context, getUpdater GetUpdater, nsName types.Names
 func IsReady(deployment appsv1.Deployment, expectedReplicas int) bool {
 	allUpdated := int32(expectedReplicas) == deployment.Status.UpdatedReplicas
 	allReady := int32(expectedReplicas) == deployment.Status.ReadyReplicas
-	atExpectedGeneration := deployment.Generation == deployment.Status.ObservedGeneration
-	return allUpdated && allReady && atExpectedGeneration
+	return allUpdated && allReady
 }

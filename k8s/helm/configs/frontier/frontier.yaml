@@ -9,7 +9,7 @@ daemon:
 edgebound:
   listen:
     network: tcp
-    addr: 0.0.0.0:2432
+    addr: 0.0.0.0:30012
     tls:
       enable: false
       mtls: false
@@ -37,7 +37,7 @@ edgebound:
 servicebound:
   listen:
     network: tcp
-    addr: 0.0.0.0:2431
+    addr: 0.0.0.0:30011
     tls:
       enable: false
       mtls: false

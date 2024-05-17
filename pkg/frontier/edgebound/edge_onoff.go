@@ -169,7 +169,7 @@ func (em *edgeManager) RemoteRegistration(rpc string, edgeID, streamID uint64) {
 	}
 }
 
-func (em *edgeManager) GetClientID(meta []byte) (uint64, error) {
+func (em *edgeManager) GetClientID(_ uint64, meta []byte) (uint64, error) {
 	var (
 		edgeID uint64
 		err    error

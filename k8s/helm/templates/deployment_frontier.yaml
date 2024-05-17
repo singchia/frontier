@@ -41,10 +41,10 @@ spec:
               containerPort: 2430
               protocol: TCP
             - name: servicebound
-              containerPort: 2431
+              containerPort: 30011
               protocol: TCP
             - name: edgebound
-              containerPort: 2432
+              containerPort: 30012
               protocol: TCP
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

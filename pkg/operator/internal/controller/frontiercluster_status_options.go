@@ -21,7 +21,7 @@ const (
 )
 
 // optionBuilder is in charge of constructing a slice of options that
-// will be applied on top of the MongoDB resource that has been provided
+// will be applied on top of the FrontierCluster resource that has been provided
 type optionBuilder struct {
 	options []status.Option
 }

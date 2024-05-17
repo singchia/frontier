@@ -135,7 +135,7 @@ func main() {
 			// 1. close
 			// 2. quit
 			if parts[0] == "help" {
-				fmt.Println(`the cli protocol
+				fmt.Println(`the command-line protocol
 	1. close
 	2. quit
 	3. open {service}

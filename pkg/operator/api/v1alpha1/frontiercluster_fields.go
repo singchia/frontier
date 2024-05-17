@@ -2,6 +2,8 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -151,4 +153,16 @@ func (fc *FrontierCluster) FrontlasReplicas() int {
 // for lable
 func (fc *FrontierCluster) AppName() string {
 	return fc.Name
+}
+
+// ownerReference
+func (fc *FrontierCluster) GetOwnerReferences() []metav1.OwnerReference {
+	ownerReference := *metav1.NewControllerRef(fc, schema.GroupVersionKind{
+		Group:   GroupVersion.Group,
+		Version: GroupVersion.Version,
+		Kind:    fc.Kind,
+	})
+	controller := true
+	ownerReference.Controller = &controller
+	return []metav1.OwnerReference{ownerReference}
 }
