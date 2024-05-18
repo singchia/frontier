@@ -4,12 +4,12 @@ import (
 	"context"
 
 	v1 "github.com/singchia/frontier/api/controlplane/frontier/v1"
-	"github.com/singchia/frontier/pkg/frontier/repo/dao"
 	"github.com/singchia/frontier/pkg/frontier/repo/model"
+	"github.com/singchia/frontier/pkg/frontier/repo/query"
 )
 
 func (cps *ControlPlaneService) listEdges(_ context.Context, req *v1.ListEdgesRequest) (*v1.ListEdgesResponse, error) {
-	query := &dao.EdgeQuery{}
+	query := &query.EdgeQuery{}
 	// conditions
 	if req.Meta != nil {
 		query.Meta = *req.Meta
@@ -79,7 +79,7 @@ func (cps *ControlPlaneService) kickEdge(_ context.Context, req *v1.KickEdgeRequ
 }
 
 func (cps *ControlPlaneService) listEdgeRPCs(_ context.Context, req *v1.ListEdgeRPCsRequest) (*v1.ListEdgeRPCsResponse, error) {
-	query := &dao.EdgeRPCQuery{}
+	query := &query.EdgeRPCQuery{}
 	// conditions
 	if req.EdgeId != nil {
 		query.EdgeID = *req.EdgeId

@@ -3,63 +3,46 @@ package dao
 import (
 	"github.com/singchia/frontier/pkg/frontier/config"
 	"github.com/singchia/frontier/pkg/frontier/repo/model"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
-	"k8s.io/klog/v2"
+	"github.com/singchia/frontier/pkg/frontier/repo/query"
 )
 
-type Dao struct {
-	dbEdge, dbService *gorm.DB
-
-	// config
-	config config.Configuration
+type Dao interface {
+	Close() error
+	CountEdgeRPCs(query *query.EdgeRPCQuery) (int64, error)
+	CountEdges(query *query.EdgeQuery) (int64, error)
+	CountServiceRPCs(query *query.ServiceRPCQuery) (int64, error)
+	CountServiceTopics(query *query.ServiceTopicQuery) (int64, error)
+	CountServices(query *query.ServiceQuery) (int64, error)
+	CreateEdge(edge *model.Edge) error
+	CreateEdgeRPC(rpc *model.EdgeRPC) error
+	CreateService(service *model.Service) error
+	CreateServiceRPC(rpc *model.ServiceRPC) error
+	CreateServiceTopic(topic *model.ServiceTopic) error
+	DeleteEdge(delete *query.EdgeDelete) error
+	DeleteEdgeRPCs(edgeID uint64) error
+	DeleteService(delete *query.ServiceDelete) error
+	DeleteServiceRPCs(serviceID uint64) error
+	DeleteServiceTopics(serviceID uint64) error
+	GetEdge(edgeID uint64) (*model.Edge, error)
+	GetService(serviceID uint64) (*model.Service, error)
+	GetServiceByName(name string) (*model.Service, error)
+	GetServiceRPC(rpc string) (*model.ServiceRPC, error)
+	GetServiceTopic(topic string) (*model.ServiceTopic, error)
+	ListEdgeRPCs(query *query.EdgeRPCQuery) ([]string, error)
+	ListEdges(query *query.EdgeQuery) ([]*model.Edge, error)
+	ListServiceRPCs(query *query.ServiceRPCQuery) ([]string, error)
+	ListServiceTopics(query *query.ServiceTopicQuery) ([]string, error)
+	ListServices(query *query.ServiceQuery) ([]*model.Service, error)
 }
 
-func NewDao(config *config.Configuration) (*Dao, error) {
-	// we split edge and service sqlite3 memory databases, since the concurrent
-	// writes perform bad, see https://github.com/mattn/go-sqlite3/issues/274
-
-	// edget bound models
-	dbEdge, err := gorm.Open(sqlite.Open("file:edge?mode=memory&cache=shared"))
-	if err != nil {
-		klog.Errorf("dao open edge sqlite3 err: %s", err)
-		return nil, err
-	}
-	sqlDB, err := dbEdge.DB()
-	if err != nil {
-		klog.Errorf("get edge DB err: %s", err)
-		return nil, err
-	}
-	sqlDB.SetMaxOpenConns(1)
-	if err = dbEdge.AutoMigrate(&model.Edge{}, &model.EdgeRPC{}); err != nil {
-		return nil, err
-	}
-
-	// service bound models
-	dbService, err := gorm.Open(sqlite.Open("file:service?mode=memory&cache=shared"))
-	if err != nil {
-		klog.Errorf("dao open service sqlite3 err: %s", err)
-		return nil, err
-	}
-	sqlDB, err = dbService.DB()
-	if err != nil {
-		klog.Errorf("get service DB err: %s", err)
-		return nil, err
-	}
-	sqlDB.SetMaxOpenConns(1)
-	if err = dbService.AutoMigrate(&model.Service{}, &model.ServiceRPC{}, &model.ServiceTopic{}); err != nil {
-		return nil, err
-	}
-	return &Dao{
-		dbEdge:    dbEdge,
-		dbService: dbService,
-	}, nil
+type dao struct {
+	config *config.Configuration
 }
 
-func (dao *Dao) Close() error {
-	sqlDB, err := dao.dbEdge.DB()
-	if err != nil {
-		return err
-	}
-	return sqlDB.Close()
+func NewDao(config *config.Configuration) (Dao, error) {
+	return nil, nil
+}
+
+func (dao *dao) Close() error {
+	return nil
 }

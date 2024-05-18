@@ -1,23 +1,14 @@
-package dao
+package memsqlite
 
 import (
 	"github.com/singchia/frontier/pkg/frontier/repo/model"
+	"github.com/singchia/frontier/pkg/frontier/repo/query"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
-type ServiceQuery struct {
-	Query
-	// Condition fields
-	Service   string
-	Addr      string
-	RPC       string
-	Topic     string
-	ServiceID uint64
-}
-
 // service
-func (dao *Dao) ListServices(query *ServiceQuery) ([]*model.Service, error) {
+func (dao *dao) ListServices(query *query.ServiceQuery) ([]*model.Service, error) {
 	tx := dao.dbService.Model(&model.Service{})
 	if dao.config.Dao.Debug {
 		tx = tx.Debug()
@@ -48,7 +39,7 @@ func (dao *Dao) ListServices(query *ServiceQuery) ([]*model.Service, error) {
 	return services, tx.Error
 }
 
-func (dao *Dao) CountServices(query *ServiceQuery) (int64, error) {
+func (dao *dao) CountServices(query *query.ServiceQuery) (int64, error) {
 	tx := dao.dbService.Model(&model.Service{})
 	if dao.config.Dao.Debug {
 		tx = tx.Debug()
@@ -60,7 +51,7 @@ func (dao *Dao) CountServices(query *ServiceQuery) (int64, error) {
 	return count, tx.Error
 }
 
-func (dao *Dao) GetService(serviceID uint64) (*model.Service, error) {
+func (dao *dao) GetService(serviceID uint64) (*model.Service, error) {
 	tx := dao.dbService.Model(&model.Service{})
 	if dao.config.Dao.Debug {
 		tx = tx.Debug()
@@ -75,7 +66,7 @@ func (dao *Dao) GetService(serviceID uint64) (*model.Service, error) {
 	return &service, tx.Error
 }
 
-func (dao *Dao) GetServiceByName(name string) (*model.Service, error) {
+func (dao *dao) GetServiceByName(name string) (*model.Service, error) {
 	tx := dao.dbService.Model(&model.Service{})
 	if dao.config.Dao.Debug {
 		tx = tx.Debug()
@@ -95,7 +86,7 @@ type ServiceDelete struct {
 	Addr      string
 }
 
-func (dao *Dao) DeleteService(delete *ServiceDelete) error {
+func (dao *dao) DeleteService(delete *query.ServiceDelete) error {
 	tx := dao.dbService
 	if dao.config.Dao.Debug {
 		tx = tx.Debug()
@@ -104,7 +95,7 @@ func (dao *Dao) DeleteService(delete *ServiceDelete) error {
 	return tx.Delete(&model.Service{}).Error
 }
 
-func (dao *Dao) CreateService(service *model.Service) error {
+func (dao *dao) CreateService(service *model.Service) error {
 	var tx *gorm.DB
 	if dao.config.Dao.Debug {
 		tx = tx.Debug()
@@ -113,7 +104,7 @@ func (dao *Dao) CreateService(service *model.Service) error {
 	return tx.Error
 }
 
-func buildServiceQuery(tx *gorm.DB, query *ServiceQuery) *gorm.DB {
+func buildServiceQuery(tx *gorm.DB, query *query.ServiceQuery) *gorm.DB {
 	// join
 	if query.RPC != "" {
 		tx = tx.InnerJoins("INNER JOIN service_rpcs ON services.service_id = service_rpcs.service_id AND service_rpcs.rpc = ?", query.RPC)
@@ -140,7 +131,7 @@ func buildServiceQuery(tx *gorm.DB, query *ServiceQuery) *gorm.DB {
 	return tx
 }
 
-func buildServiceDelete(tx *gorm.DB, delete *ServiceDelete) *gorm.DB {
+func buildServiceDelete(tx *gorm.DB, delete *query.ServiceDelete) *gorm.DB {
 	if delete.ServiceID != 0 {
 		tx = tx.Where("service_id = ?", delete.ServiceID)
 	}
@@ -151,14 +142,8 @@ func buildServiceDelete(tx *gorm.DB, delete *ServiceDelete) *gorm.DB {
 }
 
 // service rpc
-type ServiceRPCQuery struct {
-	Query
-	// Condition fields
-	Service   string
-	ServiceID uint64
-}
 
-func (dao *Dao) GetServiceRPC(rpc string) (*model.ServiceRPC, error) {
+func (dao *dao) GetServiceRPC(rpc string) (*model.ServiceRPC, error) {
 	tx := dao.dbService.Model(&model.ServiceRPC{})
 	if dao.config.Dao.Debug {
 		tx = tx.Debug()
@@ -175,7 +160,7 @@ func (dao *Dao) GetServiceRPC(rpc string) (*model.ServiceRPC, error) {
 	return &mrpc, tx.Error
 }
 
-func (dao *Dao) ListServiceRPCs(query *ServiceRPCQuery) ([]string, error) {
+func (dao *dao) ListServiceRPCs(query *query.ServiceRPCQuery) ([]string, error) {
 	tx := dao.dbService.Model(&model.ServiceRPC{})
 	if dao.config.Dao.Debug {
 		tx = tx.Debug()
@@ -205,7 +190,7 @@ func (dao *Dao) ListServiceRPCs(query *ServiceRPCQuery) ([]string, error) {
 	return rpcs, tx.Error
 }
 
-func (dao *Dao) CountServiceRPCs(query *ServiceRPCQuery) (int64, error) {
+func (dao *dao) CountServiceRPCs(query *query.ServiceRPCQuery) (int64, error) {
 	tx := dao.dbService.Model(&model.ServiceRPC{})
 	if dao.config.Dao.Debug {
 		tx = tx.Debug()
@@ -217,7 +202,7 @@ func (dao *Dao) CountServiceRPCs(query *ServiceRPCQuery) (int64, error) {
 	return count, tx.Error
 }
 
-func (dao *Dao) DeleteServiceRPCs(serviceID uint64) error {
+func (dao *dao) DeleteServiceRPCs(serviceID uint64) error {
 	tx := dao.dbService.Where("service_id = ?", serviceID)
 	if dao.config.Dao.Debug {
 		tx = tx.Debug()
@@ -225,7 +210,7 @@ func (dao *Dao) DeleteServiceRPCs(serviceID uint64) error {
 	return tx.Delete(&model.ServiceRPC{}).Error
 }
 
-func (dao *Dao) CreateServiceRPC(rpc *model.ServiceRPC) error {
+func (dao *dao) CreateServiceRPC(rpc *model.ServiceRPC) error {
 	tx := dao.dbService
 	if dao.config.Dao.Debug {
 		tx = tx.Debug()
@@ -233,7 +218,7 @@ func (dao *Dao) CreateServiceRPC(rpc *model.ServiceRPC) error {
 	return tx.Create(rpc).Error
 }
 
-func buildServiceRPCQuery(tx *gorm.DB, query *ServiceRPCQuery) *gorm.DB {
+func buildServiceRPCQuery(tx *gorm.DB, query *query.ServiceRPCQuery) *gorm.DB {
 	// join and search
 	if query.Service != "" {
 		tx = tx.InnerJoins("INNER JOIN services ON services.service_id = service_rpcs.service_id AND service LIKE ?", "%"+query.Service+"%")
@@ -250,14 +235,8 @@ func buildServiceRPCQuery(tx *gorm.DB, query *ServiceRPCQuery) *gorm.DB {
 }
 
 // service topic
-type ServiceTopicQuery struct {
-	Query
-	// Condition fields
-	Service   string
-	ServiceID uint64
-}
 
-func (dao *Dao) GetServiceTopic(topic string) (*model.ServiceTopic, error) {
+func (dao *dao) GetServiceTopic(topic string) (*model.ServiceTopic, error) {
 	tx := dao.dbService.Model(&model.ServiceTopic{})
 	if dao.config.Dao.Debug {
 		tx = tx.Debug()
@@ -272,7 +251,7 @@ func (dao *Dao) GetServiceTopic(topic string) (*model.ServiceTopic, error) {
 	return &mtopic, tx.Error
 }
 
-func (dao *Dao) ListServiceTopics(query *ServiceTopicQuery) ([]string, error) {
+func (dao *dao) ListServiceTopics(query *query.ServiceTopicQuery) ([]string, error) {
 	tx := dao.dbService.Model(&model.ServiceTopic{})
 	if dao.config.Dao.Debug {
 		tx = tx.Debug()
@@ -303,7 +282,7 @@ func (dao *Dao) ListServiceTopics(query *ServiceTopicQuery) ([]string, error) {
 	return topics, tx.Error
 }
 
-func (dao *Dao) CountServiceTopics(query *ServiceTopicQuery) (int64, error) {
+func (dao *dao) CountServiceTopics(query *query.ServiceTopicQuery) (int64, error) {
 	tx := dao.dbService.Model(&model.ServiceTopic{})
 	if dao.config.Dao.Debug {
 		tx = tx.Debug()
@@ -315,7 +294,7 @@ func (dao *Dao) CountServiceTopics(query *ServiceTopicQuery) (int64, error) {
 	return count, tx.Error
 }
 
-func (dao *Dao) DeleteServiceTopics(serviceID uint64) error {
+func (dao *dao) DeleteServiceTopics(serviceID uint64) error {
 	tx := dao.dbService.Where("service_id = ?", serviceID)
 	if dao.config.Dao.Debug {
 		tx = tx.Debug()
@@ -323,7 +302,7 @@ func (dao *Dao) DeleteServiceTopics(serviceID uint64) error {
 	return tx.Delete(&model.ServiceTopic{}).Error
 }
 
-func (dao *Dao) CreateServiceTopic(topic *model.ServiceTopic) error {
+func (dao *dao) CreateServiceTopic(topic *model.ServiceTopic) error {
 	tx := dao.dbService
 	if dao.config.Dao.Debug {
 		tx = tx.Debug()
@@ -331,7 +310,7 @@ func (dao *Dao) CreateServiceTopic(topic *model.ServiceTopic) error {
 	return tx.Create(topic).Error
 }
 
-func buildServiceTopicQuery(tx *gorm.DB, query *ServiceTopicQuery) *gorm.DB {
+func buildServiceTopicQuery(tx *gorm.DB, query *query.ServiceTopicQuery) *gorm.DB {
 	// join and search
 	if query.Service != "" {
 		tx = tx.InnerJoins("INNER JOIN services ON services.service_id = service_topics.service_id AND service LIKE ?", "%"+query.Service+"%")

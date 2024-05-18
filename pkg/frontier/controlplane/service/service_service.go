@@ -4,12 +4,12 @@ import (
 	"context"
 
 	v1 "github.com/singchia/frontier/api/controlplane/frontier/v1"
-	"github.com/singchia/frontier/pkg/frontier/repo/dao"
 	"github.com/singchia/frontier/pkg/frontier/repo/model"
+	"github.com/singchia/frontier/pkg/frontier/repo/query"
 )
 
 func (cps *ControlPlaneService) listServices(_ context.Context, req *v1.ListServicesRequest) (*v1.ListServicesResponse, error) {
-	query := &dao.ServiceQuery{}
+	query := &query.ServiceQuery{}
 	// conditions
 	if req.Service != nil {
 		query.Service = *req.Service
@@ -82,7 +82,7 @@ func (cps *ControlPlaneService) kickService(_ context.Context, req *v1.KickServi
 }
 
 func (cps *ControlPlaneService) listServiceRPCs(_ context.Context, req *v1.ListServiceRPCsRequest) (*v1.ListServiceRPCsResponse, error) {
-	query := &dao.ServiceRPCQuery{}
+	query := &query.ServiceRPCQuery{}
 	// conditions
 	if req.ServiceId != nil {
 		query.ServiceID = *req.ServiceId
@@ -129,7 +129,7 @@ func (cps *ControlPlaneService) listServiceRPCs(_ context.Context, req *v1.ListS
 }
 
 func (cps *ControlPlaneService) listServiceTopics(_ context.Context, req *v1.ListServiceTopicsRequest) (*v1.ListServiceTopicsResponse, error) {
-	query := &dao.ServiceTopicQuery{}
+	query := &query.ServiceTopicQuery{}
 	// conditions
 	if req.ServiceId != nil {
 		query.ServiceID = *req.ServiceId

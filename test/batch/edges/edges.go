@@ -25,7 +25,7 @@ func main() {
 	network := pflag.String("network", "tcp", "network to dial")
 	address := pflag.String("address", "127.0.0.1:30012", "address to dial")
 	loglevel := pflag.String("loglevel", "info", "log level, trace debug info warn error")
-	count := pflag.Int("count", 10000, "messages to publish")
+	count := pflag.Int("count", 10000, "edges to dial")
 	topic := pflag.String("topic", "test", "topic to specific")
 	nseconds := pflag.Int("nseconds", 10, "publish message every n seconds for every edge")
 
@@ -74,6 +74,7 @@ func main() {
 			mtx.Lock()
 			delete(edges, i)
 			mtx.Unlock()
+			cli.Close()
 		}(i)
 	}
 

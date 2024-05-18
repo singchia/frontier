@@ -6,17 +6,23 @@ import (
 	"log"
 	"net"
 	"os"
+	"strconv"
 	"sync"
+	"time"
 
 	armlog "github.com/jumboframes/armorigo/log"
 	"github.com/singchia/frontier/api/dataplane/v1/service"
+	"github.com/singchia/frontier/test/misc"
 	"github.com/singchia/geminio"
+	"github.com/singchia/go-timer/v2"
 	"github.com/spf13/pflag"
 )
 
 var (
-	sts = map[uint64]geminio.Stream{}
-	mtx sync.RWMutex
+	sts     = map[uint64]geminio.Stream{} // streamID stream
+	stats   = map[string]uint64{}         // clientID count
+	updated bool
+	mtx     sync.RWMutex
 )
 
 func main() {
@@ -24,6 +30,7 @@ func main() {
 	address := pflag.String("address", "127.0.0.1:30011", "address to dial")
 	serviceName := pflag.String("service", "foo", "service name")
 	loglevel := pflag.String("loglevel", "info", "log level, trace debug info warn error")
+	printstats := pflag.Bool("printstats", false, "whether print topic stats")
 
 	pflag.Parse()
 	dialer := func() (net.Conn, error) {
@@ -37,6 +44,20 @@ func main() {
 	}
 	armlog.SetLevel(level)
 	armlog.SetOutput(os.Stdout)
+
+	if *printstats {
+		t := timer.NewTimer()
+		t.Add(10*time.Second, timer.WithCyclically(), timer.WithHandler(func(e *timer.Event) {
+			mtx.Lock()
+			defer mtx.Unlock()
+			if !updated {
+				return
+			}
+			fmt.Printf("\033[2K\r stream number now: %d\n", len(sts))
+			misc.PrintMap(stats)
+			updated = false
+		}))
+	}
 
 	// get service
 	opt := []service.ServiceOption{service.OptionServiceLog(armlog.DefaultLog), service.OptionServiceName(*serviceName)}
@@ -56,9 +77,16 @@ func main() {
 			fmt.Printf("> accept stream err: %s", err)
 			continue
 		}
+		clientID := strconv.FormatUint(st.ClientID(), 10)
 		mtx.Lock()
 		sts[st.StreamID()] = st
-		fmt.Print("\033[2K\r stream number:", len(sts))
+		count, ok := stats[clientID]
+		if !ok {
+			stats[clientID] = 1
+		} else {
+			stats[clientID] = count + 1
+		}
+		updated = true
 		mtx.Unlock()
 
 		go func(st geminio.Stream) {
@@ -67,8 +95,8 @@ func main() {
 			if err == io.EOF {
 				mtx.Lock()
 				delete(sts, st.StreamID())
+				updated = true
 				mtx.Unlock()
-				fmt.Printf("\033[2K\r stream number: %d", len(sts))
 			}
 		}(st)
 	}

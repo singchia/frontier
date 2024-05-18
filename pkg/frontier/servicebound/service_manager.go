@@ -11,6 +11,7 @@ import (
 	"github.com/jumboframes/armorigo/synchub"
 	"github.com/singchia/frontier/pkg/frontier/apis"
 	"github.com/singchia/frontier/pkg/frontier/config"
+	"github.com/singchia/frontier/pkg/frontier/misc"
 	"github.com/singchia/frontier/pkg/frontier/repo/model"
 	"github.com/singchia/frontier/pkg/mapmap"
 	"github.com/singchia/frontier/pkg/utils"
@@ -77,6 +78,9 @@ func newServiceManager(conf *config.Configuration, repo apis.Repo, informer apis
 		informer:  informer,
 		exchange:  exchange,
 		mqm:       mqm,
+	}
+	if misc.IsNil(informer) {
+		sm.informer = nil
 	}
 	exchange.AddServicebound(sm)
 	ln, err := utils.Listen(listen)

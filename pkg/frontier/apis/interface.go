@@ -3,8 +3,8 @@ package apis
 import (
 	"net"
 
-	"github.com/singchia/frontier/pkg/frontier/repo/dao"
 	"github.com/singchia/frontier/pkg/frontier/repo/model"
+	"github.com/singchia/frontier/pkg/frontier/repo/query"
 	"github.com/singchia/geminio"
 )
 
@@ -71,19 +71,19 @@ type ServiceInformer interface {
 // repo
 type Repo interface {
 	Close() error
-	CountEdgeRPCs(query *dao.EdgeRPCQuery) (int64, error)
-	CountEdges(query *dao.EdgeQuery) (int64, error)
-	CountServiceRPCs(query *dao.ServiceRPCQuery) (int64, error)
-	CountServiceTopics(query *dao.ServiceTopicQuery) (int64, error)
-	CountServices(query *dao.ServiceQuery) (int64, error)
+	CountEdgeRPCs(query *query.EdgeRPCQuery) (int64, error)
+	CountEdges(query *query.EdgeQuery) (int64, error)
+	CountServiceRPCs(query *query.ServiceRPCQuery) (int64, error)
+	CountServiceTopics(query *query.ServiceTopicQuery) (int64, error)
+	CountServices(query *query.ServiceQuery) (int64, error)
 	CreateEdge(edge *model.Edge) error
 	CreateEdgeRPC(rpc *model.EdgeRPC) error
 	CreateService(service *model.Service) error
 	CreateServiceRPC(rpc *model.ServiceRPC) error
 	CreateServiceTopic(topic *model.ServiceTopic) error
-	DeleteEdge(delete *dao.EdgeDelete) error
+	DeleteEdge(delete *query.EdgeDelete) error
 	DeleteEdgeRPCs(edgeID uint64) error
-	DeleteService(delete *dao.ServiceDelete) error
+	DeleteService(delete *query.ServiceDelete) error
 	DeleteServiceRPCs(serviceID uint64) error
 	DeleteServiceTopics(serviceID uint64) error
 	GetEdge(edgeID uint64) (*model.Edge, error)
@@ -91,11 +91,11 @@ type Repo interface {
 	GetServiceByName(name string) (*model.Service, error)
 	GetServiceRPC(rpc string) (*model.ServiceRPC, error)
 	GetServiceTopic(topic string) (*model.ServiceTopic, error)
-	ListEdgeRPCs(query *dao.EdgeRPCQuery) ([]string, error)
-	ListEdges(query *dao.EdgeQuery) ([]*model.Edge, error)
-	ListServiceRPCs(query *dao.ServiceRPCQuery) ([]string, error)
-	ListServiceTopics(query *dao.ServiceTopicQuery) ([]string, error)
-	ListServices(query *dao.ServiceQuery) ([]*model.Service, error)
+	ListEdgeRPCs(query *query.EdgeRPCQuery) ([]string, error)
+	ListEdges(query *query.EdgeQuery) ([]*model.Edge, error)
+	ListServiceRPCs(query *query.ServiceRPCQuery) ([]string, error)
+	ListServiceTopics(query *query.ServiceTopicQuery) ([]string, error)
+	ListServices(query *query.ServiceQuery) ([]*model.Service, error)
 }
 
 // mq manager and mq related

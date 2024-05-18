@@ -1,4 +1,4 @@
-package dao
+package memsqlite
 
 import (
 	"sync/atomic"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/singchia/frontier/pkg/frontier/config"
 	"github.com/singchia/frontier/pkg/frontier/repo/model"
+	"github.com/singchia/frontier/pkg/frontier/repo/query"
 )
 
 func TestListServices(t *testing.T) {
@@ -64,7 +65,7 @@ func TestListServices(t *testing.T) {
 	}
 
 	// list
-	services, err := dao.ListServices(&ServiceQuery{
+	services, err := dao.ListServices(&query.ServiceQuery{
 		RPC:   "foo",
 		Topic: "bar",
 	})

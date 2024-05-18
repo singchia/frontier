@@ -7,8 +7,8 @@ import (
 
 	"github.com/jumboframes/armorigo/synchub"
 	"github.com/singchia/frontier/pkg/frontier/apis"
-	"github.com/singchia/frontier/pkg/frontier/repo/dao"
 	"github.com/singchia/frontier/pkg/frontier/repo/model"
+	"github.com/singchia/frontier/pkg/frontier/repo/query"
 	"github.com/singchia/geminio"
 	"github.com/singchia/geminio/delegate"
 	"k8s.io/klog/v2"
@@ -85,7 +85,7 @@ func (sm *serviceManager) offline(serviceID uint64, addr net.Addr) error {
 	}()
 
 	// clear memdb
-	if err := sm.repo.DeleteService(&dao.ServiceDelete{
+	if err := sm.repo.DeleteService(&query.ServiceDelete{
 		ServiceID: serviceID,
 		Addr:      addr.String(),
 	}); err != nil {

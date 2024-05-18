@@ -11,6 +11,7 @@ import (
 	"github.com/jumboframes/armorigo/synchub"
 	"github.com/singchia/frontier/pkg/frontier/apis"
 	"github.com/singchia/frontier/pkg/frontier/config"
+	"github.com/singchia/frontier/pkg/frontier/misc"
 	"github.com/singchia/frontier/pkg/mapmap"
 	"github.com/singchia/frontier/pkg/utils"
 	"github.com/singchia/geminio"
@@ -74,6 +75,9 @@ func newEdgeManager(conf *config.Configuration, repo apis.Repo, informer apis.Ed
 		idFactory: id.DefaultIncIDCounter,
 		informer:  informer,
 		exchange:  exchange,
+	}
+	if misc.IsNil(informer) {
+		em.informer = nil
 	}
 	exchange.AddEdgebound(em)
 

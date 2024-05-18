@@ -1,4 +1,4 @@
-package dao
+package memsqlite
 
 import (
 	"encoding/json"
@@ -9,6 +9,7 @@ import (
 
 	"github.com/singchia/frontier/pkg/frontier/config"
 	"github.com/singchia/frontier/pkg/frontier/repo/model"
+	"github.com/singchia/frontier/pkg/frontier/repo/query"
 )
 
 func TestCreateEdge(t *testing.T) {
@@ -56,7 +57,7 @@ func TestCountEdges(t *testing.T) {
 		}
 	}
 
-	c, err := dao.CountEdges(&EdgeQuery{
+	c, err := dao.CountEdges(&query.EdgeQuery{
 		Meta: "test",
 	})
 	if err != nil {
@@ -182,9 +183,9 @@ func BenchmarkListEdges(b *testing.B) {
 		for p.Next() {
 			pageSize := 10
 			page := rand.Intn(count/pageSize) + 1
-			clients, err := dao.ListEdges(&EdgeQuery{
+			clients, err := dao.ListEdges(&query.EdgeQuery{
 				Meta: "test",
-				Query: Query{
+				Query: query.Query{
 					PageSize: pageSize,
 					Page:     page,
 				},
@@ -231,7 +232,7 @@ func BenchmarkDeleteEdge(b *testing.B) {
 	b.RunParallel(func(p *testing.PB) {
 		for p.Next() {
 			new := atomic.AddUint64(&index, 1)
-			err := dao.DeleteEdge(&EdgeDelete{EdgeID: new})
+			err := dao.DeleteEdge(&query.EdgeDelete{EdgeID: new})
 			if err != nil {
 				b.Error(err)
 				return

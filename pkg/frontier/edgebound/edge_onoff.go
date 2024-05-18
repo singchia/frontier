@@ -7,8 +7,8 @@ import (
 
 	"github.com/jumboframes/armorigo/synchub"
 	"github.com/singchia/frontier/pkg/frontier/apis"
-	"github.com/singchia/frontier/pkg/frontier/repo/dao"
 	"github.com/singchia/frontier/pkg/frontier/repo/model"
+	"github.com/singchia/frontier/pkg/frontier/repo/query"
 	"github.com/singchia/geminio"
 	"github.com/singchia/geminio/delegate"
 	"k8s.io/klog/v2"
@@ -28,6 +28,7 @@ func (em *edgeManager) online(end geminio.End) error {
 		sync = em.shub.Add(syncKey)
 		if err := oldend.Close(); err != nil {
 			klog.Warningf("edge online, kick off old end err: %s, edgeID: %d", err, end.ClientID())
+			em.shub.Cancel(syncKey, false)
 		}
 	}
 	em.edges[end.ClientID()] = end
@@ -84,7 +85,7 @@ func (em *edgeManager) offline(edgeID uint64, addr net.Addr) error {
 	}()
 
 	// memdb
-	if err := em.repo.DeleteEdge(&dao.EdgeDelete{
+	if err := em.repo.DeleteEdge(&query.EdgeDelete{
 		EdgeID: edgeID,
 		Addr:   addr.String(),
 	}); err != nil {

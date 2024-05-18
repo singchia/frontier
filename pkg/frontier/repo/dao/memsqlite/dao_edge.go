@@ -1,21 +1,13 @@
-package dao
+package memsqlite
 
 import (
 	"github.com/singchia/frontier/pkg/frontier/repo/model"
+	"github.com/singchia/frontier/pkg/frontier/repo/query"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
-type EdgeQuery struct {
-	Query
-	// Condition fields
-	Meta   string
-	Addr   string
-	RPC    string
-	EdgeID uint64
-}
-
-func (dao *Dao) ListEdges(query *EdgeQuery) ([]*model.Edge, error) {
+func (dao *dao) ListEdges(query *query.EdgeQuery) ([]*model.Edge, error) {
 	tx := dao.dbEdge.Model(&model.Edge{})
 	if dao.config.Dao.Debug {
 		tx = tx.Debug()
@@ -46,7 +38,7 @@ func (dao *Dao) ListEdges(query *EdgeQuery) ([]*model.Edge, error) {
 	return edges, tx.Error
 }
 
-func (dao *Dao) CountEdges(query *EdgeQuery) (int64, error) {
+func (dao *dao) CountEdges(query *query.EdgeQuery) (int64, error) {
 	tx := dao.dbEdge.Model(&model.Edge{})
 	if dao.config.Dao.Debug {
 		tx = tx.Debug()
@@ -58,7 +50,7 @@ func (dao *Dao) CountEdges(query *EdgeQuery) (int64, error) {
 	return count, tx.Error
 }
 
-func (dao *Dao) GetEdge(edgeID uint64) (*model.Edge, error) {
+func (dao *dao) GetEdge(edgeID uint64) (*model.Edge, error) {
 	tx := dao.dbEdge.Model(&model.Edge{})
 	if dao.config.Dao.Debug {
 		tx = tx.Debug()
@@ -70,12 +62,7 @@ func (dao *Dao) GetEdge(edgeID uint64) (*model.Edge, error) {
 	return &edge, tx.Error
 }
 
-type EdgeDelete struct {
-	EdgeID uint64
-	Addr   string
-}
-
-func (dao *Dao) DeleteEdge(delete *EdgeDelete) error {
+func (dao *dao) DeleteEdge(delete *query.EdgeDelete) error {
 	tx := dao.dbEdge
 	if dao.config.Dao.Debug {
 		tx = tx.Debug()
@@ -84,7 +71,7 @@ func (dao *Dao) DeleteEdge(delete *EdgeDelete) error {
 	return tx.Delete(&model.Edge{}).Error
 }
 
-func (dao *Dao) CreateEdge(edge *model.Edge) error {
+func (dao *dao) CreateEdge(edge *model.Edge) error {
 	tx := dao.dbEdge
 	if dao.config.Dao.Debug {
 		tx = tx.Debug()
@@ -92,7 +79,7 @@ func (dao *Dao) CreateEdge(edge *model.Edge) error {
 	return tx.Create(edge).Error
 }
 
-func buildEdgeQuery(tx *gorm.DB, query *EdgeQuery) *gorm.DB {
+func buildEdgeQuery(tx *gorm.DB, query *query.EdgeQuery) *gorm.DB {
 	// join
 	if query.RPC != "" {
 		tx = tx.InnerJoins("INNER JOIN edge_rpcs ON edges.edge_id = edge_rpcs.edge_id AND service_rpcs.rpc = ?", query.RPC)
@@ -115,7 +102,7 @@ func buildEdgeQuery(tx *gorm.DB, query *EdgeQuery) *gorm.DB {
 	return tx
 }
 
-func buildEdgeDelete(tx *gorm.DB, delete *EdgeDelete) *gorm.DB {
+func buildEdgeDelete(tx *gorm.DB, delete *query.EdgeDelete) *gorm.DB {
 	if delete.EdgeID != 0 {
 		tx = tx.Where("edge_id = ?", delete.EdgeID)
 	}
@@ -125,14 +112,7 @@ func buildEdgeDelete(tx *gorm.DB, delete *EdgeDelete) *gorm.DB {
 	return tx
 }
 
-type EdgeRPCQuery struct {
-	Query
-	// Condition fields
-	Meta   string
-	EdgeID uint64
-}
-
-func (dao *Dao) ListEdgeRPCs(query *EdgeRPCQuery) ([]string, error) {
+func (dao *dao) ListEdgeRPCs(query *query.EdgeRPCQuery) ([]string, error) {
 	tx := dao.dbEdge.Model(&model.EdgeRPC{})
 	if dao.config.Dao.Debug {
 		tx = tx.Debug()
@@ -163,7 +143,7 @@ func (dao *Dao) ListEdgeRPCs(query *EdgeRPCQuery) ([]string, error) {
 	return rpcs, tx.Error
 }
 
-func (dao *Dao) CountEdgeRPCs(query *EdgeRPCQuery) (int64, error) {
+func (dao *dao) CountEdgeRPCs(query *query.EdgeRPCQuery) (int64, error) {
 	tx := dao.dbEdge.Model(&model.EdgeRPC{})
 	if dao.config.Dao.Debug {
 		tx = tx.Debug()
@@ -176,7 +156,7 @@ func (dao *Dao) CountEdgeRPCs(query *EdgeRPCQuery) (int64, error) {
 	return count, tx.Error
 }
 
-func (dao *Dao) DeleteEdgeRPCs(edgeID uint64) error {
+func (dao *dao) DeleteEdgeRPCs(edgeID uint64) error {
 	tx := dao.dbEdge.Where("edge_id = ?", edgeID)
 	if dao.config.Dao.Debug {
 		tx = tx.Debug()
@@ -184,7 +164,7 @@ func (dao *Dao) DeleteEdgeRPCs(edgeID uint64) error {
 	return tx.Delete(&model.EdgeRPC{}).Error
 }
 
-func (dao *Dao) CreateEdgeRPC(rpc *model.EdgeRPC) error {
+func (dao *dao) CreateEdgeRPC(rpc *model.EdgeRPC) error {
 	tx := dao.dbEdge
 	if dao.config.Dao.Debug {
 		tx = tx.Debug()
@@ -192,7 +172,7 @@ func (dao *Dao) CreateEdgeRPC(rpc *model.EdgeRPC) error {
 	return tx.Create(rpc).Error
 }
 
-func buildEdgeRPCQuery(tx *gorm.DB, query *EdgeRPCQuery) *gorm.DB {
+func buildEdgeRPCQuery(tx *gorm.DB, query *query.EdgeRPCQuery) *gorm.DB {
 	// join
 	if query.Meta != "" {
 		tx = tx.InnerJoins("INNER JOIN edges ON edges.edge_id = edge_rpcs.edge_id AND meta LIKE ?", "%"+query.Meta+"%")

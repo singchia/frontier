@@ -133,8 +133,8 @@ github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475/go.mod h1:bCqn
 github.com/redis/go-redis/v9 v9.5.1 h1:H1X4D3yHPaYrkL5X06Wh6xNVM/pX0Ft4RV0vMGvLBh8=
 github.com/redis/go-redis/v9 v9.5.1/go.mod h1:hdY0cQFCN4fnSYT6TkisLufl/4W5UIXyv0b/CLO2V2M=
 github.com/rogpeppe/go-internal v1.10.0 h1:TMyTOH3F/DB16zRVcYyreMH6GnZZrwQVAoYjRBZyWFQ=
-github.com/singchia/geminio v1.1.6-rc.1 h1:CJzpReZM01ePnRxtzEn5Y87QQcx079Mbyj50rojK24A=
-github.com/singchia/geminio v1.1.6-rc.1/go.mod h1:CmDttmY18CGhpmeiVeGEBLXYKHIOoN3MSaEDMzfSOXA=
+github.com/singchia/geminio v1.1.6-rc.2 h1:MElZfy8nTCDG6a4nlhJYd7vbeuUUn3+0hCif5iwXfO8=
+github.com/singchia/geminio v1.1.6-rc.2/go.mod h1:CmDttmY18CGhpmeiVeGEBLXYKHIOoN3MSaEDMzfSOXA=
 github.com/singchia/go-timer/v2 v2.0.3/go.mod h1:PgkEQc6io8slCUiT5rHzWKU4/P2HXHWk3WWfijZXAf4=
 github.com/singchia/go-timer/v2 v2.2.1 h1:gJucmL99fkuNzGk2AfNPFpa1X3/4+aGO21KkjFAG624=
 github.com/singchia/go-timer/v2 v2.2.1/go.mod h1:PgkEQc6io8slCUiT5rHzWKU4/P2HXHWk3WWfijZXAf4=

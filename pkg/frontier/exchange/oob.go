@@ -5,8 +5,10 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"net"
+	"time"
 
 	"github.com/singchia/frontier/pkg/frontier/apis"
+	"github.com/singchia/geminio/options"
 
 	"k8s.io/klog/v2"
 )
@@ -22,7 +24,9 @@ func (ex *exchange) GetEdgeID(meta []byte) (uint64, error) {
 	}
 	// call service
 	req := svc.NewRequest(meta)
-	rsp, err := svc.Call(context.TODO(), apis.RPCGetEdgeID, req)
+	opt := options.Call()
+	opt.SetTimeout(30 * time.Second)
+	rsp, err := svc.Call(context.TODO(), apis.RPCGetEdgeID, req, opt)
 	if err != nil {
 		klog.V(2).Infof("exchange call service: %d, get edgeID err: %s, meta: %s", svc.ClientID(), err, meta)
 		return 0, err
@@ -57,7 +61,9 @@ func (ex *exchange) EdgeOnline(edgeID uint64, meta []byte, addr net.Addr) error 
 	}
 	// call service
 	req := svc.NewRequest(data)
-	_, err = svc.Call(context.TODO(), apis.RPCEdgeOnline, req)
+	opt := options.Call()
+	opt.SetTimeout(30 * time.Second)
+	_, err = svc.Call(context.TODO(), apis.RPCEdgeOnline, req, opt)
 	if err != nil {
 		klog.V(2).Infof("exchange call service: %d, edge online err: %s, meta: %s, addr: %s", svc.ClientID(), err, meta, addr)
 		return err
@@ -88,7 +94,9 @@ func (ex *exchange) EdgeOffline(edgeID uint64, meta []byte, addr net.Addr) error
 	}
 	// call service
 	req := svc.NewRequest(data)
-	_, err = svc.Call(context.TODO(), apis.RPCEdgeOffline, req)
+	opt := options.Call()
+	opt.SetTimeout(30 * time.Second)
+	_, err = svc.Call(context.TODO(), apis.RPCEdgeOffline, req, opt)
 	if err != nil {
 		klog.V(2).Infof("exchange call service: %d, edge offline err: %s, meta: %s, addr: %s", svc.ClientID(), err, meta, addr)
 		return err
