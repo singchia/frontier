@@ -21,14 +21,14 @@ import (
 	"github.com/jumboframes/armorigo/sigaction"
 	"github.com/singchia/frontier/api/dataplane/v1/service"
 	"github.com/singchia/geminio"
+	"github.com/singchia/geminio/pkg/id"
 	"github.com/spf13/pflag"
 )
 
 var (
-	edgeID  uint64
-	edgeIDs sync.Map
-	edges   sync.Map
-	sns     sync.Map
+	edgeID uint64
+	edges  sync.Map
+	sns    sync.Map
 
 	methodSlice  []string
 	topicSlice   []string
@@ -452,10 +452,7 @@ func pickedge() uint64 {
 }
 
 func getID(meta []byte) (uint64, error) {
-	id := uint64(time.Now().UnixMicro())
-	//id := atomic.AddUint64(&edgeID, 1)
-	edgeIDs.Store(string(meta), id)
-	return id, nil
+	return id.DefaultIncIDCounter.GetID(), nil
 }
 
 func online(edgeID uint64, meta []byte, addr net.Addr) error {

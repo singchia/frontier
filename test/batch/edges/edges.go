@@ -49,8 +49,8 @@ func main() {
 		go func(i int) {
 			defer wg.Done()
 			// avoid congestion of connection
-			random := rand.Intn(1000) + 1
-			time.Sleep(time.Millisecond * time.Duration(random))
+			random := rand.Intn(*count/100) + 1
+			time.Sleep(time.Second * time.Duration(random))
 			// new edge connection
 			cli, err := edge.NewEdge(dialer,
 				edge.OptionEdgeLog(armlog.DefaultLog))
@@ -74,7 +74,7 @@ func main() {
 			mtx.Lock()
 			delete(edges, i)
 			mtx.Unlock()
-			cli.Close()
+			//cli.Close()
 		}(i)
 	}
 

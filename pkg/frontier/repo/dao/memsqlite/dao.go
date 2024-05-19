@@ -12,7 +12,7 @@ type dao struct {
 	dbEdge, dbService *gorm.DB
 
 	// config
-	config config.Configuration
+	config *config.Configuration
 }
 
 func NewDao(config *config.Configuration) (*dao, error) {
@@ -67,13 +67,27 @@ func NewDao(config *config.Configuration) (*dao, error) {
 	return &dao{
 		dbEdge:    dbEdge,
 		dbService: dbService,
+		config:    config,
 	}, nil
 }
 
 func (dao *dao) Close() error {
+	var retErr error
 	sqlDB, err := dao.dbEdge.DB()
 	if err != nil {
-		return err
+		retErr = err
 	}
-	return sqlDB.Close()
+	err = sqlDB.Close()
+	if err != nil {
+		retErr = err
+	}
+	sqlDB, err = dao.dbService.DB()
+	if err != nil {
+		retErr = err
+	}
+	err = sqlDB.Close()
+	if err != nil {
+		retErr = err
+	}
+	return retErr
 }

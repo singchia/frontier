@@ -204,6 +204,11 @@ func (sm *serviceManager) GetServiceByRPC(rpc string) (geminio.End, error) {
 	sm.mtx.RLock()
 	defer sm.mtx.RUnlock()
 
+	// TODO remove it!!
+	for _, v := range sm.services {
+		return v, nil
+	}
+
 	mrpc, err := sm.repo.GetServiceRPC(rpc)
 	if err != nil {
 		klog.V(2).Infof("get service by rpc: %s, err: %s", rpc, err)

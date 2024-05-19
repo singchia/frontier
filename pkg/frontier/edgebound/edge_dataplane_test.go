@@ -8,7 +8,7 @@ import (
 	"github.com/singchia/frontier/api/dataplane/v1/edge"
 	gconfig "github.com/singchia/frontier/pkg/config"
 	"github.com/singchia/frontier/pkg/frontier/config"
-	"github.com/singchia/frontier/pkg/frontier/repo/dao"
+	"github.com/singchia/frontier/pkg/frontier/repo"
 	"github.com/singchia/go-timer/v2"
 )
 
@@ -25,13 +25,13 @@ func TestEdgeManagerStream(t *testing.T) {
 			EdgeIDAllocWhenNoIDServiceOn: true,
 		},
 	}
-	dao, err := dao.NewDao(conf)
+	repo, err := repo.NewRepo(conf)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 	// edge manager
-	em, err := newEdgeManager(conf, dao, nil, nil, timer.NewTimer())
+	em, err := newEdgeManager(conf, repo, nil, nil, timer.NewTimer())
 	if err != nil {
 		t.Error(err)
 		return

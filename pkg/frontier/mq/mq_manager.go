@@ -186,7 +186,7 @@ func (mqm *mqManager) Produce(topic string, data []byte, opts ...apis.OptionProd
 		mq = mqm.GetMQ("*")
 		if mq == nil {
 			err := apis.ErrTopicNotOnline
-			klog.Errorf("mq manager, get mq nil, topic: %s err: %s", topic, err)
+			klog.V(2).Infof("mq manager, get mq nil, topic: %s err: %s", topic, err)
 			return err
 		}
 	}

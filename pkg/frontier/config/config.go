@@ -239,7 +239,8 @@ type MQM struct {
 type Exchange struct{}
 
 type Dao struct {
-	Debug bool `yaml:"debug"`
+	Debug   bool   `yaml:"debug,omitempty"`
+	Backend string `yaml:"backend,omitempty"` // default buntdb
 }
 
 // frontlas
@@ -253,19 +254,19 @@ type Frontlas struct {
 }
 
 type Configuration struct {
-	Daemon Daemon `yaml:"daemon"`
+	Daemon Daemon `yaml:"daemon,omitempty"`
 
 	Edgebound Edgebound `yaml:"edgebound"`
 
 	Servicebound Servicebound `yaml:"servicebound"`
 
-	ControlPlane ControlPlane `yaml:"controlplane"`
+	ControlPlane ControlPlane `yaml:"controlplane,omitempty"`
 
-	Dao Dao `yaml:"dao"`
+	Dao Dao `yaml:"dao,omitempty"`
 
 	Frontlas Frontlas `yaml:"frontlas"`
 
-	MQM MQM `yaml:"mqm"`
+	MQM MQM `yaml:"mqm,omitempty"`
 }
 
 // Configuration accepts config file and command-line, and command-line is more privileged.

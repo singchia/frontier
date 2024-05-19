@@ -142,7 +142,7 @@ func buildServiceDelete(tx *gorm.DB, delete *query.ServiceDelete) *gorm.DB {
 }
 
 // service rpc
-
+// TODO return random one, or by roundrobin strategy
 func (dao *dao) GetServiceRPC(rpc string) (*model.ServiceRPC, error) {
 	tx := dao.dbService.Model(&model.ServiceRPC{})
 	if dao.config.Dao.Debug {

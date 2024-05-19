@@ -2,7 +2,6 @@ package frontier
 
 import (
 	"net/http"
-	"runtime"
 
 	"github.com/singchia/frontier/pkg/frontier/apis"
 	"github.com/singchia/frontier/pkg/frontier/config"
@@ -27,7 +26,7 @@ func NewFrontier() (*Frontier, error) {
 	}
 	// pprof
 	if conf.Daemon.PProf.Enable {
-		runtime.SetCPUProfileRate(conf.Daemon.PProf.CPUProfileRate)
+		//runtime.SetCPUProfileRate(conf.Daemon.PProf.CPUProfileRate)
 		go func() {
 			http.ListenAndServe(conf.Daemon.PProf.Addr, nil)
 		}()

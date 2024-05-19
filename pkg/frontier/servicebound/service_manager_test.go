@@ -8,7 +8,7 @@ import (
 	"github.com/singchia/frontier/api/dataplane/v1/service"
 	gconfig "github.com/singchia/frontier/pkg/config"
 	"github.com/singchia/frontier/pkg/frontier/config"
-	"github.com/singchia/frontier/pkg/frontier/repo/dao"
+	"github.com/singchia/frontier/pkg/frontier/repo"
 	"github.com/singchia/go-timer/v2"
 )
 
@@ -24,7 +24,7 @@ func TestServiceManager(t *testing.T) {
 			},
 		},
 	}
-	dao, err := dao.NewDao(conf)
+	repo, err := repo.NewRepo(conf)
 	if err != nil {
 		t.Error(err)
 		return
@@ -34,7 +34,7 @@ func TestServiceManager(t *testing.T) {
 	}
 	inf.wg.Add(2)
 	// service manager
-	sm, err := newServiceManager(conf, dao, inf, nil, nil, timer.NewTimer())
+	sm, err := newServiceManager(conf, repo, inf, nil, nil, timer.NewTimer())
 	if err != nil {
 		t.Error(err)
 		return
