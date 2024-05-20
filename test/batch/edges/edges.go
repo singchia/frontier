@@ -74,7 +74,7 @@ func main() {
 			mtx.Lock()
 			delete(edges, i)
 			mtx.Unlock()
-			//cli.Close()
+			cli.Close()
 		}(i)
 	}
 

@@ -27,7 +27,8 @@ const (
 )
 
 var (
-	ErrUnimplemented = errors.New("unimplemented")
+	ErrUnimplemented        = errors.New("unimplemented")
+	ErrUnsupportedForBuntDB = errors.New("unsupported for buntdb")
 )
 
 type dao struct {

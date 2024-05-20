@@ -20,9 +20,6 @@ func (cps *ControlPlaneService) listEdges(_ context.Context, req *v1.ListEdgesRe
 	if req.Rpc != nil {
 		query.RPC = *req.Rpc
 	}
-	if req.EdgeId != nil {
-		query.EdgeID = *req.EdgeId
-	}
 	// order
 	if req.Order != nil && len(*req.Order) != 0 {
 		order := *req.Order
