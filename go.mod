@@ -1,8 +1,6 @@
 module github.com/singchia/frontier
 
-go 1.20
-
-//replace github.com/singchia/geminio => ../../moresec/singchia/geminio
+go 1.21
 
 require (
 	github.com/IBM/sarama v1.43.0
@@ -14,12 +12,13 @@ require (
 	github.com/nats-io/nats.go v1.33.1
 	github.com/nsqio/go-nsq v1.1.0
 	github.com/rabbitmq/amqp091-go v1.9.0
-	github.com/singchia/geminio v1.1.6-rc.2
+	github.com/singchia/geminio v1.1.6-rc.3
 	github.com/singchia/go-timer/v2 v2.2.1
 	github.com/soheilhy/cmux v0.1.5
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.4
 	github.com/swaggo/swag v1.16.3
+	github.com/tidwall/buntdb v1.3.1
 	github.com/vishvananda/netlink v1.1.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20240304212257-790db918fca8
 	google.golang.org/grpc v1.62.1
@@ -35,6 +34,13 @@ require (
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/tidwall/btree v1.4.2 // indirect
+	github.com/tidwall/gjson v1.14.3 // indirect
+	github.com/tidwall/grect v0.1.4 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.0 // indirect
+	github.com/tidwall/rtred v0.1.2 // indirect
+	github.com/tidwall/tinyqueue v0.1.1 // indirect
 	github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df // indirect
 	github.com/yuin/gopher-lua v1.1.1 // indirect
 )

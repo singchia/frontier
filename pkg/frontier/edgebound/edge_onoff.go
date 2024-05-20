@@ -1,6 +1,7 @@
 package edgebound
 
 import (
+	"errors"
 	"net"
 	"strconv"
 	"time"
@@ -18,9 +19,10 @@ func (em *edgeManager) online(end geminio.End) error {
 	// TODO transaction
 	// cache
 	var sync synchub.Sync
-	em.mtx.Lock()
+	em.mtx.RLock()
 	old, ok := em.edges[end.ClientID()]
 	if ok {
+		klog.Warningf("edge online, old end exists, edgeID: %d", end.ClientID())
 		// if the old connection exits, offline it
 		oldend := old.(geminio.End)
 		// we wait the cache and db to clear old end's data
@@ -28,19 +30,29 @@ func (em *edgeManager) online(end geminio.End) error {
 		sync = em.shub.Add(syncKey)
 		if err := oldend.Close(); err != nil {
 			klog.Warningf("edge online, kick off old end err: %s, edgeID: %d", err, end.ClientID())
-			em.shub.Cancel(syncKey, false)
 		}
+	}
+	em.mtx.RUnlock()
+
+	// we don't want the channel block the mtx
+	if sync != nil {
+		// unlikely here
+		<-sync.C()
+	}
+
+	em.mtx.Lock()
+	// double check
+	old, ok = em.edges[end.ClientID()]
+	if ok {
+		klog.Warningf("edge online same time, old end exists, edgeID: %d", end.ClientID())
+		em.mtx.Unlock()
+		return errors.New("please connect later")
 	}
 	em.edges[end.ClientID()] = end
 	if em.informer != nil {
 		em.informer.SetEdgeCount(len(em.edges))
 	}
 	em.mtx.Unlock()
-
-	if sync != nil {
-		// unlikely here
-		<-sync.C()
-	}
 
 	// memdb
 	edge := &model.Edge{
@@ -53,10 +65,22 @@ func (em *edgeManager) online(end geminio.End) error {
 		klog.Errorf("edge online, repo create err: %s, edgeID: %d", err, end.ClientID())
 		return err
 	}
+
+	// inform others
+	if em.informer != nil {
+		em.informer.EdgeOnline(end.ClientID(), end.Meta(), end.Addr())
+	}
+	// exchange to service
+	if em.exchange != nil {
+		err := em.exchange.EdgeOnline(end.ClientID(), end.Meta(), end.Addr())
+		if err == apis.ErrServiceNotOnline {
+			return nil
+		}
+	}
 	return nil
 }
 
-func (em *edgeManager) offline(edgeID uint64, addr net.Addr) error {
+func (em *edgeManager) offline(edgeID uint64, meta []byte, addr net.Addr) error {
 	// TODO transaction
 	legacy := false
 	// cache
@@ -64,15 +88,21 @@ func (em *edgeManager) offline(edgeID uint64, addr net.Addr) error {
 	value, ok := em.edges[edgeID]
 	if ok {
 		end := value.(geminio.End)
-		if end != nil && end.RemoteAddr().String() == addr.String() {
+		if end.RemoteAddr().String() == addr.String() {
 			legacy = true
 			delete(em.edges, edgeID)
 			klog.V(2).Infof("edge offline, edgeID: %d, remote addr: %s", edgeID, end.RemoteAddr().String())
+		} else {
+			// same edgeID but different connection addr
+			klog.V(1).Infof("edge offline, edgeID: %d, remote addr: %s, offline addr: %s", edgeID, end.RemoteAddr(), addr.String())
+			em.mtx.Unlock()
+			return nil
 		}
 	} else {
 		klog.Warningf("edge offline, edgeID: %d not found in cache", edgeID)
 	}
 	if em.informer != nil {
+		// TODO merge events
 		em.informer.SetEdgeCount(len(em.edges))
 	}
 	em.mtx.Unlock()
@@ -96,6 +126,15 @@ func (em *edgeManager) offline(edgeID uint64, addr net.Addr) error {
 		klog.Errorf("edge offline, repo delete edge rpcs err: %s, edgeID: %d", err, edgeID)
 		return err
 	}
+
+	// inform others
+	if em.informer != nil {
+		em.informer.EdgeOffline(edgeID, meta, addr)
+	}
+	// exchange to service
+	if em.exchange != nil {
+		return em.exchange.EdgeOffline(edgeID, meta, addr)
+	}
 	return nil
 }
 
@@ -105,18 +144,7 @@ func (em *edgeManager) ConnOnline(d delegate.ConnDescriber) error {
 	meta := d.Meta()
 	addr := d.RemoteAddr()
 
-	klog.V(1).Infof("edge online, edgeID: %d, meta: %s, addr: %s", edgeID, string(meta), addr)
-	// inform others
-	if em.informer != nil {
-		em.informer.EdgeOnline(edgeID, d.Meta(), addr)
-	}
-	// exchange to service
-	if em.exchange != nil {
-		err := em.exchange.EdgeOnline(edgeID, meta, addr)
-		if err == apis.ErrServiceNotOnline {
-			return nil
-		}
-	}
+	klog.V(2).Infof("edge online, edgeID: %d, meta: %s, addr: %s", edgeID, string(meta), addr)
 	return nil
 }
 
@@ -125,21 +153,13 @@ func (em *edgeManager) ConnOffline(d delegate.ConnDescriber) error {
 	meta := d.Meta()
 	addr := d.RemoteAddr()
 
-	klog.V(1).Infof("edge offline, edgeID: %d, meta: %s, addr: %s", edgeID, string(meta), addr)
+	klog.V(2).Infof("edge offline, edgeID: %d, meta: %s, addr: %s", edgeID, string(meta), addr)
 	// offline the cache
-	err := em.offline(edgeID, addr)
+	err := em.offline(edgeID, meta, addr)
 	if err != nil {
 		klog.Errorf("edge offline, cache or db offline err: %s, edgeID: %d, meta: %s, addr: %s",
 			err, edgeID, string(meta), addr)
 		return err
-	}
-	// inform others
-	if em.informer != nil {
-		em.informer.EdgeOffline(edgeID, d.Meta(), addr)
-	}
-	// exchange to service
-	if em.exchange != nil {
-		return em.exchange.EdgeOffline(edgeID, meta, addr)
 	}
 	return nil
 }

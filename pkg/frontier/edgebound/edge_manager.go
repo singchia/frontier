@@ -144,12 +144,13 @@ func (em *edgeManager) handleConn(conn net.Conn) error {
 	opt.SetLog(log.NewKLog())
 	end, err := server.NewEndWithConn(conn, opt)
 	if err != nil {
-		klog.Errorf("edge manager geminio server new end err: %s", err)
+		klog.Warningf("edge manager geminio server new end err: %s, addr: %s", err, conn.RemoteAddr())
 		return err
 	}
 
 	// handle online event for end
 	if err = em.online(end); err != nil {
+		end.Close()
 		return err
 	}
 	// forward and stream up to service

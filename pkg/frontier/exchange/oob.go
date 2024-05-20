@@ -22,6 +22,9 @@ func (ex *exchange) GetEdgeID(meta []byte) (uint64, error) {
 		}
 		return 0, err
 	}
+	if svc == nil {
+		return 0, apis.ErrRecordNotFound
+	}
 	// call service
 	req := svc.NewRequest(meta)
 	opt := options.Call()

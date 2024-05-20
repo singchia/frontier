@@ -160,7 +160,9 @@ func (ex *exchange) forwardRPCToService(end geminio.End) {
 		r3 := svc.NewRequest(r1.Data(), ropt)
 		r4, err := svc.Call(ctx, method, r3)
 		if err != nil {
-			klog.Errorf("edge forward rpc to service, call service: %d err: %s, edgeID: %d", serviceID, err, edgeID)
+			if err != apis.ErrRPCNotOnline {
+				klog.Errorf("edge forward rpc to service, call service: %d err: %s, edgeID: %d", serviceID, err, edgeID)
+			}
 			r2.SetError(err)
 			return
 		}
@@ -179,7 +181,7 @@ func (ex *exchange) forwardMessageToService(end geminio.End) {
 			msg, err := end.Receive(context.TODO())
 			if err != nil {
 				if err == io.EOF {
-					klog.V(2).Infof("edge forward message, edgeID: %d, receive EOF", edgeID)
+					klog.V(3).Infof("edge forward message, edgeID: %d, receive EOF", edgeID)
 					return
 				}
 				klog.Errorf("edge forward message, receive err: %s, edgeID: %d, ", err, edgeID)
@@ -189,7 +191,9 @@ func (ex *exchange) forwardMessageToService(end geminio.End) {
 			// TODO seperate async and sync produce
 			err = ex.MQM.Produce(topic, msg.Data(), apis.WithOrigin(msg), apis.WithEdgeID(edgeID))
 			if err != nil {
-				klog.Errorf("edge forward message, produce err: %s, edgeID: %d", err, edgeID)
+				if err != apis.ErrTopicNotOnline {
+					klog.Errorf("edge forward message, produce err: %s, edgeID: %d", err, edgeID)
+				}
 				msg.Error(err)
 				continue
 			}
