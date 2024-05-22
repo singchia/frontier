@@ -131,7 +131,7 @@ func TestListEdgeRPCs(t *testing.T) {
 			t.Error(err)
 		}
 	}
-	// query on all
+	// query on default page
 	retEdgeRPCs, err := dao.ListEdgeRPCs(&query.EdgeRPCQuery{})
 	if err != nil {
 		t.Error(err)
