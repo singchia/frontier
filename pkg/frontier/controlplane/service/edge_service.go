@@ -32,7 +32,7 @@ func (cps *ControlPlaneService) listEdges(_ context.Context, req *v1.ListEdgesRe
 			query.Desc = false
 		default:
 			query.Order = order
-			query.Desc = false
+			query.Desc = true
 		}
 	}
 	// pagination

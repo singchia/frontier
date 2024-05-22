@@ -14,6 +14,7 @@ import (
 
 func TestCreateEdge(t *testing.T) {
 	config := &config.Configuration{}
+	config.Dao.Backend = "sqlite3"
 	dao, err := NewDao(config)
 	if err != nil {
 		t.Error(err)
@@ -33,6 +34,7 @@ func TestCreateEdge(t *testing.T) {
 
 func TestCountEdges(t *testing.T) {
 	config := &config.Configuration{}
+	config.Dao.Backend = "sqlite3"
 	dao, err := NewDao(config)
 	if err != nil {
 		t.Error(err)
@@ -71,6 +73,7 @@ func TestCountEdges(t *testing.T) {
 // go test -v -bench=. -benchmem
 func BenchmarkCreateEdge(b *testing.B) {
 	config := &config.Configuration{}
+	config.Dao.Backend = "sqlite3"
 	dao, err := NewDao(config)
 	if err != nil {
 		b.Error(err)
@@ -101,6 +104,7 @@ func BenchmarkCreateEdge(b *testing.B) {
 
 func BenchmarkGetEdge(b *testing.B) {
 	config := &config.Configuration{}
+	config.Dao.Backend = "sqlite3"
 	dao, err := NewDao(config)
 	if err != nil {
 		b.Error(err)
@@ -141,6 +145,7 @@ func BenchmarkGetEdge(b *testing.B) {
 
 func BenchmarkListEdges(b *testing.B) {
 	config := &config.Configuration{}
+	config.Dao.Backend = "sqlite3"
 	dao, err := NewDao(config)
 	if err != nil {
 		b.Error(err)
@@ -203,6 +208,7 @@ func BenchmarkListEdges(b *testing.B) {
 
 func BenchmarkDeleteEdge(b *testing.B) {
 	config := &config.Configuration{}
+	config.Dao.Backend = "sqlite3"
 	dao, err := NewDao(config)
 	if err != nil {
 		b.Error(err)

@@ -23,9 +23,6 @@ func (cps *ControlPlaneService) listServices(_ context.Context, req *v1.ListServ
 	if req.Topic != nil {
 		query.Topic = *req.Topic
 	}
-	if req.ServiceId != nil {
-		query.ServiceID = *req.ServiceId
-	}
 	// order
 	if req.Order != nil && len(*req.Order) != 0 {
 		order := *req.Order

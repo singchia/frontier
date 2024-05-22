@@ -124,10 +124,6 @@ func buildServiceQuery(tx *gorm.DB, query *query.ServiceQuery) *gorm.DB {
 	if query.StartTime != 0 && query.EndTime != 0 && query.EndTime > query.StartTime {
 		tx = tx.Where("create_time >= ? AND create_time < ?", query.StartTime, query.EndTime)
 	}
-	// equal
-	if query.ServiceID != 0 {
-		tx = tx.Where("service_id = ?", query.ServiceID)
-	}
 	return tx
 }
 
