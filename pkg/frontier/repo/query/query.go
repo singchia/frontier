@@ -13,10 +13,9 @@ type Query struct {
 type EdgeQuery struct {
 	Query
 	// Condition fields
-	Meta   string
-	Addr   string
-	RPC    string
-	EdgeID uint64
+	Meta string
+	Addr string
+	RPC  string
 }
 
 type EdgeRPCQuery struct {
@@ -34,11 +33,10 @@ type EdgeDelete struct {
 type ServiceQuery struct {
 	Query
 	// Condition fields
-	Service   string
-	Addr      string
-	RPC       string
-	Topic     string
-	ServiceID uint64
+	Service string
+	Addr    string
+	RPC     string
+	Topic   string
 }
 
 type ServiceDelete struct {

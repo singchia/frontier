@@ -27,7 +27,9 @@ const (
 )
 
 var (
-	ErrUnimplemented = errors.New("unimplemented")
+	ErrUnimplemented                      = errors.New("unimplemented")
+	ErrUnsupportedForBuntDB               = errors.New("unsupported for buntdb")
+	ErrUnsupportedMultipleFieldsForBuntDB = errors.New("unsupported multiple fields for buntdb")
 )
 
 type dao struct {

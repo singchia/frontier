@@ -72,12 +72,11 @@ message ListServicesRequest {
     optional string addr = 2;
     optional string rpc = 3;
     optional string topic = 4;
-    optional uint64 service_id = 5;
-    int64 page = 6;
-    int64 page_size = 7;
-    optional int64 start_time = 8;
-    optional int64 end_time = 9;
-    optional string order = 10;
+    int64 page = 5;
+    int64 page_size = 6;
+    optional int64 start_time = 7;
+    optional int64 end_time = 8;
+    optional string order = 9;
 }
 
 message ListServicesResponse {

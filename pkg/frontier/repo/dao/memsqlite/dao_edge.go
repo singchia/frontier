@@ -95,10 +95,6 @@ func buildEdgeQuery(tx *gorm.DB, query *query.EdgeQuery) *gorm.DB {
 	if query.StartTime != 0 && query.EndTime != 0 && query.EndTime > query.StartTime {
 		tx = tx.Where("create_time >= ? AND create_time < ?", query.StartTime, query.EndTime)
 	}
-	// equal
-	if query.EdgeID != 0 {
-		tx = tx.Where("edge_id = ?", query.EdgeID)
-	}
 	return tx
 }
 
