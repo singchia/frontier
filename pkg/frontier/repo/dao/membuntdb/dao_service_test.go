@@ -75,6 +75,43 @@ func TestListServices(t *testing.T) {
 	t.Log(len(retServices))
 }
 
+func TestDeleteService(t *testing.T) {
+	config := &config.Configuration{}
+	dao, err := NewDao(config)
+	if err != nil {
+		t.Error(err)
+	}
+	defer dao.Close()
+
+	serviceCount := 100000
+	services := genServices(serviceCount)
+	for _, service := range services {
+		err = dao.CreateService(service)
+		if err != nil {
+			t.Error(err)
+		}
+	}
+
+	err = dao.DeleteService(&query.ServiceDelete{
+		ServiceID: 1,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	services, err = dao.ListServices(&query.ServiceQuery{
+		Query: query.Query{
+			Page:     1,
+			PageSize: serviceCount,
+		},
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	if len(services) != serviceCount-1 {
+		t.Error("unmatched length of services")
+	}
+}
+
 func TestListServiceRPCs(t *testing.T) {
 	config := &config.Configuration{}
 	dao, err := NewDao(config)
@@ -83,9 +120,9 @@ func TestListServiceRPCs(t *testing.T) {
 	}
 	defer dao.Close()
 
-	edgeCount := 1000
+	serviceCount := 1000
 	rpcPerEdge := 10
-	serviceRPCs := genServiceRPCs(edgeCount, rpcPerEdge)
+	serviceRPCs := genServiceRPCs(serviceCount, rpcPerEdge)
 	for _, rpc := range serviceRPCs {
 		err = dao.CreateServiceRPC(rpc)
 		if err != nil {
@@ -106,7 +143,7 @@ func TestListServiceRPCs(t *testing.T) {
 	retServiceRPCs, err = dao.ListServiceRPCs(&query.ServiceRPCQuery{
 		Query: query.Query{
 			Page:     1,
-			PageSize: edgeCount * rpcPerEdge,
+			PageSize: serviceCount * rpcPerEdge,
 		},
 	})
 	if err != nil {
@@ -142,9 +179,41 @@ func TestListServiceRPCs(t *testing.T) {
 	}
 }
 
-func genServices(edgeIDCounts int) []*model.Service {
+func TestDeleteServiceRPCs(t *testing.T) {
+	config := &config.Configuration{}
+	dao, err := NewDao(config)
+	if err != nil {
+		t.Error(err)
+	}
+	defer dao.Close()
+
+	serviceCount := 2
+	rpcPerEdge := 1000
+	serviceRPCs := genServiceRPCs(serviceCount, rpcPerEdge)
+	for _, rpc := range serviceRPCs {
+		err = dao.CreateServiceRPC(rpc)
+		if err != nil {
+			t.Error(err)
+		}
+	}
+	err = dao.DeleteServiceRPCs(1)
+	if err != nil {
+		t.Error(err)
+	}
+	rpcs, err := dao.ListServiceRPCs(&query.ServiceRPCQuery{
+		ServiceID: 1,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	if len(rpcs) != 0 {
+		t.Error("unmatched length of service rpcs")
+	}
+}
+
+func genServices(serviceIDCounts int) []*model.Service {
 	services := []*model.Service{}
-	for i := 0; i < edgeIDCounts; i++ {
+	for i := 0; i < serviceIDCounts; i++ {
 		service := &model.Service{
 			ServiceID:  uint64(i) + 1,
 			Service:    "test" + strconv.Itoa(i+1),
@@ -162,9 +231,9 @@ func printServices(services []*model.Service) {
 	}
 }
 
-func genServiceRPCs(edgeIDCounts int, rpcPerEdge int) []*model.ServiceRPC {
+func genServiceRPCs(serviceIDCounts int, rpcPerEdge int) []*model.ServiceRPC {
 	serviceRPCs := []*model.ServiceRPC{}
-	for i := 0; i < edgeIDCounts; i++ {
+	for i := 0; i < serviceIDCounts; i++ {
 		for j := 0; j < rpcPerEdge; j++ {
 			serviceRPC := &model.ServiceRPC{
 				RPC:        "rpc" + strconv.Itoa(j+1),

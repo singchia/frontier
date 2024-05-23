@@ -28,7 +28,7 @@ message ListEdgesRequest {
 
 message ListEdgesResponse {
     repeated Edge edges = 1;
-    uint32 count = 2;
+    int32 count = 2;
 }
 
 // get edge
@@ -56,7 +56,7 @@ message ListEdgeRPCsRequest {
 
 message ListEdgeRPCsResponse {
     repeated string rpcs = 1;
-    uint32 count = 2;
+    int32 count = 2;
 }
 
 message Service {
@@ -81,7 +81,7 @@ message ListServicesRequest {
 
 message ListServicesResponse {
     repeated Service services = 1;
-    uint32 count = 2;
+    int32 count = 2;
 }
 
 // get service
@@ -109,7 +109,7 @@ message ListServiceRPCsRequest {
 
 message ListServiceRPCsResponse {
     repeated string rpcs = 1;
-    uint32 count = 2;
+    int32 count = 2;
 }
 
 // list service topics
@@ -125,7 +125,7 @@ message ListServiceTopicsRequest {
 
 message ListServiceTopicsResponse {
     repeated string topics = 1;
-    uint32 count = 2;
+    int32 count = 2;
 }
 
 service ControlPlane {

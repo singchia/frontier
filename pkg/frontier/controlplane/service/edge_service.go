@@ -55,7 +55,7 @@ func (cps *ControlPlaneService) listEdges(_ context.Context, req *v1.ListEdgesRe
 	retEdges := transferEdges(edges)
 	return &v1.ListEdgesResponse{
 		Edges: retEdges,
-		Count: uint32(count),
+		Count: int32(count),
 	}, nil
 }
 
@@ -116,7 +116,7 @@ func (cps *ControlPlaneService) listEdgeRPCs(_ context.Context, req *v1.ListEdge
 	}
 	return &v1.ListEdgeRPCsResponse{
 		Rpcs:  rpcs,
-		Count: uint32(count),
+		Count: int32(count),
 	}, nil
 }
 
