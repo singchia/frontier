@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"strconv"
 	"strings"
@@ -43,6 +45,9 @@ func main() {
 	dialer := func() (net.Conn, error) {
 		return net.Dial(*network, *address)
 	}
+	go func() {
+		http.ListenAndServe("0.0.0.0:6062", nil)
+	}()
 	// log
 	level, err := armlog.ParseLevel(*loglevel)
 	if err != nil {

@@ -11,7 +11,6 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -37,28 +36,50 @@ var (
 	sig          *sigaction.Signal
 	nostdin      *bool
 
-	labels    map[string]int64 = map[string]int64{}
-	labelsMtx sync.RWMutex
+	labelstats map[string]int64 = map[string]int64{}
+	topicstats map[string]int64 = map[string]int64{}
+	mtx        sync.RWMutex
 )
 
-func addLabel(label string, delta int64) {
-	labelsMtx.Lock()
-	counter, ok := labels[label]
+func addLabelStats(label string, delta int64) {
+	mtx.Lock()
+	counter, ok := labelstats[label]
 	if ok {
 		counter += delta
-		labels[label] = counter
+		labelstats[label] = counter
 	} else {
-		labels[label] = delta
+		labelstats[label] = delta
 	}
-	labelsMtx.Unlock()
+	mtx.Unlock()
+}
+
+func addTopicStats(topic string, delta int64) {
+	mtx.Lock()
+	counter, ok := topicstats[topic]
+	if ok {
+		counter += delta
+		topicstats[topic] = counter
+	} else {
+		topicstats[topic] = delta
+	}
+	mtx.Unlock()
 }
 
 func printLabel() {
-	labelsMtx.RLock()
-	defer labelsMtx.RUnlock()
+	mtx.RLock()
+	defer mtx.RUnlock()
 
-	for label, counter := range labels {
+	for label, counter := range labelstats {
 		fmt.Printf("label: %s, counter: %d\n", label, counter)
+	}
+}
+
+func printTopic() {
+	mtx.RLock()
+	defer mtx.RUnlock()
+
+	for topic, counter := range topicstats {
+		fmt.Printf("topic: %s, counter: %d\n", topic, counter)
 	}
 }
 
@@ -69,10 +90,7 @@ type LabelData struct {
 
 func main() {
 	methodSlice = []string{}
-	runtime.SetCPUProfileRate(10000)
-	go func() {
-		http.ListenAndServe("0.0.0.0:6062", nil)
-	}()
+
 	network := pflag.String("network", "tcp", "network to dial")
 	address := pflag.String("address", "127.0.0.1:30011", "address to dial")
 	frontlasAddress := pflag.String("frontlas_address", "127.0.0.1:40011", "frontlas address to dial, mutually exclusive with address")
@@ -80,12 +98,16 @@ func main() {
 	loglevel := pflag.String("loglevel", "info", "log level, trace debug info warn error")
 	serviceName := pflag.String("service", "foo", "service name")
 	topics := pflag.String("topics", "", "topics to receive message, empty means without consuming")
+	topicReceivers := pflag.Int("topic_receivers", 1, "receivers to receive topic messages")
 	methods := pflag.String("methods", "", "method name, support echo")
 	printmessage = pflag.Bool("printmessage", false, "whether print message out")
 	nostdin = pflag.Bool("nostdin", false, "nostdin mode, no stdin will be accepted")
 	stats := pflag.Bool("stats", false, "print statistics or not")
 
 	pflag.Parse()
+	go func() {
+		http.ListenAndServe("0.0.0.0:6062", nil)
+	}()
 	// log
 	level, err := armlog.ParseLevel(*loglevel)
 	if err != nil {
@@ -96,7 +118,10 @@ func main() {
 	armlog.SetOutput(os.Stdout)
 
 	// get service
-	opt := []service.ServiceOption{service.OptionServiceLog(armlog.DefaultLog), service.OptionServiceName(*serviceName)}
+	opt := []service.ServiceOption{
+		service.OptionServiceLog(armlog.DefaultLog),
+		service.OptionServiceName(*serviceName),
+		service.OptionServiceBufferSize(8192, 8192)}
 	if *topics != "" {
 		topicSlice = strings.Split(*topics, ",")
 		opt = append(opt, service.OptionServiceReceiveTopics(topicSlice))
@@ -151,36 +176,40 @@ func main() {
 			for {
 				<-ticker.C
 				printLabel()
+				printTopic()
 			}
 		}()
 	}
 
 	// service receive
-	go func() {
-		for {
-			msg, err := srv.Receive(context.TODO())
-			if err == io.EOF {
-				return
+	for i := 0; i < *topicReceivers; i++ {
+		go func() {
+			for {
+				msg, err := srv.Receive(context.TODO())
+				if err == io.EOF {
+					return
+				}
+				if err != nil {
+					fmt.Println("\n> receive err:", err)
+					printPrompt()
+					continue
+				}
+				msg.Done()
+				value := msg.Data()
+				ld := &LabelData{}
+				err = json.Unmarshal(value, ld)
+				if err == nil {
+					addLabelStats(string(ld.Label), 1)
+					value = ld.Data
+				}
+				addTopicStats(msg.Topic(), 1)
+				if *printmessage {
+					fmt.Printf("> receive msg, edgeID: %d streamID: %d data: %s\n", msg.ClientID(), msg.StreamID(), string(value))
+					printPrompt()
+				}
 			}
-			if err != nil {
-				fmt.Println("\n> receive err:", err)
-				printPrompt()
-				continue
-			}
-			msg.Done()
-			value := msg.Data()
-			ld := &LabelData{}
-			err = json.Unmarshal(value, ld)
-			if err == nil {
-				addLabel(string(ld.Label), 1)
-				value = ld.Data
-			}
-			if *printmessage {
-				fmt.Printf("> receive msg, edgeID: %d streamID: %d data: %s\n", msg.ClientID(), msg.StreamID(), string(value))
-				printPrompt()
-			}
-		}
-	}()
+		}()
+	}
 
 	// service accept streams
 	go func() {
@@ -399,7 +428,7 @@ func handleStream(stream geminio.Stream) {
 			ld := &LabelData{}
 			err = json.Unmarshal(value, ld)
 			if err == nil {
-				addLabel(string(ld.Label), 1)
+				addLabelStats(string(ld.Label), 1)
 				value = ld.Data
 			}
 			if *printmessage {
@@ -474,7 +503,7 @@ func echo(ctx context.Context, req geminio.Request, rsp geminio.Response) {
 	ld := &LabelData{}
 	err := json.Unmarshal(value, ld)
 	if err == nil {
-		addLabel(string(ld.Label), 1)
+		addLabelStats(string(ld.Label), 1)
 		value = ld.Data
 	}
 	if *printmessage {
