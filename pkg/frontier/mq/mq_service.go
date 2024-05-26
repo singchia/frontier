@@ -3,6 +3,7 @@ package mq
 import (
 	"context"
 	"encoding/binary"
+	"time"
 
 	"github.com/singchia/frontier/pkg/frontier/apis"
 	"github.com/singchia/geminio"
@@ -41,7 +42,10 @@ func (mq *mqService) Produce(topic string, data []byte, opts ...apis.OptionProdu
 	mopt.SetTopic(topic)
 	mopt.SetCnss(message.Cnss())
 	newmsg := mq.end.NewMessage(data, mopt)
-	err := mq.end.Publish(context.TODO(), newmsg)
+	// publish option
+	popt := options.Publish()
+	popt.SetTimeout(30 * time.Second)
+	err := mq.end.Publish(context.TODO(), newmsg, popt)
 	if err != nil {
 		klog.Errorf("mq service, publish err: %s, edgeID: %d, serviceID: %d", err, edgeID, mq.end.ClientID())
 		return err

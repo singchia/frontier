@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jumboframes/armorigo/log"
 	"github.com/jumboframes/armorigo/synchub"
 	"github.com/singchia/frontier/pkg/frontier/apis"
 	"github.com/singchia/frontier/pkg/frontier/config"
@@ -115,7 +114,7 @@ func (sm *serviceManager) handleConn(conn net.Conn) error {
 	// stream handler
 	opt.SetAcceptStreamFunc(sm.acceptStream)
 	opt.SetClosedStreamFunc(sm.closedStream)
-	opt.SetLog(log.NewKLog())
+	opt.SetBufferSize(8192, 8192)
 	end, err := server.NewEndWithConn(conn, opt)
 	if err != nil {
 		klog.Errorf("service manager geminio server new end err: %s", err)
@@ -203,11 +202,6 @@ func (sm *serviceManager) GetServiceByName(name string) (geminio.End, error) {
 func (sm *serviceManager) GetServiceByRPC(rpc string) (geminio.End, error) {
 	sm.mtx.RLock()
 	defer sm.mtx.RUnlock()
-
-	// TODO remove it!!
-	for _, v := range sm.services {
-		return v, nil
-	}
 
 	mrpc, err := sm.repo.GetServiceRPC(rpc)
 	if err != nil {

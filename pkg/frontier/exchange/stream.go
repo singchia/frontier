@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"strconv"
+	"time"
 
 	"github.com/singchia/geminio"
 	"github.com/singchia/geminio/options"
@@ -111,12 +112,16 @@ func (ex *exchange) streamForwardMessage(left, right geminio.Stream) {
 				return
 			}
 
+			// message and options
 			mopt := options.NewMessage()
 			mopt.SetCustom(msg.Custom())
 			mopt.SetTopic(msg.Topic())
 			mopt.SetCnss(msg.Cnss())
 			newmsg := to.NewMessage(msg.Data(), mopt)
-			err = to.Publish(context.TODO(), newmsg)
+			// publish options
+			popt := options.Publish()
+			popt.SetTimeout(30 * time.Second)
+			err = to.Publish(context.TODO(), newmsg, popt)
 			if err != nil {
 				klog.Errorf("stream forward message, publish err: %s, fromID: %d, toID: %d", err, fromID, toID)
 				msg.Error(err)
@@ -140,7 +145,10 @@ func (ex *exchange) streamForwardRPC(left, right geminio.Stream) {
 			ropt := options.NewRequest()
 			ropt.SetCustom(r1.Custom())
 			r3 := to.NewRequest(r1.Data(), ropt)
-			r4, err := to.Call(ctx, method, r3)
+			// call option
+			copt := options.Call()
+			copt.SetTimeout(30 * time.Second)
+			r4, err := to.Call(ctx, method, r3, copt)
 			if err != nil {
 				klog.Errorf("stream forward rpc, call err: %s, fromID: %d, toID: %d", err, fromID, toID)
 				r2.SetError(err)

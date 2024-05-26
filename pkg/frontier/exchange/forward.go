@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"io"
+	"time"
 
 	"github.com/singchia/frontier/pkg/frontier/apis"
 	"github.com/singchia/geminio"
@@ -12,8 +13,9 @@ import (
 )
 
 func (ex *exchange) ForwardToEdge(meta *apis.Meta, end geminio.End) {
-	// raw
-	ex.forwardRawToEdge(end)
+	// raw, TODO now we didn't supply raw RW to user
+	// ex.forwardRawToEdge(end)
+
 	// message
 	ex.forwardMessageToEdge(end)
 	// rpc
@@ -48,7 +50,10 @@ func (ex *exchange) forwardRPCToEdge(end geminio.End) {
 		ropt := options.NewRequest()
 		ropt.SetCustom(r1.Custom())
 		r3 := edge.NewRequest(r1.Data(), ropt)
-		r4, err := edge.Call(ctx, method, r3)
+		// call option
+		copt := options.Call()
+		copt.SetTimeout(30 * time.Second)
+		r4, err := edge.Call(ctx, method, r3, copt)
 		if err != nil {
 			klog.V(2).Infof("service forward rpc, serviceID: %d, call edgeID: %d, err: %s", serviceID, edgeID, err)
 			r2.SetError(err)
@@ -102,7 +107,10 @@ func (ex *exchange) forwardMessageToEdge(end geminio.End) {
 			mopt.SetTopic(msg.Topic())
 			mopt.SetCnss(msg.Cnss())
 			newmsg := edge.NewMessage(msg.Data(), mopt)
-			err = edge.Publish(context.TODO(), newmsg)
+			// publish option
+			popt := options.Publish()
+			popt.SetTimeout(30 * time.Second)
+			err = edge.Publish(context.TODO(), newmsg, popt)
 			if err != nil {
 				klog.V(2).Infof("service forward message, serviceID: %d, publish edge: %d err: %s", serviceID, edgeID, err)
 				msg.Error(err)
@@ -114,8 +122,9 @@ func (ex *exchange) forwardMessageToEdge(end geminio.End) {
 }
 
 func (ex *exchange) ForwardToService(end geminio.End) {
-	// raw
-	ex.forwardRawToService(end)
+	// raw, TODO now we didn't supply raw RW to user
+	// ex.forwardRawToService(end)
+
 	// message
 	ex.forwardMessageToService(end)
 	// rpc
@@ -158,7 +167,10 @@ func (ex *exchange) forwardRPCToService(end geminio.End) {
 		ropt := options.NewRequest()
 		ropt.SetCustom(custom)
 		r3 := svc.NewRequest(r1.Data(), ropt)
-		r4, err := svc.Call(ctx, method, r3)
+		// call option
+		copt := options.Call()
+		copt.SetTimeout(30 * time.Second)
+		r4, err := svc.Call(ctx, method, r3, copt)
 		if err != nil {
 			if err != apis.ErrRPCNotOnline {
 				klog.Errorf("edge forward rpc to service, call service: %d err: %s, edgeID: %d", serviceID, err, edgeID)
