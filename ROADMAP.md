@@ -1,14 +1,22 @@
 ## Planned features
 
 ### Cluster
-- Atlas to support cluster
+- Atlas to support cluster ✅
 
-### Multiple MQ
-- Kafka
-- Nats/JetStream
-- Redis
-- NSQ
-- Rabbitmq/AMQP
+### K8S
+- Helm charts support ✅
+- CRD and Operater support ✅
+
+### Multiple MQ Producer
+- Kafka ✅
+- Nats/JetStream ✅
+- Redis ✅
+- NSQ ✅
+- Rabbitmq/AMQP ✅
+
+### Fine-tuning
+- Performance
+- Benchmark
 
 ### Metrics
 - Services/Edges

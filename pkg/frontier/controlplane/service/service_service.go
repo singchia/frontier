@@ -4,6 +4,7 @@ import (
 	"context"
 
 	v1 "github.com/singchia/frontier/api/controlplane/frontier/v1"
+	"github.com/singchia/frontier/pkg/frontier/repo/dao/membuntdb"
 	"github.com/singchia/frontier/pkg/frontier/repo/model"
 	"github.com/singchia/frontier/pkg/frontier/repo/query"
 )
@@ -53,12 +54,16 @@ func (cps *ControlPlaneService) listServices(_ context.Context, req *v1.ListServ
 	}
 	count, err := cps.repo.CountServices(query)
 	if err != nil {
-		return nil, err
+		if err != membuntdb.ErrUnimplemented {
+			return nil, err
+		} else {
+			count = -1
+		}
 	}
 	retServices := transferServices(services)
 	return &v1.ListServicesResponse{
 		Services: retServices,
-		Count:    uint32(count),
+		Count:    int32(count),
 	}, nil
 }
 
@@ -117,11 +122,15 @@ func (cps *ControlPlaneService) listServiceRPCs(_ context.Context, req *v1.ListS
 	}
 	count, err := cps.repo.CountServiceRPCs(query)
 	if err != nil {
-		return nil, err
+		if err != membuntdb.ErrUnimplemented {
+			return nil, err
+		} else {
+			count = -1
+		}
 	}
 	return &v1.ListServiceRPCsResponse{
 		Rpcs:  rpcs,
-		Count: uint32(count),
+		Count: int32(count),
 	}, nil
 }
 
@@ -164,11 +173,15 @@ func (cps *ControlPlaneService) listServiceTopics(_ context.Context, req *v1.Lis
 	}
 	count, err := cps.repo.CountServiceTopics(query)
 	if err != nil {
-		return nil, err
+		if err != membuntdb.ErrUnimplemented {
+			return nil, err
+		} else {
+			count = -1
+		}
 	}
 	return &v1.ListServiceTopicsResponse{
 		Topics: topics,
-		Count:  uint32(count),
+		Count:  int32(count),
 	}, nil
 }
 

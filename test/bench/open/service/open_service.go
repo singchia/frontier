@@ -5,6 +5,8 @@ import (
 	"io"
 	"log"
 	"net"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"strconv"
 	"sync"
@@ -33,6 +35,9 @@ func main() {
 	printstats := pflag.Bool("printstats", false, "whether print topic stats")
 
 	pflag.Parse()
+	go func() {
+		http.ListenAndServe("0.0.0.0:6062", nil)
+	}()
 	dialer := func() (net.Conn, error) {
 		return net.Dial(*network, *address)
 	}

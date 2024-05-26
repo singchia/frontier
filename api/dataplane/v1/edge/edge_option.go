@@ -10,10 +10,11 @@ type Logger log.Logger
 type Timer timer.Timer
 
 type edgeOption struct {
-	logger Logger
-	tmr    Timer
-	edgeID *uint64
-	meta   []byte
+	logger                          Logger
+	tmr                             Timer
+	edgeID                          *uint64
+	meta                            []byte
+	readBufferSize, writeBufferSize int
 }
 
 type EdgeOption func(*edgeOption)
@@ -41,5 +42,12 @@ func OptionEdgeID(edgeID uint64) EdgeOption {
 func OptionEdgeMeta(meta []byte) EdgeOption {
 	return func(opt *edgeOption) {
 		opt.meta = meta
+	}
+}
+
+func OptionServiceBufferSize(read, write int) EdgeOption {
+	return func(opt *edgeOption) {
+		opt.readBufferSize = read
+		opt.writeBufferSize = write
 	}
 }

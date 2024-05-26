@@ -6,7 +6,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/jumboframes/armorigo/log"
 	"github.com/jumboframes/armorigo/rproxy"
 	"github.com/jumboframes/armorigo/synchub"
 	"github.com/singchia/frontier/pkg/frontier/apis"
@@ -141,7 +140,6 @@ func (em *edgeManager) handleConn(conn net.Conn) error {
 	// stream handler
 	opt.SetAcceptStreamFunc(em.acceptStream)
 	opt.SetClosedStreamFunc(em.closedStream)
-	opt.SetLog(log.NewKLog())
 	end, err := server.NewEndWithConn(conn, opt)
 	if err != nil {
 		klog.Warningf("edge manager geminio server new end err: %s, addr: %s", err, conn.RemoteAddr())

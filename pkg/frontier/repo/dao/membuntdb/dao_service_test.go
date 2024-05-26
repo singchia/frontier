@@ -75,6 +75,63 @@ func TestListServices(t *testing.T) {
 	t.Log(len(retServices))
 }
 
+func TestDeleteService(t *testing.T) {
+	config := &config.Configuration{}
+	dao, err := NewDao(config)
+	if err != nil {
+		t.Error(err)
+	}
+	defer dao.Close()
+
+	serviceCount := 100000
+	services := genServices(serviceCount)
+	for _, service := range services {
+		err = dao.CreateService(service)
+		if err != nil {
+			t.Error(err)
+		}
+	}
+
+	err = dao.DeleteService(&query.ServiceDelete{
+		ServiceID: 1,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	services, err = dao.ListServices(&query.ServiceQuery{
+		Query: query.Query{
+			Page:     1,
+			PageSize: serviceCount,
+		},
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	if len(services) != serviceCount-1 {
+		t.Error("unmatched length of services")
+	}
+}
+
+func genServices(serviceIDCounts int) []*model.Service {
+	services := []*model.Service{}
+	for i := 0; i < serviceIDCounts; i++ {
+		service := &model.Service{
+			ServiceID:  uint64(i) + 1,
+			Service:    "test" + strconv.Itoa(i+1),
+			Addr:       "192.168." + strconv.Itoa(i+1) + ".1",
+			CreateTime: int64(i + 1),
+		}
+		services = append(services, service)
+	}
+	return services
+}
+
+func printServices(services []*model.Service) {
+	for _, service := range services {
+		fmt.Println(service.ServiceID, service.Service, service.Addr, service.CreateTime)
+	}
+}
+
 func TestListServiceRPCs(t *testing.T) {
 	config := &config.Configuration{}
 	dao, err := NewDao(config)
@@ -83,9 +140,9 @@ func TestListServiceRPCs(t *testing.T) {
 	}
 	defer dao.Close()
 
-	edgeCount := 1000
-	rpcPerEdge := 10
-	serviceRPCs := genServiceRPCs(edgeCount, rpcPerEdge)
+	serviceCount := 1000
+	rpcPerService := 10
+	serviceRPCs := genServiceRPCs(serviceCount, rpcPerService)
 	for _, rpc := range serviceRPCs {
 		err = dao.CreateServiceRPC(rpc)
 		if err != nil {
@@ -106,13 +163,13 @@ func TestListServiceRPCs(t *testing.T) {
 	retServiceRPCs, err = dao.ListServiceRPCs(&query.ServiceRPCQuery{
 		Query: query.Query{
 			Page:     1,
-			PageSize: edgeCount * rpcPerEdge,
+			PageSize: serviceCount * rpcPerService,
 		},
 	})
 	if err != nil {
 		t.Error(err)
 	}
-	if len(retServiceRPCs) != rpcPerEdge {
+	if len(retServiceRPCs) != rpcPerService {
 		t.Error("unmatched length of service rpcs", len(retServiceRPCs))
 	}
 
@@ -123,7 +180,7 @@ func TestListServiceRPCs(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if len(retServiceRPCs) != rpcPerEdge {
+	if len(retServiceRPCs) != rpcPerService {
 		t.Error("unmatched length of service rpcs", len(retServiceRPCs))
 	}
 
@@ -137,35 +194,47 @@ func TestListServiceRPCs(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if len(retServiceRPCs) != rpcPerEdge {
+	if len(retServiceRPCs) != rpcPerService {
 		t.Error("unmatched length of service rpcs", len(retServiceRPCs))
 	}
 }
 
-func genServices(edgeIDCounts int) []*model.Service {
-	services := []*model.Service{}
-	for i := 0; i < edgeIDCounts; i++ {
-		service := &model.Service{
-			ServiceID:  uint64(i) + 1,
-			Service:    "test" + strconv.Itoa(i+1),
-			Addr:       "192.168." + strconv.Itoa(i+1) + ".1",
-			CreateTime: int64(i + 1),
+func TestDeleteServiceRPCs(t *testing.T) {
+	config := &config.Configuration{}
+	dao, err := NewDao(config)
+	if err != nil {
+		t.Error(err)
+	}
+	defer dao.Close()
+
+	serviceCount := 2
+	rpcPerService := 1000
+	serviceRPCs := genServiceRPCs(serviceCount, rpcPerService)
+	for _, rpc := range serviceRPCs {
+		err = dao.CreateServiceRPC(rpc)
+		if err != nil {
+			t.Error(err)
 		}
-		services = append(services, service)
 	}
-	return services
+	err = dao.DeleteServiceRPCs(1)
+	if err != nil {
+		t.Error(err)
+	}
+	rpcs, err := dao.ListServiceRPCs(&query.ServiceRPCQuery{
+		ServiceID: 1,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	if len(rpcs) != 0 {
+		t.Error("unmatched length of service rpcs")
+	}
 }
 
-func printServices(services []*model.Service) {
-	for _, service := range services {
-		fmt.Println(service.ServiceID, service.Service, service.Addr, service.CreateTime)
-	}
-}
-
-func genServiceRPCs(edgeIDCounts int, rpcPerEdge int) []*model.ServiceRPC {
+func genServiceRPCs(serviceIDCounts int, rpcPerService int) []*model.ServiceRPC {
 	serviceRPCs := []*model.ServiceRPC{}
-	for i := 0; i < edgeIDCounts; i++ {
-		for j := 0; j < rpcPerEdge; j++ {
+	for i := 0; i < serviceIDCounts; i++ {
+		for j := 0; j < rpcPerService; j++ {
 			serviceRPC := &model.ServiceRPC{
 				RPC:        "rpc" + strconv.Itoa(j+1),
 				ServiceID:  uint64(i + 1),
@@ -175,4 +244,86 @@ func genServiceRPCs(edgeIDCounts int, rpcPerEdge int) []*model.ServiceRPC {
 		}
 	}
 	return serviceRPCs
+}
+
+func TestListServiceTopics(t *testing.T) {
+	config := &config.Configuration{}
+	dao, err := NewDao(config)
+	if err != nil {
+		t.Error(err)
+	}
+	defer dao.Close()
+
+	serviceCount := 1000
+	topicPerService := 10
+	serviceTopics := genServiceTopics(serviceCount, topicPerService)
+	for _, topic := range serviceTopics {
+		err = dao.CreateServiceTopic(topic)
+		if err != nil {
+			t.Error(err)
+		}
+	}
+
+	// query on default page
+	retServiceTopics, err := dao.ListServiceTopics(&query.ServiceTopicQuery{})
+	if err != nil {
+		t.Error(err)
+	}
+	if len(retServiceTopics) != 10 {
+		t.Error("unmatched length of service topics", len(retServiceTopics))
+	}
+
+	// query on all
+	retServiceTopics, err = dao.ListServiceTopics(&query.ServiceTopicQuery{
+		Query: query.Query{
+			Page:     1,
+			PageSize: serviceCount * topicPerService,
+		},
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	if len(retServiceTopics) != topicPerService {
+		t.Error("unmatched length of service topics", len(retServiceTopics))
+	}
+
+	// query on id
+	retServiceTopics, err = dao.ListServiceTopics(&query.ServiceTopicQuery{
+		ServiceID: 1,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	if len(retServiceTopics) != topicPerService {
+		t.Error("unmatched length of service topics", len(retServiceTopics))
+	}
+
+	// query on create time
+	retServiceTopics, err = dao.ListServiceTopics(&query.ServiceTopicQuery{
+		Query: query.Query{
+			StartTime: 11,
+			EndTime:   12,
+		},
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	if len(retServiceTopics) != topicPerService {
+		t.Error("unmatched length of service topics", len(retServiceTopics))
+	}
+}
+
+func genServiceTopics(serviceIDCounts int, topicPerService int) []*model.ServiceTopic {
+	serviceTopics := []*model.ServiceTopic{}
+	for i := 0; i < serviceIDCounts; i++ {
+		for j := 0; j < topicPerService; j++ {
+			serviceTopic := &model.ServiceTopic{
+				Topic:      "topic" + strconv.Itoa(j+1),
+				ServiceID:  uint64(i + 1),
+				CreateTime: int64(i + 1),
+			}
+			serviceTopics = append(serviceTopics, serviceTopic)
+		}
+	}
+	return serviceTopics
 }
