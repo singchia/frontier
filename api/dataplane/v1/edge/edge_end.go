@@ -14,13 +14,16 @@ type edgeEnd struct {
 
 func newEdgeEnd(dialer client.Dialer, opts ...EdgeOption) (*edgeEnd, error) {
 	// options
-	eopt := &edgeOption{}
+	eopt := &edgeOption{
+		readBufferSize:  -1,
+		writeBufferSize: -1,
+	}
 	for _, opt := range opts {
 		opt(eopt)
 	}
-	eopts := &client.RetryEndOptions{
-		EndOptions: &client.EndOptions{},
-	}
+
+	// turn to end options
+	eopts := client.NewEndOptions()
 	if eopt.tmr != nil {
 		eopts.SetTimer(eopt.tmr)
 	}
@@ -32,6 +35,9 @@ func newEdgeEnd(dialer client.Dialer, opts ...EdgeOption) (*edgeEnd, error) {
 	}
 	if eopt.meta != nil {
 		eopts.SetMeta(eopt.meta)
+	}
+	if eopt.readBufferSize != -1 || eopt.writeBufferSize != -1 {
+		eopts.SetBufferSize(eopt.readBufferSize, eopt.writeBufferSize)
 	}
 
 	// new geminio end

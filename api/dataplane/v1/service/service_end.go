@@ -18,7 +18,10 @@ type serviceEnd struct {
 
 func newServiceEnd(dialer client.Dialer, opts ...ServiceOption) (*serviceEnd, error) {
 	// options
-	sopt := &serviceOption{}
+	sopt := &serviceOption{
+		readBufferSize:  -1, // default length 128
+		writeBufferSize: -1, // default legnth 128
+	}
 	for _, opt := range opts {
 		opt(sopt)
 	}
@@ -31,6 +34,9 @@ func newServiceEnd(dialer client.Dialer, opts ...ServiceOption) (*serviceEnd, er
 	}
 	if sopt.serviceID != 0 {
 		sopts.SetClientID(sopt.serviceID)
+	}
+	if sopt.readBufferSize != -1 || sopt.writeBufferSize != -1 {
+		sopts.SetBufferSize(sopt.readBufferSize, sopt.writeBufferSize)
 	}
 	// meta
 	meta := &apis.Meta{}
@@ -60,13 +66,16 @@ func newServiceEnd(dialer client.Dialer, opts ...ServiceOption) (*serviceEnd, er
 
 func newRetryServiceEnd(dialer client.Dialer, opts ...ServiceOption) (*serviceEnd, error) {
 	// options
-	sopt := &serviceOption{}
+	sopt := &serviceOption{
+		readBufferSize:  -1,
+		writeBufferSize: -1,
+	}
 	for _, opt := range opts {
 		opt(sopt)
 	}
-	sopts := &client.RetryEndOptions{
-		EndOptions: &client.EndOptions{},
-	}
+
+	// turn to end options
+	sopts := client.NewEndOptions()
 	if sopt.tmr != nil {
 		sopts.SetTimer(sopt.tmr)
 	}
@@ -90,6 +99,9 @@ func newRetryServiceEnd(dialer client.Dialer, opts ...ServiceOption) (*serviceEn
 	// delegate
 	if sopt.delegate != nil {
 		sopts.SetDelegate(sopt.delegate)
+	}
+	if sopt.readBufferSize != -1 || sopt.writeBufferSize != -1 {
+		sopts.SetBufferSize(sopt.readBufferSize, sopt.writeBufferSize)
 	}
 	// new geminio end
 	end, err := client.NewRetryEndWithDialer(dialer, sopts)

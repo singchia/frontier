@@ -20,8 +20,9 @@ type serviceOption struct {
 	// to tell frontier what service we are
 	service string
 	// delegate to know online offline stuff
-	delegate  Delegate
-	serviceID uint64
+	delegate                        Delegate
+	serviceID                       uint64
+	readBufferSize, writeBufferSize int
 }
 
 type ServiceOption func(*serviceOption)
@@ -61,5 +62,12 @@ func OptionServiceDelegate(delegate Delegate) ServiceOption {
 func OptionServiceID(serviceID uint64) ServiceOption {
 	return func(opt *serviceOption) {
 		opt.serviceID = serviceID
+	}
+}
+
+func OptionServiceBufferSize(read, write int) ServiceOption {
+	return func(opt *serviceOption) {
+		opt.readBufferSize = read
+		opt.writeBufferSize = write
 	}
 }
