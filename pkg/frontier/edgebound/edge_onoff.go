@@ -68,11 +68,11 @@ func (em *edgeManager) online(end geminio.End) error {
 
 	// inform others
 	if em.informer != nil {
-		em.informer.EdgeOnline(end.ClientID(), end.Meta(), end.Addr())
+		em.informer.EdgeOnline(end.ClientID(), end.Meta(), end.RemoteAddr())
 	}
 	// exchange to service
 	if em.exchange != nil {
-		err := em.exchange.EdgeOnline(end.ClientID(), end.Meta(), end.Addr())
+		err := em.exchange.EdgeOnline(end.ClientID(), end.Meta(), end.RemoteAddr())
 		if err == apis.ErrServiceNotOnline {
 			return nil
 		}

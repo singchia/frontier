@@ -58,8 +58,11 @@ func newclusterServiceEnd(addr string, opts ...ServiceOption) (*clusterServiceEn
 	cc := clusterv1.NewClusterServiceClient(conn)
 
 	end := &clusterServiceEnd{
-		cc:             cc,
-		serviceOption:  &serviceOption{},
+		cc: cc,
+		serviceOption: &serviceOption{
+			readBufferSize:  1024,
+			writeBufferSize: 1024,
+		},
 		rpcs:           map[string]geminio.RPC{},
 		topics:         mapset.NewSet[string](),
 		edgefrontiers:  mapmap.NewBiMap(),
