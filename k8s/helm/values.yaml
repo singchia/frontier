@@ -46,7 +46,7 @@ service:
       - name: controlbound
         type: ClusterIP
         targetPort: controlbound
-        port: 2430
+        port: 30010
       - name: servicebound
         type: ClusterIP
         targetPort: servicebound
