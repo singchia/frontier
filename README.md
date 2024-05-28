@@ -7,12 +7,12 @@ Frontier是一个go开发的开源长连接网关，能让微服务直接连通�
 ## 特性
 
 - **RPC**（远程过程调用）；微服务可以直接Call到边缘节点的注册函数，同样的边缘节点也可以Call到微服务的注册函数，并且在微服务侧支持负载均衡。
-- **消息**（发布和接收）；微服务可以直接Publish到边缘节点的topic，同样的边缘节点也可以Publish到微服务的topic，或外部消息队列的topic，微服务侧的topic，支持负载均衡。
+- **消息**（发布和接收）；微服务可以直接Publish到边缘节点的topic，同样的边缘节点也可以Publish到微服务的topic，或外部消息队列的topic，微服务侧的topic支持负载均衡。
 - **多路复用**（点到点拨通）；微服务可以直接在边缘节点上打开一个新流（连接），你可以在这个新连接上封装例如流读写、拷贝文件、代理等，天堑变通途。
 - **上线离线控制**（边缘节点）；微服务可以注册边缘节点获取ID、上线和下线回调，当边缘节点请求ID、上线或者离线时，Frontier会调用这个回调。
 - **API简单**（SDK提供）；在项目的api目录下，分别对边缘和微服务提供了封装好的sdk，你可以非常简单和轻量的基于这个sdk做开发。
-- **部署简单**；支持多种部署方式，如docker、docker-compose、k8s-helm以及operator来部署和管理你的Frontier实例。
-- **水平扩展**；提供了Frontiter和Frontlas集群，在单实例性能达到瓶颈下，可以水平扩展Frontier实例。
+- **部署简单**；支持多种部署方式，如docker、docker-compose、k8s-helm以及operator来部署和管理你的Frontier实例或集群。
+- **水平扩展**；提供了Frontiter和Frontlas集群，在单实例性能达到瓶颈下，可以水平扩展Frontier实例或集群。
 - **高可用**；Frontlas具有集群视角，你可以使用微服务和边缘节点永久重连的sdk，在当前Frontier宕机情况下，新选择一个可用Frontier实例继续服务。
 
 ## 架构
@@ -22,15 +22,25 @@ Frontier是一个go开发的开源长连接网关，能让微服务直接连通�
 <img src="./docs/diagram/frontier.png" width="100%" height="100%">
 
 
-- Service End：微服务侧的功能入口
+- Service End：微服务侧的功能入口，默认连接
 - Edge End：边缘节点或客户端侧的功能入口
 - Publish/Receive：发布和接收消息
 	- Topic：发布和接收消息的主题
 - Call/Register：调用和注册函数
 	- Method：调用和注册的函数名
-- OpenStream/AcceptStream：打开和接收点到点连接
+- OpenStream/AcceptStream：打开和接收点到点流（连接）
+
+Frontier需要微服务和边缘节点两方都主动连接到Frontier，这种设计的优势在不需要Frontier主动连接任何一个地址，Service和Edge的元信息可以在连接的时候携带过来。连接的默认端口是：
+
+- 30011：提供给微服务连接，获取Service
+- 30012：提供给边缘节点连接，获取Edge
+- 30010：提供给运维人员或者程序使用的控制面
+
+详情见部署章节
+
 
 ## 使用
+
 
 ### Service
 
@@ -42,11 +52,11 @@ package main
 import "github.com/singchia/frontier/api/dataplane/v1/service"
 
 func main() {
-		dialer := func() (net.Conn, error) {
-			return net.Dial("tcp", "127.0.0.1:30011")
-		}
-		svc, err := service.NewService(dialer)
-		// 开始使用service
+	dialer := func() (net.Conn, error) {
+		return net.Dial("tcp", "127.0.0.1:30011")
+	}
+	svc, err := service.NewService(dialer)
+	// 开始使用service
 }
 ```
 
@@ -176,23 +186,81 @@ func main() {
 }
 ```
 
+### 控制面
+
+Frontier控制面提供gRPC和rest接口，运维人员可以使用这些api来确定本实例的连接情况，定义在 
+
+> api/controlplane/frontier/v1/controlplane.proto
+
+```protobuffer
+service ControlPlane {
+    // 列举所有边缘节点
+    rpc ListEdges(ListEdgesRequest) returns (ListEdgesResponse)
+        { option(google.api.http) = { get: "/v1/edges"}; };
+    // 获取边缘节点详情
+    rpc GetEdge(GetEdgeRequest) returns (Edge)
+        { option(google.api.http) = { get: "/v1/edges/{edge_id}"}; };
+    // 踢除某个边缘节点下线
+    rpc KickEdge(KickEdgeRequest) returns (KickEdgeResponse)
+        { option(google.api.http) = { delete: "/v1/edges/{edge_id}"}; };
+    // 列举边缘节点注册的RPC
+    rpc ListEdgeRPCs(ListEdgeRPCsRequest) returns (ListEdgeRPCsResponse)
+        { option(google.api.http) = { get: "/v1/edges/rpcs"}; };
+
+    // 列举所有微服务
+    rpc ListServices(ListServicesRequest) returns (ListServicesResponse)
+        { option(google.api.http) = { get: "/v1/services"}; };
+    // 获取微服务详情
+    rpc GetService(GetServiceRequest) returns (Service)
+        { option(google.api.http) = { get: "/v1/services/{service_id}"}; };
+    // 提出某个微服务下线
+    rpc KickService(KickServiceRequest) returns (KickServiceResponse)
+        { option(google.api.http) = { delete: "/v1/services/{service_id}"}; };
+    // 列举微服务注册的RPC
+    rpc ListServiceRPCs(ListServiceRPCsRequest) returns (ListServiceRPCsResponse)
+        { option(google.api.http) = { get: "/v1/services/rpcs"}; };
+    // 列举微服务接收的Topic
+    rpc ListServiceTopics(ListServiceTopicsRequest) returns (ListServiceTopicsResponse)
+        { option(google.api.http) = { get: "/v1/services/topics"}; };
+}
+```
+
+Swagger文档请见[swagger](./docs/swagger/swagger.yaml)
+
+**注意**：
+
+当你配置dao backend使用sqlite3时，count才会返回总数，默认使用buntdb，为性能考虑，这个值返回-1
+
+### 示例
+
+本仓库携带了一个ICLM(Iteractive command-line messaging)示例，可以通过
+
+```
+make examples
+```
+
+在bin目录下得到```iclm_service```和```iclm_edge```的可执行程序，以下是运行示例：
+
+## 配置
+
+### TLS
+
 ## 部署
-
-### 默认端口
-
-- 30011：提供给微服务连接，获取Service的端口
-- 30012：提供给边缘节点连接，获取Edge的端口
-- 30010：提供给运维人员或者程序使用的控制面端口
 
 ### docker
 
 ```
-
+docker run -d --name frontier -p 30011:30011 -p 30012:30012 singchia/frontier:1.0.0
 ```
+
+然后你可以使用上面所说的iclm示例来测试功能性
 
 ### docker-compose
 
 ```
+git clone https://github.com/singchia/frontier.git
+cd dist/compose
+docker-compose up -d frontier
 
 ```
 
@@ -202,14 +270,25 @@ func main() {
 
 ```
 
+
 ## 集群
 
 ### Frontier + Frontlas架构
 
 <img src="./docs/diagram/frontlas.png" width="100%" height="100%">
 
+- Frontier：最小的Frontier部署实例
+- Frontlas：同步到
 
-## 参与开发
+### 高可用
+
+## k8s
+
+### Operator
+
+## 开发
+
+### Bug和Feature
 
 如果你发现任何Bug，请提出Issue，项目Maintainers会及时响应相关问题。
  
@@ -218,6 +297,10 @@ func main() {
  * 代码风格保持一致
  * 每次提交一个Feature
  * 提交的代码都携带单元测试
+
+### 路线图
+ 
+ 祥见 [ROADMAP](./ROADMAP.md)
 
 ## 许可证
 
