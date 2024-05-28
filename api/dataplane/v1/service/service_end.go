@@ -67,8 +67,8 @@ func newServiceEnd(dialer client.Dialer, opts ...ServiceOption) (*serviceEnd, er
 func newRetryServiceEnd(dialer client.Dialer, opts ...ServiceOption) (*serviceEnd, error) {
 	// options
 	sopt := &serviceOption{
-		readBufferSize:  -1,
-		writeBufferSize: -1,
+		readBufferSize:  1024,
+		writeBufferSize: 1024,
 	}
 	for _, opt := range opts {
 		opt(sopt)

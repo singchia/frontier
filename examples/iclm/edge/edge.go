@@ -59,7 +59,8 @@ func main() {
 
 	// get edge
 	cli, err := edge.NewEdge(dialer,
-		edge.OptionEdgeLog(armlog.DefaultLog), edge.OptionEdgeMeta([]byte(*meta)))
+		edge.OptionEdgeLog(armlog.DefaultLog),
+		edge.OptionEdgeMeta([]byte(*meta)))
 	if err != nil {
 		armlog.Info("new edge err:", err)
 		return

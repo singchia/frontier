@@ -1,5 +1,7 @@
 module github.com/singchia/frontier
 
+replace "github.com/singchia/geminio" => ../geminio
+
 go 1.22
 
 require (

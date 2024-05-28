@@ -4,6 +4,7 @@ import (
 	"context"
 
 	v1 "github.com/singchia/frontier/api/controlplane/frontier/v1"
+	"github.com/singchia/frontier/pkg/frontier/repo/dao/membuntdb"
 	"github.com/singchia/frontier/pkg/frontier/repo/model"
 	"github.com/singchia/frontier/pkg/frontier/repo/query"
 )
@@ -50,7 +51,11 @@ func (cps *ControlPlaneService) listEdges(_ context.Context, req *v1.ListEdgesRe
 	}
 	count, err := cps.repo.CountEdges(query)
 	if err != nil {
-		return nil, err
+		if err != membuntdb.ErrUnimplemented {
+			return nil, err
+		} else {
+			count = -1
+		}
 	}
 	retEdges := transferEdges(edges)
 	return &v1.ListEdgesResponse{
@@ -112,7 +117,11 @@ func (cps *ControlPlaneService) listEdgeRPCs(_ context.Context, req *v1.ListEdge
 	}
 	count, err := cps.repo.CountEdgeRPCs(query)
 	if err != nil {
-		return nil, err
+		if err != membuntdb.ErrUnimplemented {
+			return nil, err
+		} else {
+			count = -1
+		}
 	}
 	return &v1.ListEdgeRPCsResponse{
 		Rpcs:  rpcs,

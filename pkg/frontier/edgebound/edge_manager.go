@@ -187,7 +187,6 @@ func (em *edgeManager) ListStreams(edgeID uint64) []geminio.Stream {
 }
 
 func (em *edgeManager) DelEdgeByID(edgeID uint64) error {
-	// TODO test it
 	em.mtx.RLock()
 	defer em.mtx.RUnlock()
 

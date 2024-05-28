@@ -8,9 +8,9 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	armlog "github.com/jumboframes/armorigo/log"
@@ -32,7 +32,8 @@ func main() {
 	count := pflag.Int("count", 10000, "edges to dial")
 	topic := pflag.String("topic", "test", "topic to specific")
 	nseconds := pflag.Int("nseconds", 10, "publish message every n seconds for every edge")
-	sourceIPs := pflag.String("source_ips", "", "source ips to dial, if your ")
+	msg := pflag.String("msg", "testtesttest", "the message content to publish")
+	sourceIPs := pflag.String("source_ips", "", "source ips to dial, if you want dial more than \"65535\" source ports")
 	pprof := pflag.String("pprof", "", "pprof addr to listen")
 	pflag.Parse()
 
@@ -43,7 +44,8 @@ func main() {
 	}
 
 	ips := []string{}
-	idx := 0
+	idx := int64(0)
+
 	if *sourceIPs != "" {
 		ips = strings.Split(*sourceIPs, ",")
 		idx = 0
@@ -52,9 +54,11 @@ func main() {
 
 	dialer := func() (net.Conn, error) {
 		if len(ips) != 0 {
-			for retry := 0; retry < 2; retry++ {
+			for retry := 0; retry < 3; retry++ {
+				thisidx := atomic.LoadInt64(&idx)
+				ip := ips[int(thisidx)%len(ips)]
 				localAddr := &net.TCPAddr{
-					IP: net.ParseIP(ips[idx]),
+					IP: net.ParseIP(ip),
 				}
 				dialer := &net.Dialer{
 					LocalAddr: localAddr,
@@ -66,14 +70,10 @@ func main() {
 				}
 				if strings.Contains(err.Error(), "cannot assign requested address") ||
 					strings.Contains(err.Error(), "address already in use") {
-					fmt.Println("source ip:", localAddr.IP.String(), localAddr.Port, err)
-					idx += 1
-					if idx >= len(ips) {
-						return nil, err
-					}
+					atomic.AddInt64(&idx, 1)
 					continue
 				}
-				fmt.Println("source ip:", localAddr.IP.String(), localAddr.Port)
+				fmt.Printf("unknown dial err: %s, source ip: %s:%d \n", err, localAddr.IP.String(), localAddr.Port)
 				return nil, err
 			}
 		}
@@ -96,7 +96,11 @@ func main() {
 		go func(i int) {
 			defer wg.Done()
 			// avoid congestion of connection
-			random := rand.Intn(*count/100) + 1
+			n := *count / 100
+			if n == 0 {
+				n = 1
+			}
+			random := rand.Intn(n) + 1
 			time.Sleep(time.Second * time.Duration(random))
 			// new edge connection
 			cli, err := edge.NewEdge(dialer,
@@ -112,9 +116,8 @@ func main() {
 			mtx.Unlock()
 			// publish message in loop
 			for {
-				str := strconv.FormatInt(int64(i), 10)
-				msg := cli.NewMessage([]byte(str))
-				err := cli.Publish(context.TODO(), *topic, msg)
+				gmsg := cli.NewMessage([]byte(*msg))
+				err := cli.Publish(context.TODO(), *topic, gmsg)
 				if err != nil {
 					fmt.Println("publish err", err)
 					break
