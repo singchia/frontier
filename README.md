@@ -50,9 +50,9 @@ Frontier需要微服务和边缘节点两方都主动连接到Frontier，这种�
 make examples
 ```
 
-在bin目录下得到```chatroom_service```和```chatroom_edge```的可执行程序，以下是运行示例：
+在bin目录下得到```chatroom_service```和```chatroom_client```的可执行程序，以下是运行示例：
 
-
+![Chatroom example](./docs/video/chatroom.gif)
 
 ### Service
 
