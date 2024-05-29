@@ -9,7 +9,7 @@ Frontier是一个go开发的开源长连接网关，旨在让微服务直达边�
 
 - **RPC**  微服务和边缘可以Call对方的函数（提前注册），并且在微服务侧支持负载均衡
 - **消息**  微服务和边缘可以Publish对方的Topic，边缘可以Publish到外部MQ的Topic，微服务侧支持负载均衡
-- **流/多路复用**  微服务可以直接在边缘节点打开一个流（连接），可以封装例如文件上传、代理等，天堑变通途
+- **多路复用/流**  微服务可以直接在边缘节点打开一个流（连接），可以封装例如文件上传、代理等，天堑变通途
 - **上线离线控制**  微服务可以注册边缘节点获取ID、上线离线回调，当这些事件发生，Frontier会调用这些方法
 - **API简单**  在项目api目录下，分别对边缘和微服务提供了封装好的sdk，可以非常简单的基于这个sdk做开发
 - **部署简单**  支持多种部署方式(docker docker-compose helm以及operator)来部署Frontier实例或集群
@@ -39,11 +39,62 @@ Frontier需要微服务和边缘节点两方都主动连接到Frontier，Service
 
 ### 功能
 
-| First Header  | Second Header |
-| ------------- | ------------- |
-| Content Cell  | Content Cell  |
-| Content Cell  | Content Cell  |
-
+<table><thead>
+  <tr>
+    <th>功能</th>
+    <th>发起方</th>
+    <th>目标方</th>
+    <th>方法</th>
+    <th>路由方式</th>
+    <th>描述</th>
+  </tr></thead>
+<tbody>
+  <tr>
+    <td rowspan="2">Messager</td>
+    <td>Service</td>
+    <td>Edge</td>
+    <td>Publish</td>
+    <td>EdgeID+Topic</td>
+    <td>必须Publish到具体的EdgeID，默认Topic为空，Edge调用Receive接收，接收处理完成后必须调用msg.Done()或msg.Error(err)保障消息一致性</td>
+  </tr>
+  <tr>
+    <td>Edge</td>
+    <td>Service或外部MQ</td>
+    <td>Publish</td>
+    <td>Topic</td>
+    <td>必须Publish到Topic，由Frontier根据Topic选择具体Service或MQ</td>
+  </tr>
+  <tr>
+    <td rowspan="2">RPCer</td>
+    <td>Service</td>
+    <td>Edge</td>
+    <td>Call</td>
+    <td>EdgeID+Method</td>
+    <td>必须Call到具体的EdgeID，必须携带Method</td>
+  </tr>
+  <tr>
+    <td>Edge</td>
+    <td>Service</td>
+    <td>Call</td>
+    <td>Method</td>
+    <td>必须Call到Method，由Frontier根据Method选择具体的Service</td>
+  </tr>
+  <tr>
+    <td rowspan="2">Multiplexer</td>
+    <td>Service</td>
+    <td>Edge</td>
+    <td>OpenStream</td>
+    <td>EdgeID</td>
+    <td>必须OpenStream到具体的EdgeID</td>
+  </tr>
+  <tr>
+    <td>Edge</td>
+    <td>Service</td>
+    <td>OpenStream</td>
+    <td>ServiceName</td>
+    <td>必须OpenStream到ServiceName，该ServiceName由Service初始化时携带的service.OptionServiceName指定</td>
+  </tr>
+</tbody></table>
 
 ## 使用
 
@@ -322,24 +373,14 @@ Frontier控制面提供gRPC和Rest接口，运维人员可以使用这些api来�
 
 ```protobuf
 service ControlPlane {
-    // 列举所有边缘节点
     rpc ListEdges(ListEdgesRequest) returns (ListEdgesResponse);
-    // 获取边缘节点详情
     rpc GetEdge(GetEdgeRequest) returns (Edge);
-    // 踢除某个边缘节点下线
     rpc KickEdge(KickEdgeRequest) returns (KickEdgeResponse);
-    // 列举边缘节点注册的RPC
     rpc ListEdgeRPCs(ListEdgeRPCsRequest) returns (ListEdgeRPCsResponse);
-
-    // 列举所有微服务
     rpc ListServices(ListServicesRequest) returns (ListServicesResponse);
-    // 获取微服务详情
     rpc GetService(GetServiceRequest) returns (Service);
-    // 提出某个微服务下线
     rpc KickService(KickServiceRequest) returns (KickServiceResponse);
-    // 列举微服务注册的RPC
     rpc ListServiceRPCs(ListServiceRPCsRequest) returns (ListServiceRPCsResponse);
-    // 列举微服务接收的Topic
     rpc ListServiceTopics(ListServiceTopicsRequest) returns (ListServiceTopicsResponse);
 }
 ```
