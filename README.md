@@ -4,9 +4,6 @@
 
 Frontier是一个go开发的开源长连接网关，能让微服务直接连通边缘节点或客户端，反之边缘节点或客户端也能直接连通到微服务。对于微服务或者边缘节点，提供了单双向RPC调用，消息发布和接收，以及直接点对点拨通通信的特性。Frontier采用云原生架构，可以使用Operator快速部署一个集群，轻松实现百万连接。
 
-## 内容
-
-[TOC]
 
 ## 特性
 
@@ -56,7 +53,7 @@ make examples
 
 在bin目录下得到```chatroom_service```和```chatroom_client```可执行程序，运行示例：
 
-https://github.com/singchia/frontier/assets/15531166/ae408745-1997-491a-a55d-c2f8d0e72f9a
+https://github.com/singchia/frontier/assets/15531166/18b01d96-e30b-450f-9610-917d65259c30
 
 可以看到上线离线通知，消息Publish等功能
 
@@ -161,7 +158,6 @@ func main() {
 	dialer := func() (net.Conn, error) {
 		return net.Dial("tcp", "127.0.0.1:30011")
 	}
-	svc, _ := service.NewService(dialer)
 	req := srv.NewRequest([]byte("test"))
 	// 调用ID为1001边缘节点的foo方法，前提是边缘节点需要预注册该方法
 	rsp, err := srv.Call(context.TODO(), edgeID, "foo", req)
@@ -418,7 +414,6 @@ helm install frontier ./ -f values.yaml
 
 ### 高可用
 
-
 ## k8s
 
 ### Operator
@@ -439,9 +434,10 @@ helm install frontier ./ -f values.yaml
  * 每次提交一个Feature
  * 提交的代码都携带单元测试
 
-### 群组
+## 测试
 
-<img src="./docs/diagram/wechat-group.jpg" width="25%">
+### 流
+<img src="./docs/diagram/stream.png" width="100%">
 
 
 ## 许可证
