@@ -2,14 +2,14 @@
 <img src="./docs/diagram/frontier-logo.png" width="30%" height="30%">
 </p>
 
-Frontier是一个go开发的开源长连接网关，能让微服务直接连通边缘节点或客户端，反之边缘节点或客户端也能直接连通到微服务。对于微服务或者边缘节点，提供了单双向RPC调用，消息发布和接收，以及直接点对点拨通通信的特性。Frontier采用云原生架构，可以使用Operator快速部署一个集群，轻松实现百万连接。
+Frontier是一个go开发的开源长连接网关，旨在让微服务直达边缘节点或客户端，反之边缘节点或客户端也同样直达微服务。对于两者，提供了单双向RPC调用，消息发布和接收，以及点对点通信的功能。Frontier符合云原生架构，可以使用Operator快速部署一个集群，具有高可用和弹性，轻松支撑百万边缘节点或客户端在线的需求。
 
 
 ## 特性
 
 - **RPC**  微服务和边缘可以Call对方的函数（提前注册），并且在微服务侧支持负载均衡
 - **消息**  微服务和边缘可以Publish对方的Topic，边缘可以Publish到外部MQ的Topic，微服务侧支持负载均衡
-- **多路复用**  微服务可以直接在边缘节点打开一个新流（连接），可以封装例如文件上传、代理等，天堑变通途
+- **流/多路复用**  微服务可以直接在边缘节点打开一个流（连接），可以封装例如文件上传、代理等，天堑变通途
 - **上线离线控制**  微服务可以注册边缘节点获取ID、上线离线回调，当这些事件发生，Frontier会调用这些方法
 - **API简单**  在项目api目录下，分别对边缘和微服务提供了封装好的sdk，可以非常简单的基于这个sdk做开发
 - **部署简单**  支持多种部署方式(docker docker-compose helm以及operator)来部署Frontier实例或集群
@@ -30,22 +30,26 @@ Frontier是一个go开发的开源长连接网关，能让微服务直接连通�
 - _Call/Register_：调用和注册函数
 - _OpenStream/AcceptStream_：打开和接收点到点流（连接）
 
-Frontier需要微服务和边缘节点两方都主动连接到Frontier，这种设计的优势在不需要Frontier主动连接任何一个地址，Service和Edge的元信息可以在连接的时候携带过来。连接的默认端口是：
+Frontier需要微服务和边缘节点两方都主动连接到Frontier，Service和Edge的元信息（接收Topic，RPC，Service名等）可以在连接的时候携带过来。连接的默认端口是：
 
-- ```30011```：提供给微服务连接，获取Service
-- ```30012```：提供给边缘节点连接，获取Edge
-- ```30010```：提供给运维人员或者程序使用的控制面
+- ```:30011``` 提供给微服务连接，获取Service
+- ```:30012``` 提供给边缘节点连接，获取Edge
+- ```:30010``` 提供给运维人员或者程序使用的控制面
 
-详情见部署章节
+
+### 功能
+
+| First Header  | Second Header |
+| ------------- | ------------- |
+| Content Cell  | Content Cell  |
+| Content Cell  | Content Cell  |
 
 
 ## 使用
 
 ### 示例
 
-> examples/chatroom
-
-该目录下有简单的聊天室示例，仅100行代码来实现一个聊天室功能，可以通过
+目录[examples/chatroom](./examples/chatroom)下有简单的聊天室示例，仅100行代码实现一个的聊天室功能，可以通过
 
 ```
 make examples
@@ -55,9 +59,10 @@ make examples
 
 https://github.com/singchia/frontier/assets/15531166/18b01d96-e30b-450f-9610-917d65259c30
 
-可以看到上线离线通知，消息Publish等功能
+在这个示例你可以看到上线离线通知，消息Publish等功能。
 
-### Service
+
+### 微服务如何使用
 
 **微服务侧获取Service**：
 
@@ -66,7 +71,6 @@ package main
 
 import (
 	"net"
-
 	"github.com/singchia/frontier/api/dataplane/v1/service"
 )
 
@@ -79,7 +83,7 @@ func main() {
 }
 ```
 
-**Service接收获取ID、上线/离线通知**：
+**微服务接收获取ID、上线/离线通知**：
 
 ```golang
 package main
@@ -87,7 +91,6 @@ package main
 import (
 	"context"
 	"net"
-
 	"github.com/singchia/frontier/api/dataplane/v1/service"
 )
 
@@ -117,7 +120,7 @@ func offline(edgeID uint64, meta []byte, addr net.Addr) error {
 }
 ```
 
-**Service发布消息到Edge**：
+**微服务发布消息到边缘节点**：
 
 前提需要该Edge在线，否则会找不到Edge
 
@@ -127,7 +130,6 @@ package main
 import (
 	"context"
 	"net"
-
 	"github.com/singchia/frontier/api/dataplane/v1/service"
 )
 
@@ -142,7 +144,7 @@ func main() {
 }
 ```
 
-**Service调用Edge的RPC**：
+**微服务调用边缘节点的RPC**：
 
 ```golang
 package main
@@ -150,7 +152,6 @@ package main
 import (
 	"context"
 	"net"
-
 	"github.com/singchia/frontier/api/dataplane/v1/service"
 )
 
@@ -164,7 +165,7 @@ func main() {
 }
 ```
 
-**Service打开Edge的点到点流**：
+**微服务打开边缘节点的点到点流**：
 
 ```golang
 package main
@@ -172,7 +173,6 @@ package main
 import (
 	"context"
 	"net"
-
 	"github.com/singchia/frontier/api/dataplane/v1/service"
 )
 
@@ -187,7 +187,7 @@ func main() {
 ```
 基于这个新打开流，你可以用来传递文件、代理流量等。
 
-**Service注册方法以供Edge调用**：
+**微服务注册方法以供边缘节点调用**：
 
 ```golang
 package main
@@ -195,7 +195,6 @@ package main
 import (
 	"context"
 	"net"
-
 	"github.com/singchia/frontier/api/dataplane/v1/service"
 )
 
@@ -214,7 +213,7 @@ func echo(ctx context.Context, req geminio.Request, rsp geminio.Response) {
 }
 ```
 
-**Service声明接收Topic**：
+**微服务声明接收Topic**：
 
 ```golang
 package main
@@ -224,7 +223,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-
 	"github.com/singchia/frontier/api/dataplane/v1/service"
 )
 
@@ -249,7 +247,7 @@ func main() {
 }
 ```
 
-### Edge
+### 边缘节点/客户端如何使用
 
 **边缘节点侧获取Edge**：
 
@@ -258,7 +256,6 @@ package main
 
 import (
 	"net"
-
 	"github.com/singchia/frontier/api/dataplane/v1/edge"
 )
 
@@ -280,7 +277,6 @@ package main
 
 import (
 	"net"
-
 	"github.com/singchia/frontier/api/dataplane/v1/edge"
 )
 
@@ -302,7 +298,6 @@ package main
 
 import (
 	"net"
-
 	"github.com/singchia/frontier/api/dataplane/v1/edge"
 )
 
@@ -320,9 +315,10 @@ func main() {
 
 ### 控制面
 
-Frontier控制面提供gRPC和rest接口，运维人员可以使用这些api来确定本实例的连接情况，定义在 
+Frontier控制面提供gRPC和Rest接口，运维人员可以使用这些api来确定本实例的连接情况，gRPC和Rest都由默认端口```:30010```提供服务。
 
-> api/controlplane/frontier/v1/controlplane.proto
+**GRPC**  详见[Protobuf定义](./api/controlplane/frontier/v1/controlplane.proto) 
+
 
 ```protobuf
 service ControlPlane {
@@ -348,14 +344,25 @@ service ControlPlane {
 }
 ```
 
-Swagger文档请见[swagger](./docs/swagger/swagger.yaml)
+**REST** Swagger详见[Swagger定义](./docs/swagger/swagger.yaml)
 
-**注意**：
+例如你可以使用下面请求来踢出某个边缘节点下线：
 
-当你配置dao backend使用sqlite3时，count才会返回总数，默认使用buntdb，为性能考虑，这个值返回-1
+```
+curl -X DELETE http://127.0.0.1:30010/v1/edges/{edge_id} 
+```
+或查看某个微服务注册了哪些RPC：
+
+```
+curl -X GET http://127.0.0.1:30010/v1/services/rpcs?service_id={service_id}
+```
+
+注意：gRPC/Rest依赖dao backend，有两个选项```buntdb```和```sqlite```，都是使用的in-memory模式，为性能考虑，默认backend使用buntdb，并且列表接口返回字段count永远是-1，当你配置backend为sqlite3时，会认为你对在Frontier上连接的微服务和边缘节点有强烈的OLTP需求，例如在Frontier上封装web，此时count才会返回总数。
 
 
 ## Frontier配置
+
+如果需要更近一步定制你的Frontier实例，可以在这一节了解各个配置是如何工作的。
 
 ### TLS
 
@@ -382,7 +389,6 @@ tls:
 docker run -d --name frontier -p 30011:30011 -p 30012:30012 singchia/frontier:1.0.0
 ```
 
-然后你可以使用上面所说的iclm示例来测试功能性
 
 ### docker-compose
 
@@ -393,6 +399,8 @@ docker-compose up -d frontier
 ```
 
 ### helm
+
+如果你是在k8s环境下，可以使用helm快速部署一个实例，默认
 
 ```
 git clone https://github.com/singchia/frontier.git
@@ -407,12 +415,25 @@ helm install frontier ./ -f values.yaml
 
 <img src="./docs/diagram/frontlas.png" width="100%" height="100%">
 
-新增Frontlas组件用于构建集群，Frontlas同样也是无状态组件，并不在内存里留存其他信息，因此需要额外依赖Redis，你需要
+新增Frontlas组件用于构建集群，Frontlas同样也是无状态组件，并不在内存里留存其他信息，因此需要额外依赖Redis，你需要提供一个Redis连接信息给到Frontlas，支持 ```redis``` ```sentinel```和```redis-cluster```。
 
 - _Frontier_：微服务和边缘数据面通信组件
 - _Frontlas_：集群管理组件，将微服务和边缘的元信息、活跃信息记录在Redis里
 
+Frontier需要主动连接Frontlas以上报自己、微服务和边缘的活跃和状态，默认Frontlas的端口是：
+
+- ```:40011``` 提供给微服务连接，代替微服务在单Frontier实例下连接的30011端口
+- ```:40012``` 提供给Frontier连接，上报状态
+
+### 使用
+
+### 分布式
+
+当部署多个Frontier实例时，跨实例的微服务和边缘节点寻址一定需要分布式存储，如果没有Frontlas，这部分的存储工作
+
 ### 高可用
+
+### 水平扩展
 
 ## k8s
 
