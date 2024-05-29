@@ -6,15 +6,24 @@ Frontier是一个go开发的开源长连接网关，能让微服务直接连通�
 
 ## 特性
 
-- **RPC**（远程过程调用）；微服务可以直接Call到边缘节点的注册函数，同样的边缘节点也可以Call到微服务的注册函数，并且在微服务侧支持负载均衡。
-- **消息**（发布和接收）；微服务可以直接Publish到边缘节点的topic，同样的边缘节点也可以Publish到微服务的topic，或外部消息队列的topic，微服务侧的topic支持负载均衡。
-- **多路复用**（点到点拨通）；微服务可以直接在边缘节点上打开一个新流（连接），你可以在这个新连接上封装例如流读写、拷贝文件、代理等，天堑变通途。
-- **上线离线控制**（边缘节点）；微服务可以注册边缘节点获取ID、上线和下线回调，当边缘节点请求ID、上线或者离线时，Frontier会调用这个回调。
-- **API简单**（SDK提供）；在项目的api目录下，分别对边缘和微服务提供了封装好的sdk，你可以非常简单和轻量的基于这个sdk做开发。
-- **部署简单**；支持多种部署方式，如docker、docker-compose、k8s-helm以及operator来部署和管理你的Frontier实例或集群。
-- **水平扩展**；提供了Frontiter和Frontlas集群，在单实例性能达到瓶颈下，可以水平扩展Frontier实例或集群。
-- **高可用**；Frontlas具有集群视角，你可以使用微服务和边缘节点永久重连的sdk，在当前Frontier宕机情况下，新选择一个可用Frontier实例继续服务。
-- **支持控制面**；允许管理员查看微服务和边缘节点，允许踢出某个边缘节点下线
+- **RPC**  
+	微服务可以直接Call到边缘节点的注册函数，同样的边缘节点也可以Call到微服务的注册函数，并且在微服务侧支持负载均衡
+- **消息**  
+	微服务可以直接Publish到边缘节点的topic，同样的边缘节点也可以Publish到微服务的topic，或外部消息队列的topic，微服务侧的topic支持负载均衡。
+- **多路复用**  
+	微服务可以直接在边缘节点上打开一个新流（连接），你可以在这个新连接上封装例如流读写、拷贝文件、代理等，天堑变通途。
+- **上线离线控制**  
+	微服务可以注册边缘节点获取ID、上线和下线回调，当边缘节点请求ID、上线或者离线时，Frontier会调用这个回调。
+- **API简单**  
+	在项目的api目录下，分别对边缘和微服务提供了封装好的sdk，你可以非常简单和轻量的基于这个sdk做开发。
+- **部署简单**  
+	支持多种部署方式，如docker、docker-compose、k8s-helm以及operator来部署和管理你的Frontier实例或集群。
+- **水平扩展**  
+	提供了Frontiter和Frontlas集群，在单实例性能达到瓶颈下，可以水平扩展Frontier实例或集群。
+- **高可用**  
+	Frontlas具有集群视角，你可以使用微服务和边缘节点永久重连的sdk，在当前Frontier宕机情况下，新选择一个可用Frontier实例继续服务。
+- **支持控制面**  
+	同时提供了gRPC和rest接口，允许运维人员对微服务和边缘节点查询或者删除，删除即踢出微服务或边缘节点下线
 
 ## 架构
 
@@ -52,7 +61,7 @@ make examples
 
 在bin目录下得到```chatroom_service```和```chatroom_client```的可执行程序，以下是运行示例：
 
-![Chatroom example](./docs/video/chatroom.gif)
+https://github.com/singchia/frontier/assets/15531166/ae408745-1997-491a-a55d-c2f8d0e72f9a
 
 ### Service
 
@@ -264,6 +273,31 @@ func main() {
 	// 开始使用eg
 }
 ```
+
+**边缘节点发布消息到Topic**：
+
+Service需要提前声明接收该Topic，或者在配置文件中配置外部MQ。
+
+```
+package main
+
+import (
+	"net"
+
+	"github.com/singchia/frontier/api/dataplane/v1/edge"
+)
+
+func main() {
+	dialer := func() (net.Conn, error) {
+		return net.Dial("tcp", "127.0.0.1:30012")
+	}
+	eg, err := edge.NewEdge(dialer)
+	// 开始使用eg
+	msg := cli.NewMessage([]byte("test"))
+	err = cli.Publish(context.TODO(), "foo", msg)
+}
+```
+
 
 ### 控制面
 
