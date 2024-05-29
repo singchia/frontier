@@ -440,7 +440,8 @@ func genDefaultConfig(writer io.Writer) error {
 			},
 		},
 		Dao: Dao{
-			Debug: false,
+			Debug:   false,
+			Backend: "buntdb",
 		},
 		Frontlas: Frontlas{
 			Enable: false,

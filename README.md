@@ -6,15 +6,15 @@ Frontier是一个go开发的开源长连接网关，能让微服务直接连通�
 
 ## 特性
 
-- **RPC**  微服务和边缘节点可以直接Call到对方的注册函数，并且在微服务侧支持负载均衡
-- **消息**  微服务和边缘节点可以直接Publish到对方的topic，边缘节点可以Publish到外部消息队列的topic，微服务侧topic支持负载均衡
-- **多路复用**  微服务可以直接在边缘节点上打开一个新流（连接），你可以封装例如流读写、拷贝文件、代理等，天堑变通途
-- **上线离线控制**  微服务可以注册边缘节点获取ID、上线和下线回调，当边缘节点请求ID、上线或者离线时，Frontier会调用这个方法
-- **API简单**  在项目api目录下，分别对边缘和微服务提供了封装好的sdk，你可以非常简单和轻量的基于这个sdk做开发
-- **部署简单**  支持多种部署方式(docker docker-compose helm以及operator)来部署和管理你的Frontier实例或集群
+- **RPC**  微服务和边缘可以Call对方的函数（提前注册），并且在微服务侧支持负载均衡
+- **消息**  微服务和边缘可以Publish对方的Topic，边缘可以Publish到外部MQ的Topic，微服务侧支持负载均衡
+- **多路复用**  微服务可以直接在边缘节点打开一个新流（连接），可以封装例如文件上传、代理等，天堑变通途
+- **上线离线控制**  微服务可以注册边缘节点获取ID、上线离线回调，当这些事件发生，Frontier会调用这些方法
+- **API简单**  在项目api目录下，分别对边缘和微服务提供了封装好的sdk，可以非常简单的基于这个sdk做开发
+- **部署简单**  支持多种部署方式(docker docker-compose helm以及operator)来部署Frontier实例或集群
 - **水平扩展**  提供了Frontiter和Frontlas集群，在单实例性能达到瓶颈下，可以水平扩展Frontier实例或集群
-- **高可用**  Frontlas支持集群部署，同时使用微服务和边缘节点永久重连sdk，在当前实例宕机情况时，切换新可用实例继续服务
-- **支持控制面**  同时提供了gRPC和rest接口，允许运维人员对微服务和边缘节点查询或者删除，删除即踢出微服务或边缘节点下线
+- **高可用**  支持集群部署，支持微服务和边缘节点永久重连sdk，在当前实例宕机情况时，切换新可用实例继续服务
+- **支持控制面**  提供了gRPC和rest接口，允许运维人员对微服务和边缘节点查询或删除，删除即踢除微服务或边缘下线
 
 ## 架构
 
@@ -23,13 +23,11 @@ Frontier是一个go开发的开源长连接网关，能让微服务直接连通�
 <img src="./docs/diagram/frontier.png" width="100%" height="100%">
 
 
-- Service End：微服务侧的功能入口，默认连接
-- Edge End：边缘节点或客户端侧的功能入口
-- Publish/Receive：发布和接收消息
-	- Topic：发布和接收消息的主题
-- Call/Register：调用和注册函数
-	- Method：调用和注册的函数名
-- OpenStream/AcceptStream：打开和接收点到点流（连接）
+- _Service End_：微服务侧的功能入口，默认连接
+- _Edge End_：边缘节点或客户端侧的功能入口
+- _Publish/Receive_：发布和接收消息
+- _Call/Register_：调用和注册函数
+- _OpenStream/AcceptStream_：打开和接收点到点流（连接）
 
 Frontier需要微服务和边缘节点两方都主动连接到Frontier，这种设计的优势在不需要Frontier主动连接任何一个地址，Service和Edge的元信息可以在连接的时候携带过来。连接的默认端口是：
 
@@ -44,11 +42,9 @@ Frontier需要微服务和边缘节点两方都主动连接到Frontier，这种�
 
 ### 示例
 
-本仓库携带了一个Chatroom示例：
-
 > examples/chatroom
 
-仅100行代码，可以通过
+该目录下有简单的聊天室示例，仅100行代码来实现一个聊天室功能，可以通过
 
 ```
 make examples
@@ -109,16 +105,20 @@ func getID(meta []byte) (uint64, error) {
 	return 0, nil
 }
 
+// edge上线
 func online(edgeID uint64, meta []byte, addr net.Addr) error {
 	return nil
 }
 
+// edge离线
 func offline(edgeID uint64, meta []byte, addr net.Addr) error {
 	return nil
 }
 ```
 
 **Service发布消息到Edge**：
+
+前提需要该Edge在线，否则会找不到Edge
 
 ```golang
 package main
@@ -302,7 +302,7 @@ Frontier控制面提供gRPC和rest接口，运维人员可以使用这些api来�
 
 > api/controlplane/frontier/v1/controlplane.proto
 
-```protobuffer
+```protobuf
 service ControlPlane {
     // 列举所有边缘节点
     rpc ListEdges(ListEdgesRequest) returns (ListEdgesResponse)
@@ -342,9 +342,22 @@ Swagger文档请见[swagger](./docs/swagger/swagger.yaml)
 当你配置dao backend使用sqlite3时，count才会返回总数，默认使用buntdb，为性能考虑，这个值返回-1
 
 
-## 配置
+## Frontier配置
 
 ### TLS
+
+```
+tls:
+  enable: false
+  mtls: false
+  ca_certs:
+  - ca1.cert
+  - ca2.cert
+  certs:
+  - cert: edgebound.cert
+    key: edgebound.key
+  insecure_skip_verify: false
+```
 
 ## 部署
 
@@ -362,13 +375,13 @@ docker run -d --name frontier -p 30011:30011 -p 30012:30012 singchia/frontier:1.
 git clone https://github.com/singchia/frontier.git
 cd dist/compose
 docker-compose up -d frontier
-
 ```
 
 ### helm
 
 ```
-
+git clone https://github.com/singchia/frontier.git
+cd dist/
 ```
 
 
@@ -378,10 +391,10 @@ docker-compose up -d frontier
 
 <img src="./docs/diagram/frontlas.png" width="100%" height="100%">
 
-引入了一个Frontlas组件用于构建集群，Frontlas同样也是无状态组件，并不在内存里留存其他信息
+新增Frontlas组件用于构建集群，Frontlas同样也是无状态组件，并不在内存里留存其他信息，因此需要额外依赖Redis，你需要
 
-- Frontier：最小的Frontier部署实例
-- Frontlas：同步到
+- _Frontier_：微服务和边缘数据面通信组件
+- _Frontlas_：集群管理组件，将微服务和边缘的元信息、活跃信息记录在Redis里
 
 ### 高可用
 
@@ -394,7 +407,7 @@ docker-compose up -d frontier
 
 ### 路线图
  
- 祥见 [ROADMAP](./ROADMAP.md)
+ 详见 [ROADMAP](./ROADMAP.md)
 
 ### Bug和Feature
 
@@ -405,7 +418,6 @@ docker-compose up -d frontier
  * 代码风格保持一致
  * 每次提交一个Feature
  * 提交的代码都携带单元测试
-
 
 
 ## 许可证
