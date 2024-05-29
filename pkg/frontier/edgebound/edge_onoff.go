@@ -70,13 +70,7 @@ func (em *edgeManager) online(end geminio.End) error {
 	if em.informer != nil {
 		em.informer.EdgeOnline(end.ClientID(), end.Meta(), end.RemoteAddr())
 	}
-	// exchange to service
-	if em.exchange != nil {
-		err := em.exchange.EdgeOnline(end.ClientID(), end.Meta(), end.RemoteAddr())
-		if err == apis.ErrServiceNotOnline {
-			return nil
-		}
-	}
+
 	return nil
 }
 
@@ -144,6 +138,13 @@ func (em *edgeManager) ConnOnline(d delegate.ConnDescriber) error {
 	meta := d.Meta()
 	addr := d.RemoteAddr()
 
+	// exchange to service
+	if em.exchange != nil {
+		err := em.exchange.EdgeOnline(edgeID, meta, addr)
+		if err != nil && err != apis.ErrServiceNotOnline {
+			return err
+		}
+	}
 	klog.V(2).Infof("edge online, edgeID: %d, meta: %s, addr: %s", edgeID, string(meta), addr)
 	return nil
 }

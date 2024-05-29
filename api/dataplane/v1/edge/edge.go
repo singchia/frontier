@@ -62,5 +62,9 @@ type Edge interface {
 type Dialer func() (net.Conn, error)
 
 func NewEdge(dialer Dialer, opts ...EdgeOption) (Edge, error) {
+	return newRetryEdgeEnd(client.Dialer(dialer), opts...)
+}
+
+func NewNoRetryEdge(dialer Dialer, opts ...EdgeOption) (Edge, error) {
 	return newEdgeEnd(client.Dialer(dialer), opts...)
 }

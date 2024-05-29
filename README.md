@@ -14,6 +14,7 @@ Frontier是一个go开发的开源长连接网关，能让微服务直接连通�
 - **部署简单**；支持多种部署方式，如docker、docker-compose、k8s-helm以及operator来部署和管理你的Frontier实例或集群。
 - **水平扩展**；提供了Frontiter和Frontlas集群，在单实例性能达到瓶颈下，可以水平扩展Frontier实例或集群。
 - **高可用**；Frontlas具有集群视角，你可以使用微服务和边缘节点永久重连的sdk，在当前Frontier宕机情况下，新选择一个可用Frontier实例继续服务。
+- **支持控制面**；允许管理员查看微服务和边缘节点，允许踢出某个边缘节点下线
 
 ## 架构
 
@@ -32,14 +33,25 @@ Frontier是一个go开发的开源长连接网关，能让微服务直接连通�
 
 Frontier需要微服务和边缘节点两方都主动连接到Frontier，这种设计的优势在不需要Frontier主动连接任何一个地址，Service和Edge的元信息可以在连接的时候携带过来。连接的默认端口是：
 
-- 30011：提供给微服务连接，获取Service
-- 30012：提供给边缘节点连接，获取Edge
-- 30010：提供给运维人员或者程序使用的控制面
+- ```30011```：提供给微服务连接，获取Service
+- ```30012```：提供给边缘节点连接，获取Edge
+- ```30010```：提供给运维人员或者程序使用的控制面
 
 详情见部署章节
 
 
 ## 使用
+
+### 示例
+
+本仓库携带了一个Chatroom示例，可以通过
+
+```
+make examples
+```
+
+在bin目录下得到```chatroom_service```和```chatroom_edge```的可执行程序，以下是运行示例：
+
 
 
 ### Service
@@ -49,7 +61,11 @@ Frontier需要微服务和边缘节点两方都主动连接到Frontier，这种�
 ```golang
 package main
 
-import "github.com/singchia/frontier/api/dataplane/v1/service"
+import (
+	"net"
+
+	"github.com/singchia/frontier/api/dataplane/v1/service"
+)
 
 func main() {
 	dialer := func() (net.Conn, error) {
@@ -65,7 +81,12 @@ func main() {
 ```golang
 package main
 
-import "github.com/singchia/frontier/api/dataplane/v1/service"
+import (
+	"context"
+	"net"
+
+	"github.com/singchia/frontier/api/dataplane/v1/service"
+)
 
 func main() {
 	dialer := func() (net.Conn, error) {
@@ -96,7 +117,12 @@ func offline(edgeID uint64, meta []byte, addr net.Addr) error {
 ```golang
 package main
 
-import "github.com/singchia/frontier/api/dataplane/v1/service"
+import (
+	"context"
+	"net"
+
+	"github.com/singchia/frontier/api/dataplane/v1/service"
+)
 
 func main() {
 	dialer := func() (net.Conn, error) {
@@ -114,7 +140,12 @@ func main() {
 ```golang
 package main
 
-import "github.com/singchia/frontier/api/dataplane/v1/service"
+import (
+	"context"
+	"net"
+
+	"github.com/singchia/frontier/api/dataplane/v1/service"
+)
 
 func main() {
 	dialer := func() (net.Conn, error) {
@@ -132,7 +163,12 @@ func main() {
 ```golang
 package main
 
-import "github.com/singchia/frontier/api/dataplane/v1/service"
+import (
+	"context"
+	"net"
+
+	"github.com/singchia/frontier/api/dataplane/v1/service"
+)
 
 func main() {
 	dialer := func() (net.Conn, error) {
@@ -143,13 +179,19 @@ func main() {
 	st, err := srv.OpenStream(context.TODO(), 1001)
 }
 ```
+基于这个新打开流，你可以用来传递文件、代理流量等。
 
 **Service注册方法以供Edge调用**：
 
 ```golang
 package main
 
-import "github.com/singchia/frontier/api/dataplane/v1/service"
+import (
+	"context"
+	"net"
+
+	"github.com/singchia/frontier/api/dataplane/v1/service"
+)
 
 func main() {
 	dialer := func() (net.Conn, error) {
@@ -168,6 +210,39 @@ func echo(ctx context.Context, req geminio.Request, rsp geminio.Response) {
 
 **Service声明接收Topic**：
 
+```golang
+package main
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"net"
+
+	"github.com/singchia/frontier/api/dataplane/v1/service"
+)
+
+func main() {
+	dialer := func() (net.Conn, error) {
+		return net.Dial("tcp", "127.0.0.1:30011")
+	}
+	// 在获取svc时声明需要接收的topic
+	svc, _ := service.NewService(dialer, service.OptionServiceReceiveTopics([]string{"foo"}))
+	for {
+		msg, err := srv.Receive(context.TODO())
+		if err == io.EOF {
+			return
+		}
+		if err != nil {
+			fmt.Println("\n> receive err:", err)
+			continue
+		}
+		msg.Done()
+		fmt.Printf("> receive msg, edgeID: %d streamID: %d data: %s\n", msg.ClientID(), msg.StreamID(), string(value))
+	}
+}
+```
+
 ### Edge
 
 **边缘节点侧获取Edge**：
@@ -175,7 +250,11 @@ func echo(ctx context.Context, req geminio.Request, rsp geminio.Response) {
 ```golang
 package main
 
-import "github.com/singchia/frontier/api/dataplane/v1/edge"
+import (
+	"net"
+
+	"github.com/singchia/frontier/api/dataplane/v1/edge"
+)
 
 func main() {
 	dialer := func() (net.Conn, error) {
@@ -231,15 +310,6 @@ Swagger文档请见[swagger](./docs/swagger/swagger.yaml)
 
 当你配置dao backend使用sqlite3时，count才会返回总数，默认使用buntdb，为性能考虑，这个值返回-1
 
-### 示例
-
-本仓库携带了一个ICLM(Iteractive command-line messaging)示例，可以通过
-
-```
-make examples
-```
-
-在bin目录下得到```iclm_service```和```iclm_edge```的可执行程序，以下是运行示例：
 
 ## 配置
 
@@ -277,16 +347,23 @@ docker-compose up -d frontier
 
 <img src="./docs/diagram/frontlas.png" width="100%" height="100%">
 
+引入了一个Frontlas组件用于构建集群，Frontlas同样也是无状态组件，并不在内存里留存其他信息
+
 - Frontier：最小的Frontier部署实例
 - Frontlas：同步到
 
 ### 高可用
+
 
 ## k8s
 
 ### Operator
 
 ## 开发
+
+### 路线图
+ 
+ 祥见 [ROADMAP](./ROADMAP.md)
 
 ### Bug和Feature
 
@@ -298,9 +375,7 @@ docker-compose up -d frontier
  * 每次提交一个Feature
  * 提交的代码都携带单元测试
 
-### 路线图
- 
- 祥见 [ROADMAP](./ROADMAP.md)
+
 
 ## 许可证
 
