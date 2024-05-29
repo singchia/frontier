@@ -11,7 +11,7 @@ fullnameOverride: ""
 
 image:
   frontier:
-    repository: frontier
+    image: frontier
     pullPolicy: IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
     tag: 1.0.0

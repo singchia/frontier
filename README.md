@@ -4,6 +4,10 @@
 
 Frontier是一个go开发的开源长连接网关，能让微服务直接连通边缘节点或客户端，反之边缘节点或客户端也能直接连通到微服务。对于微服务或者边缘节点，提供了单双向RPC调用，消息发布和接收，以及直接点对点拨通通信的特性。Frontier采用云原生架构，可以使用Operator快速部署一个集群，轻松实现百万连接。
 
+## 内容
+
+[TOC]
+
 ## 特性
 
 - **RPC**  微服务和边缘可以Call对方的函数（提前注册），并且在微服务侧支持负载均衡
@@ -14,7 +18,7 @@ Frontier是一个go开发的开源长连接网关，能让微服务直接连通�
 - **部署简单**  支持多种部署方式(docker docker-compose helm以及operator)来部署Frontier实例或集群
 - **水平扩展**  提供了Frontiter和Frontlas集群，在单实例性能达到瓶颈下，可以水平扩展Frontier实例或集群
 - **高可用**  支持集群部署，支持微服务和边缘节点永久重连sdk，在当前实例宕机情况时，切换新可用实例继续服务
-- **支持控制面**  提供了gRPC和rest接口，允许运维人员对微服务和边缘节点查询或删除，删除即踢除微服务或边缘下线
+- **支持控制面**  提供了gRPC和rest接口，允许运维人员对微服务和边缘节点查询或删除，删除即踢除目标下线
 
 ## 架构
 
@@ -295,6 +299,28 @@ func main() {
 }
 ```
 
+**边缘节点调用微服务RPC**：
+
+```golang
+package main
+
+import (
+	"net"
+
+	"github.com/singchia/frontier/api/dataplane/v1/edge"
+)
+
+func main() {
+	dialer := func() (net.Conn, error) {
+		return net.Dial("tcp", "127.0.0.1:30012")
+	}
+	eg, err := edge.NewEdge(dialer)
+	// 开始使用eg
+	msg := cli.NewMessage([]byte("test"))
+	// 调用echo方法，Frontier会查找并转发请求到相应的微服务
+	rsp, err := cli.Call(context.TODO(), "echo", req)
+}
+```
 
 ### 控制面
 
@@ -305,33 +331,24 @@ Frontier控制面提供gRPC和rest接口，运维人员可以使用这些api来�
 ```protobuf
 service ControlPlane {
     // 列举所有边缘节点
-    rpc ListEdges(ListEdgesRequest) returns (ListEdgesResponse)
-        { option(google.api.http) = { get: "/v1/edges"}; };
+    rpc ListEdges(ListEdgesRequest) returns (ListEdgesResponse);
     // 获取边缘节点详情
-    rpc GetEdge(GetEdgeRequest) returns (Edge)
-        { option(google.api.http) = { get: "/v1/edges/{edge_id}"}; };
+    rpc GetEdge(GetEdgeRequest) returns (Edge);
     // 踢除某个边缘节点下线
-    rpc KickEdge(KickEdgeRequest) returns (KickEdgeResponse)
-        { option(google.api.http) = { delete: "/v1/edges/{edge_id}"}; };
+    rpc KickEdge(KickEdgeRequest) returns (KickEdgeResponse);
     // 列举边缘节点注册的RPC
-    rpc ListEdgeRPCs(ListEdgeRPCsRequest) returns (ListEdgeRPCsResponse)
-        { option(google.api.http) = { get: "/v1/edges/rpcs"}; };
+    rpc ListEdgeRPCs(ListEdgeRPCsRequest) returns (ListEdgeRPCsResponse);
 
     // 列举所有微服务
-    rpc ListServices(ListServicesRequest) returns (ListServicesResponse)
-        { option(google.api.http) = { get: "/v1/services"}; };
+    rpc ListServices(ListServicesRequest) returns (ListServicesResponse);
     // 获取微服务详情
-    rpc GetService(GetServiceRequest) returns (Service)
-        { option(google.api.http) = { get: "/v1/services/{service_id}"}; };
+    rpc GetService(GetServiceRequest) returns (Service);
     // 提出某个微服务下线
-    rpc KickService(KickServiceRequest) returns (KickServiceResponse)
-        { option(google.api.http) = { delete: "/v1/services/{service_id}"}; };
+    rpc KickService(KickServiceRequest) returns (KickServiceResponse);
     // 列举微服务注册的RPC
-    rpc ListServiceRPCs(ListServiceRPCsRequest) returns (ListServiceRPCsResponse)
-        { option(google.api.http) = { get: "/v1/services/rpcs"}; };
+    rpc ListServiceRPCs(ListServiceRPCsRequest) returns (ListServiceRPCsResponse);
     // 列举微服务接收的Topic
-    rpc ListServiceTopics(ListServiceTopicsRequest) returns (ListServiceTopicsResponse)
-        { option(google.api.http) = { get: "/v1/services/topics"}; };
+    rpc ListServiceTopics(ListServiceTopicsRequest) returns (ListServiceTopicsResponse);
 }
 ```
 
@@ -361,6 +378,8 @@ tls:
 
 ## 部署
 
+在单Frontier实例下，可以根据环境选择以下方式部署你的Frontier实例。
+
 ### docker
 
 ```
@@ -381,7 +400,8 @@ docker-compose up -d frontier
 
 ```
 git clone https://github.com/singchia/frontier.git
-cd dist/
+cd dist/helm
+helm install frontier ./ -f values.yaml
 ```
 
 
@@ -418,6 +438,10 @@ cd dist/
  * 代码风格保持一致
  * 每次提交一个Feature
  * 提交的代码都携带单元测试
+
+### 群组
+
+<img src="./docs/diagram/wechat-group.jpg" width="25%">
 
 
 ## 许可证
