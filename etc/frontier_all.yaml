@@ -10,60 +10,60 @@ daemon:
 controlplane:
   enable: false
   listen:
-    addr: 0.0.0.0:30010
-    advertised_addr: ""
     network: tcp
-    tls:
-      ca_certs: null
-      certs: null
-      enable: false
-      insecure_skip_verify: false
-      mtls: false
+    addr: 0.0.0.0:30010
+    # advertised_addr: ""
+    # tls:
+    #   ca_certs: null
+    #   certs: null
+    #   enable: false
+    #   insecure_skip_verify: false
+    #   mtls: false
 servicebound:
   listen:
+    network: tcp
     addr: 0.0.0.0:30011
-    advertised_addr: ""
-    network: tcp
-    tls:
-      ca_certs:
-      - ca1.cert
-      - ca2.cert
-      certs:
-      - cert: servicebound.cert
-        key: servicebound.key
-      enable: false
-      insecure_skip_verify: false
-      mtls: false
+    # advertised_addr: ""
+    # tls:
+    #   ca_certs:
+    #   - ca1.cert
+    #   - ca2.cert
+    #   certs:
+    #   - cert: servicebound.cert
+    #     key: servicebound.key
+    #   enable: false
+    #   insecure_skip_verify: false
+    #   mtls: false
 edgebound:
-  bypass:
-    addr: 192.168.1.10:8443
-    advertised_addr: ""
-    network: tcp
-    tls:
-      ca_certs:
-      - ca1.cert
-      certs:
-      - cert: frontier.cert
-        key: frontier.key
-      enable: true
-      insecure_skip_verify: false
-      mtls: true
-  bypass_enable: false
-  edgeid_alloc_when_no_idservice_on: true
   listen:
-    addr: 0.0.0.0:30012
-    advertised_addr: ""
     network: tcp
-    tls:
-      ca_certs:
-      - ca1.cert
-      - ca2.cert
-      certs:
-      - cert: edgebound.cert
-        key: edgebound.key
-      enable: false
-      insecure_skip_verify: false
-      mtls: false
+    addr: 0.0.0.0:30012
+    # advertised_addr: ""
+    # tls:
+    #   ca_certs:
+    #   - ca1.cert
+    #   - ca2.cert
+    #   certs:
+    #   - cert: edgebound.cert
+    #     key: edgebound.key
+    #   enable: false
+    #   insecure_skip_verify: false
+    #   mtls: false
+  edgeid_alloc_when_no_idservice_on: true
+  # bypass:
+  #   addr: 192.168.1.10:8443
+  #   advertised_addr: ""
+  #   network: tcp
+  #   tls:
+  #     ca_certs:
+  #     - ca1.cert
+  #     certs:
+  #     - cert: frontier.cert
+  #       key: frontier.key
+  #     enable: true
+  #     insecure_skip_verify: false
+  #     mtls: true
+  # bypass_enable: false
 dao:
   backend: buntdb
   debug: false
@@ -75,7 +75,8 @@ frontlas:
     enable: false
     interval: 0
   dial:
-    addr: 127.0.0.1:40012
+    addrs: 
+      - 127.0.0.1:40012
     network: tcp
     tls:
       ca_certs: null
@@ -87,59 +88,119 @@ mqm:
   amqp:
     enable: false
     addrs: null
+    # 0 max channels means 2^16 - 1
     channel_max: 0
+    # exchange to declare
     exchanges: null
+    # 0 max bytes means unlimited
     frame_size: 0
+    # less than 1s uses the server's interval
     heartbeat: 0
+    # Connection locale that we expect to always be en_US
+    # Even though servers must return it as per the AMQP 0-9-1 spec,
+    # we are not aware of it being used other than to satisfy the spec requirements
     locale: ""
     producer:
-      app_id: ""
-      content_encoding: ""
-      content_type: ""
-      delivery_mode: 0
+      # exchange name to produce
       exchange: ""
+      routing_keys: null
+      # creating application id
+      app_id: ""
+      # MIME content encoding
+      content_encoding: ""
+      # MIME content type
+      content_type: ""
+      # Transient (0 or 1) or Persistent (2)
+      delivery_mode: 0
       expiration: ""
+      # message related headers
       headers: null
       immediate: false
       mandatory: false
+      # 0 to 9
       priority: 0
+      # address to to reply to (ex: RPC)
       reply_to: ""
-      routing_keys: null
+      # message type name
       type: ""
+      # creating user id - ex: "guest"
       user_id: ""
     queueBindings: null
     queues: null
+    # Vhost specifies the namespace of permissions, exchanges, queues and
+    # bindings on the server.  Dial sets this to the path parsed from the URL.
     vhost: ""
   kafka:
     enable: false
     addrs: null
     producer:
-      async: false
-      compression: none
-      compression_level: 0
-      flush:
-        bytes: 0
-        frequency: 0
-        max_messages: 0
-        messages: 0
-      idempotent: false
-      max_message_bytes: 0
-      required_acks: 0
-      retry:
-        backoff: 0
-        max: 0
-      timeout: 0
+      # topics to notify frontier which topics to allow to publish
       topics: null
+      # The type of compression to use on messages (defaults to no compression).
+      # Similar to `compression.codec` setting of the JVM producer.
+      compression: none
+      # The level of compression to use on messages. The meaning depends
+      # on the actual compression type used and defaults to default compression
+      # level for the codec.
+      compression_level: 0
+      # If enabled, the producer will ensure that exactly one copy of each message is
+      # written.
+      idempotent: false
+      # The maximum permitted size of a message (defaults to 1000000). Should be
+      # set equal to or smaller than the broker's `message.max.bytes`.
+      max_message_bytes: 0
+      # The level of acknowledgement reliability needed from the broker (defaults
+      # to WaitForLocal). Equivalent to the `request.required.acks` setting of the
+      # JVM producer.
+      required_acks: 0
+      # The maximum duration the broker will wait the receipt of the number of
+      # RequiredAcks (defaults to 10 seconds). This is only relevant when
+      # RequiredAcks is set to WaitForAll or a number > 1. Only supports
+      # millisecond resolution, nanoseconds will be truncated. Equivalent to
+      # the JVM producer's `request.timeout.ms` setting.
+      timeout: 0
+      # The following config options control how often messages are batched up and
+      # sent to the broker. By default, messages are sent as fast as possible, and
+      # all messages received while the current batch is in-flight are placed
+      # into the subsequent batch.
+      flush:
+        # The best-effort number of bytes needed to trigger a flush. Use the
+        # global sarama.MaxRequestSize to set a hard upper limit.
+        bytes: 0
+        # The best-effort frequency of flushes. Equivalent to
+        # `queue.buffering.max.ms` setting of JVM producer.
+        frequency: 0
+        # The maximum number of messages the producer will send in a single
+        # broker request. Defaults to 0 for unlimited. Similar to
+        # `queue.buffering.max.messages` in the JVM producer.
+        max_messages: 0
+        # The best-effort number of messages needed to trigger a flush. Use
+        # `MaxMessages` to set a hard upper limit.
+        messages: 0
+      retry:
+        #How long to wait for the cluster to settle between retries
+        # (default 100ms). Similar to the `retry.backoff.ms` setting of the
+        # JVM producer.
+        backoff: 0
+        # The total number of times to retry sending a message (default 3).
+        # Similar to the `message.send.max.retries` setting of the JVM producer.
+        max: 0
+      
   nats:
     enable: false
     addrs: null
-    jetStream:
-      enable: false
-      name: ""
-      producer:
-        subjects: null
     producer:
+      # topics to specific
       subjects: null
+    # jetstream will replace upper producer.
+    jetstream:
+      enable: false
+      # jetstream name to publish
+      name: ""
+      # jetstream producer
+      producer:
+        # topics to specific
+        subjects: null
   nsq:
     enable: false
     addrs: null
@@ -151,5 +212,6 @@ mqm:
     db: 0
     password: ""
     producer:
+      # topics to specific
       channels: null
 

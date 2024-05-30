@@ -1,0 +1,72 @@
+control_plane:
+  listen:
+    addr: 0.0.0.0:40011
+    advertised_addr: ""
+    network: tcp
+    tls:
+      ca_certs: null
+      certs: null
+      enable: false
+      insecure_skip_verify: false
+      mtls: false
+daemon:
+  p_prof:
+    addr: 0.0.0.0:6061
+    cpu_profile_rate: 0
+    enable: true
+  r_limit:
+    enable: false
+    num_file: 1024
+frontier_manager:
+  expiration:
+    edge_meta: 0
+    service_meta: 0
+  listen:
+    addr: 0.0.0.0:40012
+    advertised_addr: ""
+    network: tcp
+    tls:
+      ca_certs: null
+      certs: null
+      enable: false
+      insecure_skip_verify: false
+      mtls: false
+redis:
+  client_name: ""
+  cluster:
+    addrs: null
+    max_redirects: 0
+    route_by_latency: false
+    route_randomly: false
+  conn_max_idle_time: 0
+  conn_max_lifetime: 0
+  dial_timeout: 0
+  disable_indentity: false
+  identity_suffix: ""
+  max_active_conns: 0
+  max_idle_conns: 0
+  max_retries: 0
+  max_retry_backoff: 0
+  min_idle_conns: 0
+  min_retry_backoff: 0
+  mode: standalone
+  password: ""
+  pool_fifo: false
+  pool_size: 0
+  pool_timeout: 0
+  protocol: 0
+  read_timeout: 0
+  sentinel:
+    addrs: null
+    db: 0
+    master_name: ""
+    replica_only: false
+    route_by_latency: false
+    route_randomly: false
+    use_disconnected_replicas: false
+  standalone:
+    addr: ""
+    db: 0
+    network: ""
+  username: ""
+  write_timeout: 0

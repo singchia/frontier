@@ -681,38 +681,198 @@ curl -X GET http://127.0.0.1:30010/v1/services/rpcs?service_id={service_id}
 
 ## Frontier配置
 
-如果需要更近一步定制你的Frontier实例，可以在这一节了解各个配置是如何工作的。
+如果需要更近一步定制你的Frontier实例，可以在这一节了解各个配置是如何工作的。定制完你的配置，保存为```frontier.yaml```，挂载到容器```/usr/conf/frontier.yaml```位置生效。
 
 ### 最小化配置
 
 简单起，你可以仅配置面向微服务和边缘节点的服务监听地址：
 
 ```
+# 微服务端配置
 servicebound:
+  # 监听网络
   listen:
     network: tcp
+    # 监听地址
     addr: 0.0.0.0:30011
+# 边缘节点端配置
 edgebound:
+  # 监听网络
   listen:
     network: tcp
+    # 监听地址
     addr: 0.0.0.0:30012
+  # 找不到注册的GetEdgeID时，是否允许Frontier分配edgeID
   edgeid_alloc_when_no_idservice_on: true
 ```
 
 ### TLS
 
+对于用户来说，比较重要的TLS配置在微服务、边缘节点和控制面都是支持的，另支持mTLS，Frontier由此校验客户端携带的证书。
+
 ```
-tls:
+servicebound:
+  listen:
+    addr: 0.0.0.0:30011
+    network: tcp
+    tls:
+      # 是否开启TLS，默认不开启
+      enable: false
+      # 证书和私钥，允许配置多对证书，由客户端协商确定
+      certs:
+      - cert: servicebound.cert
+        key: servicebound.key
+      # 是否启用mtls，启动会校验客户端携带的证书是否由下面的CA签发
+      mtls: false
+      # CA证书，用于校验客户端证书
+      ca_certs:
+      - ca1.cert
+edgebound:
+  listen:
+    addr: 0.0.0.0:30012
+    network: tcp
+    tls:
+      # 是否开启TLS，默认不开启
+      enable: false
+      # 证书和私钥，允许配置多对证书，由客户端协商确定
+      certs:
+      - cert: edgebound.cert
+        key: edgebound.key
+      insecure_skip_verify: false
+      # 是否启用mtls，启动会校验客户端携带的证书是否由下面的CA签发
+      mtls: false
+      # CA证书，用于校验客户端证书
+      ca_certs:
+      - ca1.cert
+```
+
+### 外部MQ
+
+如果你需要配置外部MQ，Frontier也支持将相应的Topic转Publish到这些MQ。
+
+**AMQP**
+
+```
+mqm:
+  amqp:
+    # 是否允许
+    enable: false
+    # AMQP地址
+    addrs: null
+    # 生产者
+    producer:
+       # exchange名
+    	exchange: ""
+    	# 等于Frontier内Topic的概念，数组值
+    	routing_keys: null
+```
+对于AMQP来说，以上是最小配置，边缘节点Publish的消息Topic如果在routing_keys内，Frontier会Publish到exchange中，如果还有微服务或其他外部MQ也声明了该Topic，Frontier仍然会按照hashby来选择一个Publish。
+
+**Kafka**
+
+```
+mqm:
+  kafka:
+    # 是否允许
+    enable: false
+    # kafka地址
+    addrs: null
+    # 生产者
+    producer:
+       # 数组值
+    	topics: null
+```
+对于Kafka来说，以上是最小配置，边缘节点Publish的消息Topic如果在上面数组中，Frontier会Publish过来。如果还有微服务或其他外部MQ也声明了该Topic，Frontier仍然会按照hashby来选择一个Publish。
+
+**NATS**
+
+```
+mqm:
+  nats:
+    # 是否允许
+    enable: false
+    # NATS地址
+    addrs: null
+    producer:
+      # 等于Frontier内Topic的概念，数组值
+      subjects: null
+    # 如果允许jetstream，会优先Publish到jetstream
+    jetstream:
+      enable: false
+      # jetstream名
+      name: ""
+      producer:
+        # 等于Frontier内Topic的概念，数组值
+        subjects: null
+```
+NATS配置里，如果允许Jetstream，会优先使用Publish到Jetstream。如果还有微服务或其他外部MQ也声明了该Topic，Frontier仍然会按照hashby来选择一个Publish。
+
+**NSQ**
+
+```
+mqm:
+  nsq:
+    # 是否允许
+    enable: false
+    # NSQ地址
+    addrs: null
+    producer:
+      # 数组值
+      topics: null
+```
+NSQ的Topic里，如果还有微服务或其他外部MQ也声明了该Topic，Frontier仍然会按照hashby来选择一个Publish。
+
+**Redis**
+
+```
+mqm:
+  redis:
+    # 是否允许
+    enable: false
+    # Redis地址
+    addrs: null
+    # Redis DB
+    db: 0
+    # 密码
+    password: ""
+    producer:
+      # 等于Frontier内Topic的概念，数组值
+      channels: null
+```
+如果还有微服务或其他外部MQ也声明了该Topic，Frontier仍然会按照hashby来选择一个Publish。
+
+
+### 其他配置
+
+```
+daemon:
+  # 是否开启PProf
+  pprof:
+    addr: 0.0.0.0:6060
+    cpu_profile_rate: 0
+    enable: true
+  # 资源限制
+  rlimit:
+    enable: true
+    nofile: 102400
+  # 控制面开启
+controlplane:
   enable: false
-  mtls: false
-  ca_certs:
-  - ca1.cert
-  - ca2.cert
-  certs:
-  - cert: edgebound.cert
-    key: edgebound.key
-  insecure_skip_verify: false
+  listen:
+    network: tcp
+    addr: 0.0.0.0:30010
+dao:
+  # 支持buntdb和sqlite3，都使用的in-memory模式，保持无状态
+  backend: buntdb
+  # sqlite debug开启
+  debug: false
+exchange:
+  # Frontier根据edgeid srcip或random的哈希策略转发边缘节点的消息、RPC和打开流到微服务，默认edgeid
+  # 即相同的边缘节点总是会请求到相同的微服务。
+  hashby: edgeid
 ```
+
+更多详细配置见 [frontier_all.yaml](./etc/frontier_all.yaml)
 
 ## Frontier部署
 
@@ -752,26 +912,167 @@ helm install frontier ./ -f values.yaml
 新增Frontlas组件用于构建集群，Frontlas同样也是无状态组件，并不在内存里留存其他信息，因此需要额外依赖Redis，你需要提供一个Redis连接信息给到Frontlas，支持 ```redis``` ```sentinel```和```redis-cluster```。
 
 - _Frontier_：微服务和边缘数据面通信组件
-- _Frontlas_：集群管理组件，将微服务和边缘的元信息、活跃信息记录在Redis里
+- _Frontlas_：命名取自Frontier Atlas，集群管理组件，将微服务和边缘的元信息、活跃信息记录在Redis里
 
 Frontier需要主动连接Frontlas以上报自己、微服务和边缘的活跃和状态，默认Frontlas的端口是：
 
 - ```:40011``` 提供给微服务连接，代替微服务在单Frontier实例下连接的30011端口
 - ```:40012``` 提供给Frontier连接，上报状态
 
+你可以根据需要部署任意多个Frontier实例，而对于Frontlas，分开部署两个即可保障HA（高可用），因为不存储状态没有一致性问题。
+
+### 配置
+
+**Frontier**的frontier.yaml需要添加如下配置：
+
+```
+frontlas:
+  enable: true
+  dial:
+    network: tcp
+    addr:
+      - 127.0.0.1:40012
+    tls:
+  metrics:
+    enable: false
+    interval: 0
+daemon:
+  # Frontier集群内的唯一ID
+  frontier_id: frontier01
+```
+Frontier需要连接Frontlas，用来上报自己、微服务和边缘的活跃和状态。
+
+
+**Frontlas**的frontlas.yaml最小化配置：
+
+```
+control_plane:
+  listen:
+    # 微服务改连接这个地址，用来发现集群的边缘节点所在的Frontier
+    network: tcp
+    addr: 0.0.0.0:40011
+frontier_plane:
+  # Frontier连接这个地址
+  listen:
+    network: tcp
+    addr: 0.0.0.0:40012
+  expiration:
+    # 微服务在redis内元信息的过期时间
+    service_meta: 30
+    # 边缘节点在redis内元信息的过期时间
+    edge_meta: 30
+redis:
+  # 支持连接standalone、sentinel和cluster
+  mode: standalone
+  standalone:
+    network: tcp
+    addr: redis:6379
+    db: 0
+```
+
+更多详细配置见 [frontlas_all.yaml](./etc/frontlas_all.yaml)
+
 ### 使用
 
-### 分布式
+由于使用Frontlas来发现可用的Frontier，因此微服务需要做出调整如下：
 
-当部署多个Frontier实例时，跨实例的微服务和边缘节点寻址一定需要分布式存储，如果没有Frontlas，这部分的存储工作
+**微服务获取Service**
 
-### 高可用
+```
+package main
 
-### 水平扩展
+import (
+	"net"
+	"github.com/singchia/frontier/api/dataplane/v1/service"
+)
+
+func main() {
+	// 改使用NewClusterService来获取Service
+	svc, err := service.NewClusterService("127.0.0.1:40011")
+	// 开始使用service，其他一切保持不变
+}
+```
+
+**边缘节点获取连接地址**
+
+对于边缘节点来说，依然连接Frontier，不过可以从Frontlas来获取可用的Frontier地址，Frontlas提供了列举Frontier实例接口：
+
+```
+curl -X http://127.0.0.1:40011/cluster/v1/frontiers
+```
+你可以在这个接口上封装一下，提供给边缘节点做负载均衡或者高可用，或加上mTLS直接提供给边缘节点（不建议）。
+
+**控制面GRPC** 详见[Protobuf定义](./api/controlplane/frontlas/v1/cluster.proto) 
+
+Frontlas控制面与Frontier不同，是面向集群的控制面，目前只提供了读取集群的接口
+
+```protobuf
+service ClusterService {
+    rpc GetFrontierByEdge(GetFrontierByEdgeIDRequest) returns (GetFrontierByEdgeIDResponse);
+    rpc ListFrontiers(ListFrontiersRequest) returns (ListFrontiersResponse);
+
+    rpc ListEdges(ListEdgesRequest) returns (ListEdgesResponse);
+    rpc GetEdgeByID(GetEdgeByIDRequest) returns (GetEdgeByIDResponse);
+    rpc GetEdgesCount(GetEdgesCountRequest) returns (GetEdgesCountResponse);
+
+    rpc ListServices(ListServicesRequest) returns (ListServicesResponse) ;
+    rpc GetServiceByID(GetServiceByIDRequest) returns (GetServiceByIDResponse) ;
+    rpc GetServicesCount(GetServicesCountRequest) returns (GetServicesCountResponse) ;
+}
+```
+
 
 ## k8s
 
 ### Operator
+
+**安装CRD和Operator**
+
+按照以下步骤安装和部署Operator到你的.kubeconfig环境中：
+
+```
+git clone https://github.com/singchia/frontier.git
+cd pkg/operator
+make install && make deploy
+```
+
+**CR**
+
+```
+apiVersion: frontier.singchia.io/v1alpha1
+kind: FrontierCluster
+metadata:
+  labels:
+    app.kubernetes.io/name: frontiercluster
+    app.kubernetes.io/managed-by: kustomize
+  name: frontiercluster
+spec:
+  frontier:
+    # 单实例Frontier
+    replicas: 1
+    # 微服务侧端口
+    servicebound:
+      port: 30011
+    # 边缘节点侧端口
+    edgebound:
+      port: 30012
+  frontlas:
+    # 单实例Frontlas
+    replicas: 1
+    # 控制面端口
+    controlplane:
+      port: 40011
+    # 依赖的Redis配置
+    redis:
+      addrs:
+        - rfs-redisfailover:26379
+      password: your-password
+      masterName: mymaster
+      redisType: sentinel
+```
+
+1分钟，你即可拥有一个Frontier+Frontlas的集群。
+
 
 ## 开发
 

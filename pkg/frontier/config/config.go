@@ -202,7 +202,7 @@ type Nats struct {
 		Producer struct {
 			Subjects []string `yaml:"subjects" json:"subjects"`
 		} `yaml:"producer,omitempty" json:"producer"`
-	} `yaml:"jetstream,omitempty" json:"jetStream"`
+	} `yaml:"jetstream,omitempty" json:"jetstream"`
 }
 
 type NSQ struct {
@@ -355,7 +355,7 @@ func Parse() (*Configuration, error) {
 	frontlasAddr := os.Getenv("FRONTLAS_ADDR")
 	if frontlasAddr != "" {
 		config.Frontlas.Enable = true
-		config.Frontlas.Dial.Addr = frontlasAddr
+		config.Frontlas.Dial.Addrs = []string{frontlasAddr}
 	}
 	return config, nil
 }
@@ -424,7 +424,7 @@ func genAllConfig(writer io.Writer) error {
 			BypassEnable:                 false,
 			Bypass: config.Dial{
 				Network: "tcp",
-				Addr:    "192.168.1.10:8443",
+				Addrs:   []string{"192.168.1.10:8443"},
 				TLS: config.TLS{
 					Enable: true,
 					MTLS:   true,
@@ -448,7 +448,7 @@ func genAllConfig(writer io.Writer) error {
 			Enable: false,
 			Dial: config.Dial{
 				Network: "tcp",
-				Addr:    "127.0.0.1:40012",
+				Addrs:   []string{"127.0.0.1:40012"},
 				TLS: config.TLS{
 					Enable: false,
 					MTLS:   false,

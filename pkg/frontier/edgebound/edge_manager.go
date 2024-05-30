@@ -2,6 +2,8 @@ package edgebound
 
 import (
 	"context"
+	"errors"
+	"math/rand"
 	"net"
 	"strings"
 	"sync"
@@ -108,7 +110,10 @@ func newEdgeManager(conf *config.Configuration, repo apis.Repo, informer apis.Ed
 }
 
 func (em *edgeManager) bypassDial(_ net.Addr, _ interface{}) (net.Conn, error) {
-	return utils.Dial(&em.conf.Edgebound.Bypass)
+	if em.conf.Edgebound.Bypass.Addrs == nil || len(em.conf.Edgebound.Bypass.Addrs) == 0 {
+		return nil, errors.New("illegal bypass addrs")
+	}
+	return utils.Dial(&em.conf.Edgebound.Bypass, rand.Intn(len(em.conf.Edgebound.Bypass.Addrs)))
 }
 
 // Serve blocks until the Accept error
