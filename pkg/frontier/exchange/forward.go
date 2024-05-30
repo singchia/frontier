@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/singchia/frontier/pkg/frontier/apis"
+	"github.com/singchia/frontier/pkg/frontier/misc"
 	"github.com/singchia/geminio"
 	"github.com/singchia/geminio/options"
 	"k8s.io/klog/v2"
@@ -143,15 +144,18 @@ func (ex *exchange) forwardRawToService(end geminio.End) {
 // rpc from edge, and forward to service
 func (ex *exchange) forwardRPCToService(end geminio.End) {
 	edgeID := end.ClientID()
+	addr := end.RemoteAddr()
 	// we hijack all rpcs and forward them to service
 	end.Hijack(func(ctx context.Context, method string, r1 geminio.Request, r2 geminio.Response) {
 		// get service
-		svc, err := ex.Servicebound.GetServiceByRPC(method)
+		svcs, err := ex.Servicebound.GetServicesByRPC(method)
 		if err != nil {
 			klog.V(2).Infof("exchange forward rpc to service, get service by rpc err: %s, edgeID: %d", err, edgeID)
 			r2.SetError(err)
 			return
 		}
+		index := misc.Hash(ex.conf.Exchange.HashBy, len(svcs), edgeID, addr)
+		svc := svcs[index]
 		serviceID := svc.ClientID()
 		// we record the edgeID to service
 		tail := make([]byte, 8)
@@ -201,7 +205,10 @@ func (ex *exchange) forwardMessageToService(end geminio.End) {
 			}
 			topic := msg.Topic()
 			// TODO seperate async and sync produce
-			err = ex.MQM.Produce(topic, msg.Data(), apis.WithOrigin(msg), apis.WithEdgeID(edgeID))
+			err = ex.MQM.Produce(topic, msg.Data(),
+				apis.WithOrigin(msg),
+				apis.WithEdgeID(edgeID),
+				apis.WithAddr(end.RemoteAddr()))
 			if err != nil {
 				if err != apis.ErrTopicNotOnline {
 					klog.Errorf("edge forward message, produce err: %s, edgeID: %d", err, edgeID)

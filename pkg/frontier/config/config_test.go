@@ -60,13 +60,25 @@ func TestParseFile(t *testing.T) {
 	}
 }
 
-func TestGenDefaultConfig(t *testing.T) {
+func TestGenMinConfig(t *testing.T) {
 	file, err := os.OpenFile("../../../etc/frontier.yaml", os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		t.Error(err)
 	}
 	defer file.Close()
-	err = genDefaultConfig(file)
+	err = genMinConfig(file)
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestGenAllConfig(t *testing.T) {
+	file, err := os.OpenFile("../../../etc/frontier_all.yaml", os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0666)
+	if err != nil {
+		t.Error(err)
+	}
+	defer file.Close()
+	err = genAllConfig(file)
 	if err != nil {
 		t.Error(err)
 	}

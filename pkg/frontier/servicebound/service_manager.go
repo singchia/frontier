@@ -199,6 +199,27 @@ func (sm *serviceManager) GetServiceByName(name string) (geminio.End, error) {
 	return sm.services[mservice.ServiceID], nil
 }
 
+func (sm *serviceManager) GetServicesByName(name string) ([]geminio.End, error) {
+	sm.mtx.RLock()
+	defer sm.mtx.RUnlock()
+
+	mservices, err := sm.repo.GetServicesByName(name)
+	if err != nil {
+		klog.V(2).Infof("get services by name: %s, err: %s", name, err)
+		return nil, err
+	}
+	ends := []geminio.End{}
+	for _, mservice := range mservices {
+		end, ok := sm.services[mservice.ServiceID]
+		if ok {
+			ends = append(ends, end)
+			continue
+		}
+		// TOTO warning the consistency
+	}
+	return ends, nil
+}
+
 func (sm *serviceManager) GetServiceByRPC(rpc string) (geminio.End, error) {
 	sm.mtx.RLock()
 	defer sm.mtx.RUnlock()
@@ -208,8 +229,28 @@ func (sm *serviceManager) GetServiceByRPC(rpc string) (geminio.End, error) {
 		klog.V(2).Infof("get service by rpc: %s, err: %s", rpc, err)
 		return nil, err
 	}
-
 	return sm.services[mrpc.ServiceID], nil
+}
+
+func (sm *serviceManager) GetServicesByRPC(rpc string) ([]geminio.End, error) {
+	sm.mtx.RLock()
+	defer sm.mtx.RUnlock()
+
+	mrpcs, err := sm.repo.GetServiceRPCs(rpc)
+	if err != nil {
+		klog.V(2).Infof("get service by rpc: %s, err: %s", rpc, err)
+		return nil, err
+	}
+	ends := []geminio.End{}
+	for _, mrpc := range mrpcs {
+		end, ok := sm.services[mrpc.ServiceID]
+		if ok {
+			ends = append(ends, end)
+			continue
+		}
+		// TODO warning the consistency
+	}
+	return ends, nil
 }
 
 func (sm *serviceManager) GetServiceByTopic(topic string) (geminio.End, error) {
@@ -221,8 +262,28 @@ func (sm *serviceManager) GetServiceByTopic(topic string) (geminio.End, error) {
 		klog.V(2).Infof("get service by topic: %s, err: %s", topic, err)
 		return nil, err
 	}
-
 	return sm.services[mtopic.ServiceID], nil
+}
+
+func (sm *serviceManager) GetServicesByTopic(topic string) ([]geminio.End, error) {
+	sm.mtx.RLock()
+	defer sm.mtx.RUnlock()
+
+	mtopics, err := sm.repo.GetServiceTopics(topic)
+	if err != nil {
+		klog.V(2).Infof("get service by topic: %s, err: %s", topic, err)
+		return nil, err
+	}
+	ends := []geminio.End{}
+	for _, mtopic := range mtopics {
+		end, ok := sm.services[mtopic.ServiceID]
+		if ok {
+			ends = append(ends, end)
+			continue
+		}
+		// TODO warning the consistency
+	}
+	return ends, nil
 }
 
 func (sm *serviceManager) ListService() []geminio.End {

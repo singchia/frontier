@@ -1,0 +1,155 @@
+daemon:
+  frontier_id: ""
+  pprof:
+    addr: 0.0.0.0:6060
+    cpu_profile_rate: 0
+    enable: true
+  rlimit:
+    enable: true
+    nofile: 102400
+controlplane:
+  enable: false
+  listen:
+    addr: 0.0.0.0:30010
+    advertised_addr: ""
+    network: tcp
+    tls:
+      ca_certs: null
+      certs: null
+      enable: false
+      insecure_skip_verify: false
+      mtls: false
+servicebound:
+  listen:
+    addr: 0.0.0.0:30011
+    advertised_addr: ""
+    network: tcp
+    tls:
+      ca_certs:
+      - ca1.cert
+      - ca2.cert
+      certs:
+      - cert: servicebound.cert
+        key: servicebound.key
+      enable: false
+      insecure_skip_verify: false
+      mtls: false
+edgebound:
+  bypass:
+    addr: 192.168.1.10:8443
+    advertised_addr: ""
+    network: tcp
+    tls:
+      ca_certs:
+      - ca1.cert
+      certs:
+      - cert: frontier.cert
+        key: frontier.key
+      enable: true
+      insecure_skip_verify: false
+      mtls: true
+  bypass_enable: false
+  edgeid_alloc_when_no_idservice_on: true
+  listen:
+    addr: 0.0.0.0:30012
+    advertised_addr: ""
+    network: tcp
+    tls:
+      ca_certs:
+      - ca1.cert
+      - ca2.cert
+      certs:
+      - cert: edgebound.cert
+        key: edgebound.key
+      enable: false
+      insecure_skip_verify: false
+      mtls: false
+dao:
+  backend: buntdb
+  debug: false
+exchange:
+  hashby: edgeid
+frontlas:
+  enable: false
+  metrics:
+    enable: false
+    interval: 0
+  dial:
+    addr: 127.0.0.1:40012
+    network: tcp
+    tls:
+      ca_certs: null
+      certs: null
+      enable: false
+      insecure_skip_verify: false
+      mtls: false
+mqm:
+  amqp:
+    enable: false
+    addrs: null
+    channel_max: 0
+    exchanges: null
+    frame_size: 0
+    heartbeat: 0
+    locale: ""
+    producer:
+      app_id: ""
+      content_encoding: ""
+      content_type: ""
+      delivery_mode: 0
+      exchange: ""
+      expiration: ""
+      headers: null
+      immediate: false
+      mandatory: false
+      priority: 0
+      reply_to: ""
+      routing_keys: null
+      type: ""
+      user_id: ""
+    queueBindings: null
+    queues: null
+    vhost: ""
+  kafka:
+    enable: false
+    addrs: null
+    producer:
+      async: false
+      compression: none
+      compression_level: 0
+      flush:
+        bytes: 0
+        frequency: 0
+        max_messages: 0
+        messages: 0
+      idempotent: false
+      max_message_bytes: 0
+      required_acks: 0
+      retry:
+        backoff: 0
+        max: 0
+      timeout: 0
+      topics: null
+  nats:
+    enable: false
+    addrs: null
+    jetStream:
+      enable: false
+      name: ""
+      producer:
+        subjects: null
+    producer:
+      subjects: null
+  nsq:
+    enable: false
+    addrs: null
+    producer:
+      topics: null
+  redis:
+    enable: false
+    addrs: null
+    db: 0
+    password: ""
+    producer:
+      channels: null
+

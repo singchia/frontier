@@ -2,7 +2,7 @@
 <img src="./docs/diagram/frontier-logo.png" width="30%" height="30%">
 </p>
 
-Frontier是一个go开发的开源长连接网关，旨在让微服务直达边缘节点或客户端，反之边缘节点或客户端也同样直达微服务。对于两者，提供了单双向RPC调用，消息发布和接收，以及点对点通信的功能。Frontier符合云原生架构，可以使用Operator快速部署一个集群，具有高可用和弹性，轻松支撑百万边缘节点或客户端在线的需求。
+Frontier是一个go开发的全双工开源长连接网关，旨在让微服务直达边缘节点或客户端，反之边缘节点或客户端也同样直达微服务。对于两者，提供了全双工的单双向RPC调用，消息发布和接收，以及点对点流的功能。Frontier符合云原生架构，可以使用Operator快速部署一个集群，具有高可用和弹性，轻松支撑百万边缘节点或客户端在线的需求。
 
 
 ## 特性
@@ -10,7 +10,7 @@ Frontier是一个go开发的开源长连接网关，旨在让微服务直达边�
 - **RPC**  微服务和边缘可以Call对方的函数（提前注册），并且在微服务侧支持负载均衡
 - **消息**  微服务和边缘可以Publish对方的Topic，边缘可以Publish到外部MQ的Topic，微服务侧支持负载均衡
 - **多路复用/流**  微服务可以直接在边缘节点打开一个流（连接），可以封装例如文件上传、代理等，天堑变通途
-- **上线离线控制**  微服务可以注册边缘节点获取ID、上线离线回调，当这些事件发生，Frontier会调用这些方法
+- **上线离线控制**  微服务可以注册边缘节点获取ID、上线离线回调，当这些事件发生，Frontier会调用这些函数
 - **API简单**  在项目api目录下，分别对边缘和微服务提供了封装好的sdk，可以非常简单的基于这个sdk做开发
 - **部署简单**  支持多种部署方式(docker docker-compose helm以及operator)来部署Frontier实例或集群
 - **水平扩展**  提供了Frontiter和Frontlas集群，在单实例性能达到瓶颈下，可以水平扩展Frontier实例或集群
@@ -19,7 +19,7 @@ Frontier是一个go开发的开源长连接网关，旨在让微服务直达边�
 
 ## 架构
 
-### Frontier架构
+### 组件Frontier
 
 <img src="./docs/diagram/frontier.png" width="100%" height="100%">
 
@@ -29,6 +29,7 @@ Frontier是一个go开发的开源长连接网关，旨在让微服务直达边�
 - _Publish/Receive_：发布和接收消息
 - _Call/Register_：调用和注册函数
 - _OpenStream/AcceptStream_：打开和接收点到点流（连接）
+-  _外部MQ_：Frontier支持将从边缘节点Publish的消息根据配置的Topic转发到外部MQ
 
 Frontier需要微服务和边缘节点两方都主动连接到Frontier，Service和Edge的元信息（接收Topic，RPC，Service名等）可以在连接的时候携带过来。连接的默认端口是：
 
@@ -43,7 +44,7 @@ Frontier需要微服务和边缘节点两方都主动连接到Frontier，Service
   <tr>
     <th>功能</th>
     <th>发起方</th>
-    <th>目标方</th>
+    <th>接收方</th>
     <th>方法</th>
     <th>路由方式</th>
     <th>描述</th>
@@ -62,7 +63,7 @@ Frontier需要微服务和边缘节点两方都主动连接到Frontier，Service
     <td>Service或外部MQ</td>
     <td>Publish</td>
     <td>Topic</td>
-    <td>必须Publish到Topic，由Frontier根据Topic选择具体Service或MQ</td>
+    <td>必须Publish到Topic，由Frontier根据Topic选择某个Service或MQ</td>
   </tr>
   <tr>
     <td rowspan="2">RPCer</td>
@@ -70,14 +71,14 @@ Frontier需要微服务和边缘节点两方都主动连接到Frontier，Service
     <td>Edge</td>
     <td>Call</td>
     <td>EdgeID+Method</td>
-    <td>必须Call到具体的EdgeID，必须携带Method</td>
+    <td>必须Call到具体的EdgeID，需要携带Method</td>
   </tr>
   <tr>
     <td>Edge</td>
     <td>Service</td>
     <td>Call</td>
     <td>Method</td>
-    <td>必须Call到Method，由Frontier根据Method选择具体的Service</td>
+    <td>必须Call到Method，由Frontier根据Method选择某个的Service</td>
   </tr>
   <tr>
     <td rowspan="2">Multiplexer</td>
@@ -96,6 +97,17 @@ Frontier需要微服务和边缘节点两方都主动连接到Frontier，Service
   </tr>
 </tbody></table>
 
+主要遵守以下设计原则：
+
+1. 所有的消息、RPC和Stream都是点到点的传递
+	- 从微服务到边缘，一定要指定边缘节点ID
+	- 从边缘到微服务，Frontier根据Topic和Method路由，最终哈希选择一个微服务或外部MQ，默认根据```edgeid```哈希，你也可以选择```random```或```srcip```
+2. 消息需要接收方明确结束
+	- 为了保障消息的传达语义，接收方一定需要msg.Done()或msg.Error(err)，保障传达一致性
+3. Multiplexer打开的流在逻辑上是微服务与边缘节点的直接通信
+	- 对方接收到流后，所有在这个流上功能都会直达对方，不会经过Frontierd的路由策略
+
+
 ## 使用
 
 ### 示例
@@ -106,7 +118,7 @@ Frontier需要微服务和边缘节点两方都主动连接到Frontier，Service
 make examples
 ```
 
-在bin目录下得到```chatroom_service```和```chatroom_client```可执行程序，运行示例：
+在bin目录下得到```chatroom_service```和```chatroom_egent```可执行程序，运行示例：
 
 https://github.com/singchia/frontier/assets/15531166/18b01d96-e30b-450f-9610-917d65259c30
 
@@ -150,9 +162,9 @@ func main() {
 		return net.Dial("tcp", "127.0.0.1:30011")
 	}
 	svc, _ := service.NewService(dialer)
-	srv.RegisterGetEdgeID(context.TODO(), getID)
-	srv.RegisterEdgeOnline(context.TODO(), online)
-	srv.RegisterEdgeOffline(context.TODO(), offline)
+	svc.RegisterGetEdgeID(context.TODO(), getID)
+	svc.RegisterEdgeOnline(context.TODO(), online)
+	svc.RegisterEdgeOffline(context.TODO(), offline)
 }
 
 // service可以根据meta分配id给edge
@@ -189,78 +201,10 @@ func main() {
 		return net.Dial("tcp", "127.0.0.1:30011")
 	}
 	svc, _ := service.NewService(dialer)
-	msg := srv.NewMessage([]byte("test"))
+	msg := svc.NewMessage([]byte("test"))
 	// 发布一条消息到ID为1001的边缘节点
-	err = srv.Publish(context.TODO(), 1001, msg)
-}
-```
-
-**微服务调用边缘节点的RPC**：
-
-```golang
-package main
-
-import (
-	"context"
-	"net"
-	"github.com/singchia/frontier/api/dataplane/v1/service"
-)
-
-func main() {
-	dialer := func() (net.Conn, error) {
-		return net.Dial("tcp", "127.0.0.1:30011")
-	}
-	req := srv.NewRequest([]byte("test"))
-	// 调用ID为1001边缘节点的foo方法，前提是边缘节点需要预注册该方法
-	rsp, err := srv.Call(context.TODO(), edgeID, "foo", req)
-}
-```
-
-**微服务打开边缘节点的点到点流**：
-
-```golang
-package main
-
-import (
-	"context"
-	"net"
-	"github.com/singchia/frontier/api/dataplane/v1/service"
-)
-
-func main() {
-	dialer := func() (net.Conn, error) {
-		return net.Dial("tcp", "127.0.0.1:30011")
-	}
-	svc, _ := service.NewService(dialer)
-	// 打开ID为1001边缘节点的新流（同时st也是一个net.Conn），前提是edge需要AcceptStream接收该流
-	st, err := srv.OpenStream(context.TODO(), 1001)
-}
-```
-基于这个新打开流，你可以用来传递文件、代理流量等。
-
-**微服务注册方法以供边缘节点调用**：
-
-```golang
-package main
-
-import (
-	"context"
-	"net"
-	"github.com/singchia/frontier/api/dataplane/v1/service"
-)
-
-func main() {
-	dialer := func() (net.Conn, error) {
-		return net.Dial("tcp", "127.0.0.1:30011")
-	}
-	svc, _ := service.NewService(dialer)
-	// 注册一个"echo"方法
-	srv.Register(context.TODO(), "echo", echo)
-}
-
-func echo(ctx context.Context, req geminio.Request, rsp geminio.Response) {
-	value := req.Data()
-	rsp.SetData(value)
+	err := svc.Publish(context.TODO(), 1001, msg)
+	// ...
 }
 ```
 
@@ -284,17 +228,188 @@ func main() {
 	// 在获取svc时声明需要接收的topic
 	svc, _ := service.NewService(dialer, service.OptionServiceReceiveTopics([]string{"foo"}))
 	for {
-		msg, err := srv.Receive(context.TODO())
+		// 接收消息
+		msg, err := svc.Receive(context.TODO())
 		if err == io.EOF {
+			// 收到EOF表示svc生命周期已终结，不可以再使用
 			return
 		}
 		if err != nil {
-			fmt.Println("\n> receive err:", err)
+			fmt.Println("receive err:", err)
 			continue
 		}
+		// 处理完msg后，需要通知调用方已完成
 		msg.Done()
-		fmt.Printf("> receive msg, edgeID: %d streamID: %d data: %s\n", msg.ClientID(), msg.StreamID(), string(value))
 	}
+}
+
+```
+
+**微服务调用边缘节点的RPC**：
+
+```golang
+package main
+
+import (
+	"context"
+	"net"
+	"github.com/singchia/frontier/api/dataplane/v1/service"
+)
+
+func main() {
+	dialer := func() (net.Conn, error) {
+		return net.Dial("tcp", "127.0.0.1:30011")
+	}
+	svc, _ := service.NewService(dialer)
+	req := svc.NewRequest([]byte("test"))
+	// 调用ID为1001边缘节点的foo方法，前提是边缘节点需要预注册该方法
+	rsp, err := svc.Call(context.TODO(), 1001, "foo", req)
+	// ...
+}
+```
+
+**微服务注册方法以供边缘节点调用**：
+
+```golang
+package main
+
+import (
+	"context"
+	"net"
+	"github.com/singchia/frontier/api/dataplane/v1/service"
+	"github.com/singchia/geminio"
+)
+
+func main() {
+	dialer := func() (net.Conn, error) {
+		return net.Dial("tcp", "127.0.0.1:30011")
+	}
+	svc, _ := service.NewService(dialer)
+	// 注册一个"echo"方法
+	svc.Register(context.TODO(), "echo", echo)
+	// ...
+}
+
+func echo(ctx context.Context, req geminio.Request, rsp geminio.Response) {
+	value := req.Data()
+	rsp.SetData(value)
+}
+```
+
+**微服务打开边缘节点的点到点流**：
+
+```golang
+package main
+
+import (
+	"context"
+	"net"
+	"github.com/singchia/frontier/api/dataplane/v1/service"
+)
+
+func main() {
+	dialer := func() (net.Conn, error) {
+		return net.Dial("tcp", "127.0.0.1:30011")
+	}
+	svc, _ := service.NewService(dialer)
+	// 打开ID为1001边缘节点的新流（同时st也是一个net.Conn），前提是edge需要AcceptStream接收该流
+	st, err := svc.OpenStream(context.TODO(), 1001)
+}
+```
+基于这个新打开流，你可以用来传递文件、代理流量等。
+
+
+**微服务接收流**
+
+```golang
+package main
+
+import (
+	"fmt"
+	"io"
+	"net"
+	"github.com/singchia/frontier/api/dataplane/v1/service"
+)
+
+func main() {
+	dialer := func() (net.Conn, error) {
+		return net.Dial("tcp", "127.0.0.1:30011")
+	}
+	// 在获取svc时声明需要微服务名，在边缘打开流时需要指定该微服务名
+	svc, _ := service.NewService(dialer, service.OptionServiceName("service-name"))
+	for {
+		st, err := svc.AcceptStream()
+		if err == io.EOF {
+			// 收到EOF表示svc生命周期已终结，不可以再使用
+			return
+		} else if err != nil {
+			fmt.Println("accept stream err:", err)
+			continue
+		}
+		// 使用stream，这个stream同时是个net.Conn，你可以Read/Write/Close，同时也可以RPC和消息
+	}
+}
+```
+基于这个新打开流，你可以用来传递文件、代理流量等。
+
+**消息、RPC和流一起来吧！**
+
+```golang
+package main
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"net"
+	"github.com/singchia/frontier/api/dataplane/v1/service"
+	"github.com/singchia/geminio"
+)
+
+func main() {
+	dialer := func() (net.Conn, error) {
+		return net.Dial("tcp", "127.0.0.1:30011")
+	}
+	// 在获取svc时声明需要微服务名，在边缘打开流时需要指定该微服务名
+	svc, _ := service.NewService(dialer, service.OptionServiceName("service-name"))
+
+	// 接收流
+	go func() {
+		for {
+			st, err := svc.AcceptStream()
+			if err == io.EOF {
+				// 收到EOF表示svc生命周期已终结，不可以再使用
+				return
+			} else if err != nil {
+				fmt.Println("accept stream err:", err)
+				continue
+			}
+			// 使用stream，这个stream同时是个net.Conn，你可以Read/Write/Close，同时也可以RPC和消息
+		}
+	}()
+
+	// 注册一个"echo"方法
+	svc.Register(context.TODO(), "echo", echo)
+
+	// 接收消息
+	for {
+		msg, err := svc.Receive(context.TODO())
+		if err == io.EOF {
+			// 收到EOF表示svc生命周期已终结，不可以再使用
+			return
+		}
+		if err != nil {
+			fmt.Println("receive err:", err)
+			continue
+		}
+		// 处理完msg后，需要通知调用方已完成
+		msg.Done()
+	}
+}
+
+func echo(ctx context.Context, req geminio.Request, rsp geminio.Response) {
+	value := req.Data()
+	rsp.SetData(value)
 }
 ```
 
@@ -314,8 +429,8 @@ func main() {
 	dialer := func() (net.Conn, error) {
 		return net.Dial("tcp", "127.0.0.1:30012")
 	}
-	eg, err := edge.NewEdge(dialer)
-	// 开始使用eg
+	eg, _ := edge.NewEdge(dialer)
+	// 开始使用eg ...
 }
 ```
 
@@ -327,6 +442,7 @@ Service需要提前声明接收该Topic，或者在配置文件中配置外部MQ
 package main
 
 import (
+	"context"
 	"net"
 	"github.com/singchia/frontier/api/dataplane/v1/edge"
 )
@@ -335,14 +451,105 @@ func main() {
 	dialer := func() (net.Conn, error) {
 		return net.Dial("tcp", "127.0.0.1:30012")
 	}
-	eg, err := edge.NewEdge(dialer)
+	eg, _ := edge.NewEdge(dialer)
 	// 开始使用eg
-	msg := cli.NewMessage([]byte("test"))
-	err = cli.Publish(context.TODO(), "foo", msg)
+	msg := eg.NewMessage([]byte("test"))
+	err := eg.Publish(context.TODO(), "foo", msg)
+	// ...
 }
+
+```
+
+**边缘节点接收消息**：
+
+```golang
+package main
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"net"
+	"github.com/singchia/frontier/api/dataplane/v1/edge"
+)
+
+func main() {
+	dialer := func() (net.Conn, error) {
+		return net.Dial("tcp", "127.0.0.1:30012")
+	}
+	eg, _ := edge.NewEdge(dialer)
+	for {
+		// 接收消息
+		msg, err := eg.Receive(context.TODO())
+		if err == io.EOF {
+			// 收到EOF表示eg生命周期已终结，不可以再使用
+			return
+		}
+		if err != nil {
+			fmt.Println("receive err:", err)
+			continue
+		}
+		// 处理完msg后，需要通知调用方已完成
+		msg.Done()
+	}
+	// ...
+}
+
 ```
 
 **边缘节点调用微服务RPC**：
+
+```golang
+package main
+
+import (
+	"context"
+	"net"
+	"github.com/singchia/frontier/api/dataplane/v1/edge"
+)
+
+func main() {
+	dialer := func() (net.Conn, error) {
+		return net.Dial("tcp", "127.0.0.1:30012")
+	}
+	eg, _ := edge.NewEdge(dialer)
+	// 开始使用eg
+	req := eg.NewRequest([]byte("test"))
+	// 调用echo方法，Frontier会查找并转发请求到相应的微服务
+	rsp, err := eg.Call(context.TODO(), "echo", req)
+}
+
+```
+
+**边缘节点注册RPC**：
+
+```golang
+package main
+
+import (
+	"context"
+	"net"
+	"github.com/singchia/frontier/api/dataplane/v1/edge"
+	"github.com/singchia/geminio"
+)
+
+func main() {
+	dialer := func() (net.Conn, error) {
+		return net.Dial("tcp", "127.0.0.1:30012")
+	}
+	eg, _ := edge.NewEdge(dialer)
+	// 注册一个"echo"方法
+	eg.Register(context.TODO(), "echo", echo)
+	// ...
+}
+
+func echo(ctx context.Context, req geminio.Request, rsp geminio.Response) {
+	value := req.Data()
+	rsp.SetData(value)
+}
+```
+
+**边缘节点打开微服务的点到点流**：
 
 ```golang
 package main
@@ -356,13 +563,84 @@ func main() {
 	dialer := func() (net.Conn, error) {
 		return net.Dial("tcp", "127.0.0.1:30012")
 	}
-	eg, err := edge.NewEdge(dialer)
-	// 开始使用eg
-	msg := cli.NewMessage([]byte("test"))
-	// 调用echo方法，Frontier会查找并转发请求到相应的微服务
-	rsp, err := cli.Call(context.TODO(), "echo", req)
+	eg, _ := edge.NewEdge(dialer)
+	st, err := eg.OpenStream("service-name")
+	// ...
 }
 ```
+基于这个新打开流，你可以用来传递文件、代理流量等。
+
+**边缘节点接收流**：
+
+```golang
+package main
+
+import (
+	"net"
+	"fmt"
+	"io"
+	"github.com/singchia/frontier/api/dataplane/v1/edge"
+)
+
+func main() {
+	dialer := func() (net.Conn, error) {
+		return net.Dial("tcp", "127.0.0.1:30012")
+	}
+	eg, _ := edge.NewEdge(dialer)
+	for {
+		stream, err := eg.AcceptStream()
+		if err == io.EOF {
+			// 收到EOF表示eg生命周期已终结，不可以再使用
+			return
+		} else if err != nil {
+			fmt.Println("accept stream err:", err)
+			continue
+		}
+		// 使用stream，这个stream同时是个net.Conn，你可以Read/Write/Close，同时也可以RPC和消息
+	}
+}
+```
+
+### 错误处理
+
+<table><thead>
+  <tr>
+    <th>错误</th>
+    <th>描述和处理</th>
+  </tr></thead>
+<tbody>
+  <tr>
+    <td>io.EOF</td>
+    <td>收到EOF表示流或连接已关闭，需要退出Receive、AcceptStream等操作</td>
+  </tr>
+  <tr>
+    <td>io.ErrShortBuffer</td>
+    <td>发送端或者接收端的Buffer已满，可以设置OptionServiceBufferSize或OptionEdgeBufferSize来调整</td>
+  </tr>
+  <tr>
+    <td>apis.ErrEdgeNotOnline</td>
+    <td>表示该边缘节点不在线，需要检查边缘连接</td>
+  </tr>
+  <tr>
+    <td>apis.ServiceNotOnline</td>
+    <td>表示微服务不在线，需要检查微服务连接信息或连接</td>
+  </tr>
+  <tr>
+    <td>apis.RPCNotOnline</td>
+    <td>表示Call的RPC不在线</td>
+  </tr>
+  <tr>
+    <td>apis.TopicOnline</td>
+    <td>表示Publish的Topic不在线</td>
+  </tr>
+  <tr>
+    <td>其他错误</td>
+    <td>还存在Timeout、BufferFull等</td>
+  </tr>
+</tbody>
+</table>
+
+需要注意的是，如果关闭流，在流上正在阻塞的方法都会立即得到io.EOF，如果关闭入口（Service和Edge），则所有在此之上的流，阻塞的方法都会立即得到io.EOF。
 
 ### 控制面
 
@@ -387,7 +665,7 @@ service ControlPlane {
 
 **REST** Swagger详见[Swagger定义](./docs/swagger/swagger.yaml)
 
-例如你可以使用下面请求来踢出某个边缘节点下线：
+例如你可以使用下面请求来踢除某个边缘节点下线：
 
 ```
 curl -X DELETE http://127.0.0.1:30010/v1/edges/{edge_id} 
@@ -398,12 +676,28 @@ curl -X DELETE http://127.0.0.1:30010/v1/edges/{edge_id}
 curl -X GET http://127.0.0.1:30010/v1/services/rpcs?service_id={service_id}
 ```
 
-注意：gRPC/Rest依赖dao backend，有两个选项```buntdb```和```sqlite```，都是使用的in-memory模式，为性能考虑，默认backend使用buntdb，并且列表接口返回字段count永远是-1，当你配置backend为sqlite3时，会认为你对在Frontier上连接的微服务和边缘节点有强烈的OLTP需求，例如在Frontier上封装web，此时count才会返回总数。
+**注意**：gRPC/Rest依赖dao backend，有两个选项```buntdb```和```sqlite```，都是使用的in-memory模式，为性能考虑，默认backend使用buntdb，并且列表接口返回字段count永远是-1，当你配置backend为sqlite3时，会认为你对在Frontier上连接的微服务和边缘节点有强烈的OLTP需求，例如在Frontier上封装web，此时count才会返回总数。
 
 
 ## Frontier配置
 
 如果需要更近一步定制你的Frontier实例，可以在这一节了解各个配置是如何工作的。
+
+### 最小化配置
+
+简单起，你可以仅配置面向微服务和边缘节点的服务监听地址：
+
+```
+servicebound:
+  listen:
+    network: tcp
+    addr: 0.0.0.0:30011
+edgebound:
+  listen:
+    network: tcp
+    addr: 0.0.0.0:30012
+  edgeid_alloc_when_no_idservice_on: true
+```
 
 ### TLS
 
@@ -420,7 +714,7 @@ tls:
   insecure_skip_verify: false
 ```
 
-## 部署
+## Frontier部署
 
 在单Frontier实例下，可以根据环境选择以下方式部署你的Frontier实例。
 
@@ -441,14 +735,13 @@ docker-compose up -d frontier
 
 ### helm
 
-如果你是在k8s环境下，可以使用helm快速部署一个实例，默认
+如果你是在k8s环境下，可以使用helm快速部署一个实例
 
 ```
 git clone https://github.com/singchia/frontier.git
 cd dist/helm
 helm install frontier ./ -f values.yaml
 ```
-
 
 ## 集群
 
@@ -486,7 +779,7 @@ Frontier需要主动连接Frontlas以上报自己、微服务和边缘的活跃�
  
  详见 [ROADMAP](./ROADMAP.md)
 
-### Bug和Feature
+### 贡献
 
 如果你发现任何Bug，请提出Issue，项目Maintainers会及时响应相关问题。
  
@@ -496,9 +789,11 @@ Frontier需要主动连接Frontlas以上报自己、微服务和边缘的活跃�
  * 每次提交一个Feature
  * 提交的代码都携带单元测试
 
+
 ## 测试
 
-### 流
+### 流功能测试
+
 <img src="./docs/diagram/stream.png" width="100%">
 
 
