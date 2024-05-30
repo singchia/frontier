@@ -769,9 +769,9 @@ mqm:
     # 生产者
     producer:
        # exchange名
-    	exchange: ""
-    	# 等于Frontier内Topic的概念，数组值
-    	routing_keys: null
+      exchange: ""
+      # 等于Frontier内Topic的概念，数组值
+      routing_keys: null
 ```
 对于AMQP来说，以上是最小配置，边缘节点Publish的消息Topic如果在routing_keys内，Frontier会Publish到exchange中，如果还有微服务或其他外部MQ也声明了该Topic，Frontier仍然会按照hashby来选择一个Publish。
 
@@ -787,7 +787,7 @@ mqm:
     # 生产者
     producer:
        # 数组值
-    	topics: null
+      topics: null
 ```
 对于Kafka来说，以上是最小配置，边缘节点Publish的消息Topic如果在上面数组中，Frontier会Publish过来。如果还有微服务或其他外部MQ也声明了该Topic，Frontier仍然会按照hashby来选择一个Publish。
 
