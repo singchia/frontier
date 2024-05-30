@@ -1,0 +1,42 @@
+version: "3.7"
+
+services:
+    frontier:
+        container_name: frontier
+        image: singchia/frontier:1.0.0
+        restart: always
+        ports:
+            - 30010:30010
+            - 30011:30011
+            - 30012:30012
+        logging:
+            driver: json-file
+            options:
+                max-size: 50m
+                max-file: "5"
+    frontlas:
+        container_name: frontlas
+        image: singchia/frontlas:1.0.0
+        restart: always
+        ports:
+            - 40011:40011
+            - 40012:40012
+        logging:
+            driver: json-file
+            options:
+                max-size: 50m
+                max-file: "5"
+    redis:
+        image: redis:6.2.6
+        restart: always
+        container_name: "redis"
+        command: redis-server
+        deploy:
+            resources:
+                limits:
+                    cpus: '1'
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "50m"
+                max-file: "5"

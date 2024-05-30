@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/singchia/frontier/pkg/frontier/apis"
+	"github.com/singchia/frontier/pkg/frontier/misc"
 	"github.com/singchia/geminio/options"
 
 	"k8s.io/klog/v2"
@@ -42,7 +43,7 @@ func (ex *exchange) GetEdgeID(meta []byte) (uint64, error) {
 }
 
 func (ex *exchange) EdgeOnline(edgeID uint64, meta []byte, addr net.Addr) error {
-	svc, err := ex.Servicebound.GetServiceByRPC(apis.RPCEdgeOnline)
+	svcs, err := ex.Servicebound.GetServicesByRPC(apis.RPCEdgeOnline)
 	if err != nil {
 		klog.V(2).Infof("exchange edge online, get service err: %s, edgeID: %d, meta: %s, addr: %s", err, edgeID, string(meta), addr)
 		if err == apis.ErrRecordNotFound {
@@ -62,6 +63,9 @@ func (ex *exchange) EdgeOnline(edgeID uint64, meta []byte, addr net.Addr) error 
 		klog.Errorf("exchange edge online, json marshal err: %s, edgeID: %d, meta: %s, addr: %s", err, edgeID, string(meta), addr)
 		return err
 	}
+
+	index := misc.Hash(ex.conf.Exchange.HashBy, len(svcs), edgeID, addr)
+	svc := svcs[index]
 	// call service
 	req := svc.NewRequest(data)
 	opt := options.Call()
@@ -75,7 +79,7 @@ func (ex *exchange) EdgeOnline(edgeID uint64, meta []byte, addr net.Addr) error 
 }
 
 func (ex *exchange) EdgeOffline(edgeID uint64, meta []byte, addr net.Addr) error {
-	svc, err := ex.Servicebound.GetServiceByRPC(apis.RPCEdgeOffline)
+	svcs, err := ex.Servicebound.GetServicesByRPC(apis.RPCEdgeOffline)
 	if err != nil {
 		klog.V(2).Infof("exchange edge offline, get service err: %s, edgeID: %d, meta: %s, addr: %s", err, edgeID, string(meta), addr)
 		if err == apis.ErrRecordNotFound {
@@ -83,6 +87,8 @@ func (ex *exchange) EdgeOffline(edgeID uint64, meta []byte, addr net.Addr) error
 		}
 		return err
 	}
+	index := misc.Hash(ex.conf.Exchange.HashBy, len(svcs), edgeID, addr)
+	svc := svcs[index]
 	// call service the edge offline event
 	event := &apis.OnEdgeOffline{
 		EdgeID: edgeID,

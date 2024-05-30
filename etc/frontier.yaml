@@ -1,67 +1,9 @@
-daemon:
-  frontier_id: frontier01
-  rlimit:
-    enable: false
-    nofile: 102400
-  pprof:
-    enable: true
-    addr: 0.0.0.0:6060
-    cpu_profile_rate: 0
-controlplane:
-  enable: false
-  listen:
-    network: tcp
-    addr: 0.0.0.0:30010
-servicebound:
-  listen:
-    network: tcp
-    addr: 0.0.0.0:30011
-    tls:
-      enable: false
-      mtls: false
-      ca_certs:
-      - ca1.cert
-      - ca2.cert
-      certs:
-      - cert: servicebound.cert
-        key: servicebound.key
-      insecure_skip_verify: false
 edgebound:
   listen:
     network: tcp
     addr: 0.0.0.0:30012
-    tls:
-      enable: false
-      mtls: false
-      ca_certs:
-      - ca1.cert
-      - ca2.cert
-      certs:
-      - cert: edgebound.cert
-        key: edgebound.key
-      insecure_skip_verify: false
-  bypass:
-    network: tcp
-    addr: 192.168.1.10:8443
-    tls:
-      enable: true
-      mtls: true
-      ca_certs:
-      - ca1.cert
-      certs:
-      - cert: frontier.cert
-        key: frontier.key
-      insecure_skip_verify: false
-  bypass_enable: false
   edgeid_alloc_when_no_idservice_on: true
-dao:
-  debug: false
-frontlas:
-  enable: false
-  dial:
+servicebound:
+  listen:
     network: tcp
-    addr: 127.0.0.1:40012
-  metrics:
-    enable: false
-    interval: 0
-mqm: {}
+    addr: 0.0.0.0:30011

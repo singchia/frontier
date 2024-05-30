@@ -26,7 +26,8 @@ frontlas-linux:
 .PHONY: examples
 examples:
 	make -C examples
-	mv examples/iclm/bin/* ./bin/
+	mv examples/iclm/bin/* ./bin/ && rm -rf examples/iclm/bin
+	mv examples/chatroom/bin/* ./bin/ && rm -rf examples/chatroom/bin
 
 # clean
 .PHONY: clean

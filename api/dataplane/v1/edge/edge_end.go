@@ -41,6 +41,42 @@ func newEdgeEnd(dialer client.Dialer, opts ...EdgeOption) (*edgeEnd, error) {
 	}
 
 	// new geminio end
+	end, err := client.NewEndWithDialer(dialer, eopts)
+	if err != nil {
+		return nil, err
+	}
+	return &edgeEnd{end}, nil
+}
+
+func newRetryEdgeEnd(dialer client.Dialer, opts ...EdgeOption) (*edgeEnd, error) {
+	// options
+	eopt := &edgeOption{
+		readBufferSize:  -1,
+		writeBufferSize: -1,
+	}
+	for _, opt := range opts {
+		opt(eopt)
+	}
+
+	// turn to end options
+	eopts := client.NewEndOptions()
+	if eopt.tmr != nil {
+		eopts.SetTimer(eopt.tmr)
+	}
+	if eopt.logger != nil {
+		eopts.SetLog(eopt.logger)
+	}
+	if eopt.edgeID != nil {
+		eopts.SetClientID(*eopt.edgeID)
+	}
+	if eopt.meta != nil {
+		eopts.SetMeta(eopt.meta)
+	}
+	if eopt.readBufferSize != -1 || eopt.writeBufferSize != -1 {
+		eopts.SetBufferSize(eopt.readBufferSize, eopt.writeBufferSize)
+	}
+
+	// new geminio end
 	end, err := client.NewRetryEndWithDialer(dialer, eopts)
 	if err != nil {
 		return nil, err

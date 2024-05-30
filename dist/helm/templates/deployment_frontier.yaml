@@ -31,7 +31,7 @@ spec:
         - name: {{ .Chart.Name }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.global.registry }}/{{ .Values.image.frontier.repository }}:{{ .Values.image.frontier.tag | default .Chart.AppVersion }}"
+          image: "{{ .Values.global.registry }}/{{ .Values.image.frontier.image }}:{{ .Values.image.frontier.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.frontier.pullPolicy }}
           volumeMounts:
             - name: config
@@ -52,7 +52,7 @@ spec:
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.affinity }}
+      {{- with .Values.affinity.frontier }}
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}

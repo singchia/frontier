@@ -6,6 +6,7 @@ import (
 
 	"github.com/singchia/frontier/pkg/frontier/apis"
 	"github.com/singchia/frontier/pkg/frontier/config"
+	"github.com/singchia/frontier/pkg/frontier/misc"
 	"github.com/singchia/geminio"
 	"k8s.io/klog/v2"
 )
@@ -181,15 +182,22 @@ func (mqm *mqManager) GetMQs(topic string) []apis.MQ {
 }
 
 func (mqm *mqManager) Produce(topic string, data []byte, opts ...apis.OptionProduce) error {
-	mq := mqm.GetMQ(topic)
-	if mq == nil {
-		mq = mqm.GetMQ("*")
+	mqs := mqm.GetMQs(topic)
+	if mqs == nil || len(mqs) == 0 {
+		mq := mqm.GetMQ("*")
 		if mq == nil {
 			err := apis.ErrTopicNotOnline
 			klog.V(2).Infof("mq manager, get mq nil, topic: %s err: %s", topic, err)
 			return err
 		}
 	}
+	// TODO optimize the logic
+	opt := &apis.ProduceOption{}
+	for _, fun := range opts {
+		fun(opt)
+	}
+	index := misc.Hash(mqm.conf.Exchange.HashBy, len(mqs), opt.EdgeID, opt.Addr)
+	mq := mqs[index]
 	err := mq.Produce(topic, data, opts...)
 	if err != nil {
 		klog.Errorf("mq manager, produce topic: %s message err: %s", topic, err)

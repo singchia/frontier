@@ -1,0 +1,24 @@
+apiVersion: frontier.singchia.io/v1alpha1
+kind: FrontierCluster
+metadata:
+  labels:
+    app.kubernetes.io/name: frontiercluster
+    app.kubernetes.io/managed-by: kustomize
+  name: frontiercluster
+spec:
+  frontier:
+    replicas: 1
+    servicebound:
+      port: 30011
+    edgebound:
+      port: 30012
+  frontlas:
+    replicas: 1
+    controlplane:
+      port: 40011
+    redis:
+      addrs:
+        - rfs-redisfailover:26379
+      password: your-password
+      masterName: mymaster
+      redisType: sentinel

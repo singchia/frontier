@@ -199,6 +199,15 @@ func (dao *dao) GetService(serviceID uint64) (*model.Service, error) {
 }
 
 func (dao *dao) GetServiceByName(name string) (*model.Service, error) {
+	services, err := dao.GetServicesByName(name)
+	if err != nil {
+		return nil, err
+	}
+	// random one
+	return services[rand.Intn(len(services))], err
+}
+
+func (dao *dao) GetServicesByName(name string) ([]*model.Service, error) {
 	services := []*model.Service{}
 	err := dao.db.View(func(tx *buntdb.Tx) error {
 		pivot := fmt.Sprintf(`{"service": "%s"}`, name)
@@ -217,8 +226,7 @@ func (dao *dao) GetServiceByName(name string) (*model.Service, error) {
 	if len(services) == 0 {
 		return nil, apis.ErrRecordNotFound
 	}
-	// random one
-	return services[rand.Intn(len(services))], err
+	return services, err
 }
 
 func (dao *dao) DeleteService(delete *query.ServiceDelete) error {
@@ -250,6 +258,15 @@ func getServiceKey(serviceID uint64) string {
 
 // service rpc
 func (dao *dao) GetServiceRPC(rpc string) (*model.ServiceRPC, error) {
+	serviceRPCs, err := dao.GetServiceRPCs(rpc)
+	if err != nil {
+		return nil, err
+	}
+	// return random one
+	return serviceRPCs[rand.Intn(len(serviceRPCs))], err
+}
+
+func (dao *dao) GetServiceRPCs(rpc string) ([]*model.ServiceRPC, error) {
 	serviceRPCs := []*model.ServiceRPC{}
 	err := dao.db.View(func(tx *buntdb.Tx) error {
 		pivot := fmt.Sprintf(`{"rpc":"%s"}`, rpc)
@@ -267,7 +284,7 @@ func (dao *dao) GetServiceRPC(rpc string) (*model.ServiceRPC, error) {
 	if len(serviceRPCs) == 0 {
 		return nil, apis.ErrRecordNotFound
 	}
-	return serviceRPCs[rand.Intn(len(serviceRPCs))], err
+	return serviceRPCs, err
 }
 
 func (dao *dao) ListServiceRPCs(query *query.ServiceRPCQuery) ([]string, error) {
@@ -465,6 +482,14 @@ func getServiceRPCKey(serviceID uint64, rpc string) string {
 
 // service topics
 func (dao *dao) GetServiceTopic(topic string) (*model.ServiceTopic, error) {
+	serviceTopics, err := dao.GetServiceTopics(topic)
+	if err != nil {
+		return nil, err
+	}
+	return serviceTopics[rand.Intn(len(serviceTopics))], err
+}
+
+func (dao *dao) GetServiceTopics(topic string) ([]*model.ServiceTopic, error) {
 	serviceTopics := []*model.ServiceTopic{}
 	err := dao.db.View(func(tx *buntdb.Tx) error {
 		pivot := fmt.Sprintf(`{"topic":"%s"}`, topic)
@@ -482,7 +507,7 @@ func (dao *dao) GetServiceTopic(topic string) (*model.ServiceTopic, error) {
 	if len(serviceTopics) == 0 {
 		return nil, apis.ErrRecordNotFound
 	}
-	return serviceTopics[rand.Intn(len(serviceTopics))], err
+	return serviceTopics, err
 }
 
 func (dao *dao) ListServiceTopics(query *query.ServiceTopicQuery) ([]string, error) {

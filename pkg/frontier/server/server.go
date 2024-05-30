@@ -25,6 +25,7 @@ func NewServer(conf *config.Configuration, repo apis.Repo, mqm apis.MQM) (*Serve
 	// informer
 	var (
 		inf *frontlas.Informer
+		cp  *controlplane.ControlPlane
 		err error
 	)
 	if conf.Frontlas.Enable {
@@ -53,17 +54,19 @@ func NewServer(conf *config.Configuration, repo apis.Repo, mqm apis.MQM) (*Serve
 	}
 
 	// controlplane
-	controlplane, err := controlplane.NewControlPlane(conf, repo, servicebound, edgebound)
-	if err != nil {
-		klog.Errorf("new controlplane err: %s", err)
-		return nil, err
+	if conf.ControlPlane.Enable {
+		cp, err = controlplane.NewControlPlane(conf, repo, servicebound, edgebound)
+		if err != nil {
+			klog.Errorf("new controlplane err: %s", err)
+			return nil, err
+		}
 	}
 
 	return &Server{
 		tmr:          tmr,
 		servicebound: servicebound,
 		edgebound:    edgebound,
-		controlplane: controlplane,
+		controlplane: cp,
 	}, nil
 
 }
@@ -71,12 +74,16 @@ func NewServer(conf *config.Configuration, repo apis.Repo, mqm apis.MQM) (*Serve
 func (s *Server) Serve() {
 	go s.servicebound.Serve()
 	go s.edgebound.Serve()
-	go s.controlplane.Serve()
+	if s.controlplane != nil {
+		go s.controlplane.Serve()
+	}
 }
 
 func (s *Server) Close() {
 	s.servicebound.Close()
 	s.edgebound.Close()
-	s.controlplane.Close()
+	if s.controlplane != nil {
+		s.controlplane.Close()
+	}
 	s.tmr.Close()
 }

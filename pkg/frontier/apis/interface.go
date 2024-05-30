@@ -45,8 +45,11 @@ type Servicebound interface {
 	ListService() []geminio.End
 	// for management
 	GetServiceByName(service string) (geminio.End, error)
+	GetServicesByName(service string) ([]geminio.End, error)
 	GetServiceByRPC(rpc string) (geminio.End, error)
+	GetServicesByRPC(rpc string) ([]geminio.End, error)
 	GetServiceByTopic(topic string) (geminio.End, error)
+	GetServicesByTopic(topic string) ([]geminio.End, error)
 	DelServiceByID(serviceID uint64) error
 	DelSerivces(service string) error
 
@@ -89,8 +92,11 @@ type Repo interface {
 	GetEdge(edgeID uint64) (*model.Edge, error)
 	GetService(serviceID uint64) (*model.Service, error)
 	GetServiceByName(name string) (*model.Service, error)
+	GetServicesByName(name string) ([]*model.Service, error)
 	GetServiceRPC(rpc string) (*model.ServiceRPC, error)
+	GetServiceRPCs(rpc string) ([]*model.ServiceRPC, error)
 	GetServiceTopic(topic string) (*model.ServiceTopic, error)
+	GetServiceTopics(topic string) ([]*model.ServiceTopic, error)
 	ListEdgeRPCs(query *query.EdgeRPCQuery) ([]string, error)
 	ListEdges(query *query.EdgeQuery) ([]*model.Edge, error)
 	ListServiceRPCs(query *query.ServiceRPCQuery) ([]string, error)
@@ -118,6 +124,7 @@ type MQ interface {
 type ProduceOption struct {
 	Origin interface{}
 	EdgeID uint64
+	Addr   net.Addr
 }
 
 type OptionProduce func(*ProduceOption)
@@ -131,5 +138,11 @@ func WithEdgeID(edgeID uint64) OptionProduce {
 func WithOrigin(origin interface{}) OptionProduce {
 	return func(po *ProduceOption) {
 		po.Origin = origin
+	}
+}
+
+func WithAddr(addr net.Addr) OptionProduce {
+	return func(po *ProduceOption) {
+		po.Addr = addr
 	}
 }

@@ -3,6 +3,7 @@ package utils
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"net"
 	"os"
 
@@ -10,11 +11,19 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func Dial(dial *config.Dial) (net.Conn, error) {
+func Dial(dial *config.Dial, index int) (net.Conn, error) {
+	if len(dial.Addrs) == 0 {
+		return nil, errors.New("illegal addrs")
+	}
 	var (
 		network string = dial.Network
-		addr    string = dial.Addr
+		addr    string
 	)
+	if index < len(dial.Addrs) {
+		addr = dial.Addrs[index]
+	} else {
+		addr = dial.Addrs[0]
+	}
 
 	if !dial.TLS.Enable {
 		conn, err := net.Dial(network, addr)

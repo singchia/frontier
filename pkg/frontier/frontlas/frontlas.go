@@ -3,6 +3,8 @@ package frontlas
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"math/rand"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -28,6 +30,9 @@ type Informer struct {
 
 func NewInformer(conf *config.Configuration, tmr timer.Timer) (*Informer, error) {
 	dial := conf.Frontlas.Dial
+	if dial.Addrs == nil || len(dial.Addrs) == 0 {
+		return nil, errors.New("illegal dial addrs")
+	}
 
 	sbAddr, ebAddr, err := getAdvertisedAddrs(conf.Servicebound.Listen, conf.Edgebound.Listen, dial)
 	// meta
@@ -44,7 +49,7 @@ func NewInformer(conf *config.Configuration, tmr timer.Timer) (*Informer, error)
 	opt.SetMeta(data)
 
 	dialer := func() (net.Conn, error) {
-		conn, err := utils.Dial(&dial)
+		conn, err := utils.Dial(&dial, rand.Intn(len(dial.Addrs)))
 		if err != nil {
 			klog.Errorf("frontlas new informer, dial err: %s", err)
 			return nil, err
@@ -103,7 +108,7 @@ func getAdvertisedAddrs(sblisten, eblisten gconfig.Listen, dial gconfig.Dial) (s
 	)
 	getDefaultRouteHost := func() (string, error) {
 		once.Do(func() {
-			ip, rerr := utils.GetDefaultRouteIP(dial.Network, dial.Addr)
+			ip, rerr := utils.GetDefaultRouteIP(dial.Network, dial.Addrs[0])
 			if err != nil {
 				err = rerr
 				return

@@ -81,6 +81,20 @@ func (dao *dao) GetServiceByName(name string) (*model.Service, error) {
 	return &service, tx.Error
 }
 
+func (dao *dao) GetServicesByName(name string) ([]*model.Service, error) {
+	tx := dao.dbService.Model(&model.Service{})
+	if dao.config.Dao.Debug {
+		tx = tx.Debug()
+	}
+	tx = tx.Where("service = ?", name)
+	services := []*model.Service{}
+	tx = tx.Find(&services)
+	if tx.RowsAffected == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+	return services, tx.Error
+}
+
 type ServiceDelete struct {
 	ServiceID uint64
 	Addr      string
@@ -154,6 +168,21 @@ func (dao *dao) GetServiceRPC(rpc string) (*model.ServiceRPC, error) {
 		return nil, gorm.ErrRecordNotFound
 	}
 	return &mrpc, tx.Error
+}
+
+func (dao *dao) GetServiceRPCs(rpc string) ([]*model.ServiceRPC, error) {
+	tx := dao.dbService.Model(&model.ServiceRPC{})
+	if dao.config.Dao.Debug {
+		tx = tx.Debug()
+	}
+	tx = tx.Where("rpc = ?", rpc)
+
+	mrpcs := []*model.ServiceRPC{}
+	tx = tx.Find(&mrpcs)
+	if tx.RowsAffected == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+	return mrpcs, tx.Error
 }
 
 func (dao *dao) ListServiceRPCs(query *query.ServiceRPCQuery) ([]string, error) {
@@ -231,7 +260,6 @@ func buildServiceRPCQuery(tx *gorm.DB, query *query.ServiceRPCQuery) *gorm.DB {
 }
 
 // service topic
-
 func (dao *dao) GetServiceTopic(topic string) (*model.ServiceTopic, error) {
 	tx := dao.dbService.Model(&model.ServiceTopic{})
 	if dao.config.Dao.Debug {
@@ -245,6 +273,21 @@ func (dao *dao) GetServiceTopic(topic string) (*model.ServiceTopic, error) {
 		return nil, gorm.ErrRecordNotFound
 	}
 	return &mtopic, tx.Error
+}
+
+func (dao *dao) GetServiceTopics(topic string) ([]*model.ServiceTopic, error) {
+	tx := dao.dbService.Model(&model.ServiceTopic{})
+	if dao.config.Dao.Debug {
+		tx = tx.Debug()
+	}
+	tx = tx.Where("topic = ?", topic).Limit(1)
+
+	mtopics := []*model.ServiceTopic{}
+	tx = tx.Find(&mtopics)
+	if tx.RowsAffected == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+	return mtopics, tx.Error
 }
 
 func (dao *dao) ListServiceTopics(query *query.ServiceTopicQuery) ([]string, error) {
