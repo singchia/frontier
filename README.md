@@ -694,7 +694,7 @@ curl -X GET http://127.0.0.1:30010/v1/services/rpcs?service_id={service_id}
 
 简单起，你可以仅配置面向微服务和边缘节点的服务监听地址：
 
-```
+```yaml
 # 微服务端配置
 servicebound:
   # 监听网络
@@ -717,7 +717,7 @@ edgebound:
 
 对于用户来说，比较重要的TLS配置在微服务、边缘节点和控制面都是支持的，另支持mTLS，Frontier由此校验客户端携带的证书。
 
-```
+```yaml
 servicebound:
   listen:
     addr: 0.0.0.0:30011
@@ -759,7 +759,7 @@ edgebound:
 
 **AMQP**
 
-```
+```yaml
 mqm:
   amqp:
     # 是否允许
@@ -777,7 +777,7 @@ mqm:
 
 **Kafka**
 
-```
+```yaml
 mqm:
   kafka:
     # 是否允许
@@ -793,7 +793,7 @@ mqm:
 
 **NATS**
 
-```
+```yaml
 mqm:
   nats:
     # 是否允许
@@ -816,7 +816,7 @@ NATS配置里，如果允许Jetstream，会优先使用Publish到Jetstream。如
 
 **NSQ**
 
-```
+```yaml
 mqm:
   nsq:
     # 是否允许
@@ -831,7 +831,7 @@ NSQ的Topic里，如果还有微服务或其他外部MQ也声明了该Topic，Fr
 
 **Redis**
 
-```
+```yaml
 mqm:
   redis:
     # 是否允许
@@ -851,7 +851,7 @@ mqm:
 
 ### 其他配置
 
-```
+```yaml
 daemon:
   # 是否开启PProf
   pprof:
@@ -932,7 +932,7 @@ Frontier需要主动连接Frontlas以上报自己、微服务和边缘的活跃�
 
 **Frontier**的frontier.yaml需要添加如下配置：
 
-```
+```yaml
 frontlas:
   enable: true
   dial:
@@ -952,7 +952,7 @@ Frontier需要连接Frontlas，用来上报自己、微服务和边缘的活跃�
 
 **Frontlas**的frontlas.yaml最小化配置：
 
-```
+```yaml
 control_plane:
   listen:
     # 微服务改连接这个地址，用来发现集群的边缘节点所在的Frontier
@@ -1045,7 +1045,7 @@ make install && make deploy
 
 **CR**
 
-```
+```yaml
 apiVersion: frontier.singchia.io/v1alpha1
 kind: FrontierCluster
 metadata:
