@@ -46,7 +46,7 @@ func NewFrontierManager(conf *config.Configuration, dao *repo.Dao, tmr timer.Tim
 		klog.Errorf("frontier plane listen err: %s", err)
 		return nil, err
 	}
-	klog.V(1).Infof("server listening on: %v", ln.Addr())
+	klog.V(0).Infof("frontierbound server listening on: %v", ln.Addr())
 
 	fm.ln = ln
 	return fm, nil

@@ -2,7 +2,7 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 global:
-  registry: hub.docker.com/singchia
+  registry: singchia
   pullPolicy: Always
 
 imagePullSecrets: []
@@ -14,7 +14,7 @@ image:
     image: frontier
     pullPolicy: IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
-    tag: 1.0.0
+    tag: 1.1.0
 
 replicaCount: 1
 
@@ -47,7 +47,7 @@ service:
         type: ClusterIP
         targetPort: controlbound
         port: 30010
-      - name: servicebound
+      - name: frontier-edgebound-svc
         type: ClusterIP
         targetPort: servicebound
         port: 30011

@@ -97,6 +97,8 @@ spec:
                         - mtls
                         type: object
                     type: object
+                  image:
+                    type: string
                   nodeAffinity:
                     description: Node affinity is a group of node affinity scheduling
                       rules.
@@ -316,6 +318,8 @@ spec:
                           for a service
                         type: string
                     type: object
+                  image:
+                    type: string
                   nodeAffinity:
                     description: Node affinity is a group of node affinity scheduling
                       rules.

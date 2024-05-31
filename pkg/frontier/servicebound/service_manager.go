@@ -87,6 +87,7 @@ func newServiceManager(conf *config.Configuration, repo apis.Repo, informer apis
 		klog.Errorf("service manager listen err: %s", err)
 		return nil, err
 	}
+	klog.V(0).Infof("servicebound server listening on: %s", ln.Addr())
 	sm.ln = ln
 	return sm, nil
 }

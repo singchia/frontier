@@ -109,6 +109,8 @@ spec:
                         - mtls
                         type: object
                     type: object
+                  image:
+                    type: string
                   nodeAffinity:
                     description: Node affinity is a group of node affinity scheduling
                       rules.
@@ -328,6 +330,8 @@ spec:
                           for a service
                         type: string
                     type: object
+                  image:
+                    type: string
                   nodeAffinity:
                     description: Node affinity is a group of node affinity scheduling
                       rules.
@@ -525,6 +529,8 @@ spec:
                         type: array
                       db:
                         type: integer
+                      masterName:
+                        type: string
                       password:
                         type: string
                       redisType:
@@ -859,7 +865,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: singchia/frontiercluster-controller:1.0.0
+        image: singchia/frontiercluster-controller:1.1.0
         imagePullPolicy: Always
         livenessProbe:
           httpGet:

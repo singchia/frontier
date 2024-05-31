@@ -5,6 +5,7 @@
 <div align="center">
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/singchia/frontier)](https://goreportcard.com/report/github.com/singchia/frontier)
+[![Go Reference](https://pkg.go.dev/badge/badge/github.com/singchia/frontier.svg)](https://pkg.go.dev/github.com/singchia/frontier/api/dataplane/v1/service)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 </div>
@@ -888,7 +889,7 @@ exchange:
 ### docker
 
 ```
-docker run -d --name frontier -p 30011:30011 -p 30012:30012 singchia/frontier:1.0.0
+docker run -d --name frontier -p 30011:30011 -p 30012:30012 singchia/frontier:1.1.0
 ```
 
 
@@ -909,6 +910,12 @@ git clone https://github.com/singchia/frontier.git
 cd dist/helm
 helm install frontier ./ -f values.yaml
 ```
+
+你的微服务应该连接`service/frontier-servicebound-svc:40011`，你的边缘节点可以连接`:30012`所在的NodePort。
+
+### operator
+
+见下面集群部署章节
 
 ## 集群
 
@@ -1039,11 +1046,23 @@ service ClusterService {
 
 ```
 git clone https://github.com/singchia/frontier.git
-cd pkg/operator
-make install && make deploy
+cd dist/crd
+kubectl apply -f install.yaml
 ```
 
-**CR**
+查看CRD：
+
+```
+kubectl get crd frontierclusters.frontier.singchia.io
+```
+
+查看Operator：
+
+```
+kubectl get all -n frontier-system
+```
+
+**FrontierCluster集群**
 
 ```yaml
 apiVersion: frontier.singchia.io/v1alpha1
@@ -1056,7 +1075,7 @@ metadata:
 spec:
   frontier:
     # 单实例Frontier
-    replicas: 1
+    replicas: 2
     # 微服务侧端口
     servicebound:
       port: 30011
@@ -1069,8 +1088,8 @@ spec:
     # 控制面端口
     controlplane:
       port: 40011
-    # 依赖的Redis配置
     redis:
+      # 依赖的Redis配置
       addrs:
         - rfs-redisfailover:26379
       password: your-password
@@ -1078,8 +1097,40 @@ spec:
       redisType: sentinel
 ```
 
-1分钟，你即可拥有一个Frontier+Frontlas的集群。
+1分钟，你即可拥有一个2实例Frontier+1实例Frontlas的集群。
 
+通过一下来检查资源部署情况 
+
+> kubectl get all -l app=frontiercluster-frontier  
+> kubectl get all -l app=frontiercluster-frontlas
+
+
+```
+NAME                                           READY   STATUS    RESTARTS   AGE
+pod/frontiercluster-frontier-57d565c89-dn6n8   1/1     Running   0          7m22s
+pod/frontiercluster-frontier-57d565c89-nmwmt   1/1     Running   0          7m22s
+NAME                                       TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
+service/frontiercluster-edgebound-svc      NodePort    10.233.23.174   <none>        30012:30012/TCP  8m7s
+service/frontiercluster-servicebound-svc   ClusterIP   10.233.29.156   <none>        30011/TCP        8m7s
+NAME                                       READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/frontiercluster-frontier   2/2     2            2           7m22s
+NAME                                                 DESIRED   CURRENT   READY   AGE
+replicaset.apps/frontiercluster-frontier-57d565c89   2         2         2       7m22s
+```
+
+```
+kubectl get all -l app=frontiercluster-frontlas
+NAME                                            READY   STATUS    RESTARTS   AGE
+pod/frontiercluster-frontlas-85c4fb6d9b-5clkh   1/1     Running   0          8m11s
+NAME                                   TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)               AGE
+service/frontiercluster-frontlas-svc   ClusterIP   10.233.0.23   <none>        40011/TCP,40012/TCP   8m11s
+NAME                                       READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/frontiercluster-frontlas   1/1     1            1           8m11s
+NAME                                                  DESIRED   CURRENT   READY   AGE
+replicaset.apps/frontiercluster-frontlas-85c4fb6d9b   1         1         1       8m11s
+```
+
+你的微服务应该连接`service/frontiercluster-frontlas-svc:40011`，你的边缘节点可以连接`:30012`所在的NodePort。
 
 ## 开发
 
@@ -1108,3 +1159,7 @@ spec:
 ## 许可证
 
 Released under the [Apache License 2.0](https://github.com/singchia/geminio/blob/main/LICENSE)
+
+---
+
+已经看到这里，点个Star⭐️是莫大的认可♥️

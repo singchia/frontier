@@ -33,6 +33,9 @@ func NewInformer(conf *config.Configuration, tmr timer.Timer) (*Informer, error)
 	if dial.Addrs == nil || len(dial.Addrs) == 0 {
 		return nil, errors.New("illegal dial addrs")
 	}
+	if dial.Network == "" {
+		dial.Network = "tcp"
+	}
 
 	sbAddr, ebAddr, err := getAdvertisedAddrs(conf.Servicebound.Listen, conf.Edgebound.Listen, dial)
 	// meta

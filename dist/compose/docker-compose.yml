@@ -3,8 +3,9 @@ version: "3.7"
 services:
     frontier:
         container_name: frontier
-        image: singchia/frontier:1.0.0
+        image: singchia/frontier:1.1.0
         restart: always
+        command: --config /usr/conf/frontier.yaml -v 1
         ports:
             - 30010:30010
             - 30011:30011
@@ -16,7 +17,7 @@ services:
                 max-file: "5"
     frontlas:
         container_name: frontlas
-        image: singchia/frontlas:1.0.0
+        image: singchia/frontlas:1.1.0
         restart: always
         ports:
             - 40011:40011
