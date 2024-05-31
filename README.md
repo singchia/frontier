@@ -985,7 +985,7 @@ redis:
 
 **微服务获取Service**
 
-```
+```golang
 package main
 
 import (
