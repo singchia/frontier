@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iclm-service
+spec:
+  selector:
+    matchLabels:
+      app: iclm-service
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: iclm-service
+    spec:
+      imagePullSecrets:
+        - name: Always
+      containers:
+        - name: iclm-service
+          image: singchia/iclm_service:1.0.0-dev
+          imagePullPolicy: Always

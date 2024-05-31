@@ -130,7 +130,7 @@ func (sm *serviceManager) ConnOffline(d delegate.ConnDescriber) error {
 	serviceID := d.ClientID()
 	meta := string(d.Meta())
 	addr := d.RemoteAddr()
-	klog.V(2).Infof("service offline, serviceID: %d, service: %s, remote addr: %s", serviceID, meta, addr)
+	klog.V(1).Infof("service offline, serviceID: %d, service: %s, remote addr: %s", serviceID, meta, addr)
 	// offline the cache
 	err := sm.offline(serviceID, addr)
 	if err != nil {

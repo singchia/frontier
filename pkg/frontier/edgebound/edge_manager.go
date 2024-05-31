@@ -87,6 +87,7 @@ func newEdgeManager(conf *config.Configuration, repo apis.Repo, informer apis.Ed
 		klog.Errorf("edge manager listen err: %s", err)
 		return nil, err
 	}
+	klog.V(0).Infof("edgebound server listening on: %s", ln.Addr())
 
 	geminioLn := ln
 	bypass := conf.Edgebound.BypassEnable

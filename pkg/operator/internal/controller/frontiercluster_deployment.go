@@ -96,6 +96,10 @@ func (r *FrontierClusterReconciler) ensureFrontierDeployment(ctx context.Context
 	labels := map[string]string{
 		"app": app,
 	}
+	image := fc.Spec.Frontier.Image
+	if image == "" {
+		image = "singchia/frontier:1.1.0"
+	}
 
 	volumeMounts := []corev1.VolumeMount{}
 	volumes := []corev1.Volume{}
@@ -146,7 +150,7 @@ func (r *FrontierClusterReconciler) ensureFrontierDeployment(ctx context.Context
 	// container
 	container := container.Builder().
 		SetName("frontier").
-		SetImage("singchia/frontier:1.0.0-dev").
+		SetImage(image).
 		SetImagePullPolicy(corev1.PullAlways).
 		SetEnvs([]corev1.EnvVar{{
 			Name:  FrontierServiceboundPortEnv,
@@ -221,13 +225,17 @@ func (r *FrontierClusterReconciler) ensureFrontlasDeployment(ctx context.Context
 	labels := map[string]string{
 		"app": app,
 	}
+	image := fc.Spec.Frontlas.Image
+	if image == "" {
+		image = "singchia/frontlas:1.1.0"
+	}
 
 	service, _, cpport, _ := fc.FrontlasServicePort()
 
 	// container
 	container := container.Builder().
 		SetName("frontlas").
-		SetImage("singchia/frontlas:1.0.0-dev").
+		SetImage(image).
 		SetImagePullPolicy(corev1.PullAlways).
 		SetEnvs([]corev1.EnvVar{{
 			Name:  FrontlasControlPlanePortEnv,

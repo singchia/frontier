@@ -65,6 +65,7 @@ type Frontier struct {
 	Replicas     int                 `json:"replicas,omitempty"` // frontier replicas, default 1
 	Servicebound Servicebound        `json:"servicebound"`
 	Edgebound    Edgebound           `json:"edgebound"`
+	Image        string              `json:"image,omitempty"` // default singchia/frontier:1.1.0
 	NodeAffinity corev1.NodeAffinity `json:"nodeAffinity,omitempty"`
 }
 
@@ -95,6 +96,7 @@ type Frontlas struct {
 	Replicas     int                 `json:"replicas,omitempty"` // frontlas replicas, default 1
 	ControlPlane ControlPlane        `json:"controlplane,omitempty"`
 	NodeAffinity corev1.NodeAffinity `json:"nodeAffinity,omitempty"`
+	Image        string              `json:"image,omitempty"`
 	Redis        Redis               `json:"redis"`
 }
 

@@ -7,15 +7,17 @@ metadata:
   name: frontiercluster
 spec:
   frontier:
-    replicas: 1
+    replicas: 2
     servicebound:
       port: 30011
     edgebound:
       port: 30012
+    image: singchia/frontier:1.1.0
   frontlas:
     replicas: 1
     controlplane:
       port: 40011
+    image: singchia/frontlas:1.1.0
     redis:
       addrs:
         - rfs-redisfailover:26379
