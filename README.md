@@ -8,6 +8,8 @@
 [![Go Reference](https://pkg.go.dev/badge/badge/github.com/singchia/frontier.svg)](https://pkg.go.dev/github.com/singchia/frontier/api/dataplane/v1/service)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
+简体中文 | [English](./README_en.md)
+
 </div>
 
 Frontier是一个go开发的全双工开源长连接网关，旨在让微服务直达边缘节点或客户端，反之边缘节点或客户端也同样直达微服务。对于两者，提供了全双工的单双向RPC调用，消息发布和接收，以及点对点流的功能。Frontier符合云原生架构，可以使用Operator快速部署一个集群，具有高可用和弹性，轻松支撑百万边缘节点或客户端在线的需求。
@@ -911,7 +913,7 @@ cd dist/helm
 helm install frontier ./ -f values.yaml
 ```
 
-你的微服务应该连接`service/frontier-servicebound-svc:40011`，你的边缘节点可以连接`:30012`所在的NodePort。
+你的微服务应该连接`service/frontier-servicebound-svc:30011`，你的边缘节点可以连接`:30012`所在的NodePort。
 
 ### operator
 
@@ -1097,6 +1099,12 @@ spec:
       redisType: sentinel
 ```
 
+保存为`frontiercluster.yaml`，执行
+
+```
+kubectl apply -f frontiercluster.yaml
+```
+
 1分钟，你即可拥有一个2实例Frontier+1实例Frontlas的集群。
 
 通过一下来检查资源部署情况 
@@ -1119,7 +1127,6 @@ replicaset.apps/frontiercluster-frontier-57d565c89   2         2         2      
 ```
 
 ```
-kubectl get all -l app=frontiercluster-frontlas
 NAME                                            READY   STATUS    RESTARTS   AGE
 pod/frontiercluster-frontlas-85c4fb6d9b-5clkh   1/1     Running   0          8m11s
 NAME                                   TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)               AGE
