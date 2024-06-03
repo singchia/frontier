@@ -204,7 +204,7 @@ func (ex *exchange) forwardMessageToService(end geminio.End) {
 				continue
 			}
 			topic := msg.Topic()
-			// TODO seperate async and sync produce
+			// TODO separate async and sync produce
 			err = ex.MQM.Produce(topic, msg.Data(),
 				apis.WithOrigin(msg),
 				apis.WithEdgeID(edgeID),
