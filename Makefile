@@ -28,6 +28,7 @@ examples:
 	make -C examples
 	mv examples/iclm/bin/* ./bin/ && rm -rf examples/iclm/bin
 	mv examples/chatroom/bin/* ./bin/ && rm -rf examples/chatroom/bin
+	mv examples/rtmp/bin/* ./bin/ && rm -rf examples/rtmp/bin
 
 # clean
 .PHONY: clean
