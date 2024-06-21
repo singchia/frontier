@@ -14,6 +14,7 @@ require (
 	github.com/rabbitmq/amqp091-go v1.9.0
 	github.com/singchia/geminio v1.1.7-rc.1
 	github.com/singchia/go-timer/v2 v2.2.1
+	github.com/singchia/joy4 v0.0.0-20240621074108-53a2b0132ec6
 	github.com/soheilhy/cmux v0.1.5
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.4
@@ -33,6 +34,7 @@ require (
 	github.com/alicebob/gopher-json v0.0.0-20200520072559-a9ecdc9d1d3a // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
+	github.com/nareix/joy4 v0.0.0-20200507095837-05a4ffbb5369 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/tidwall/btree v1.4.2 // indirect
 	github.com/tidwall/gjson v1.14.3 // indirect
