@@ -123,6 +123,8 @@ Frontier需要微服务和边缘节点两方都主动连接到Frontier，Service
 
 ### 示例
 
+**聊天室**
+
 目录[examples/chatroom](./examples/chatroom)下有简单的聊天室示例，仅100行代码实现一个的聊天室功能，可以通过
 
 ```
@@ -135,6 +137,19 @@ https://github.com/singchia/frontier/assets/15531166/18b01d96-e30b-450f-9610-917
 
 在这个示例你可以看到上线离线通知，消息Publish等功能。
 
+**直播**
+
+目录[examples/rtmp](./examples/rtmp)下有简单的直播示例，仅80行代码实现一个的直播代理功能，可以通过
+
+```
+make examples
+```
+
+在bin目录下得到```rtmp_service```和```rtmp_edge```可执行程序，运行后，使用[OBS](https://obsproject.com/)连接rtmp_edge即可直播代理：
+
+<img src="./docs/diagram/rtmp.png" width="100%" height="100%">
+
+在这个示例你可以看到Multiplexer和Stream功能。
 
 ### 微服务如何使用
 
