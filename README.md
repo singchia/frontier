@@ -1179,10 +1179,16 @@ replicaset.apps/frontiercluster-frontlas-85c4fb6d9b   1         1         1     
 <img src="./docs/diagram/stream.png" width="100%">
 
 
+## 群组
+
+<p align=center>
+<img src="./docs/diagram/wechat.jpg" width="30%" height="30%">
+</p>
+
 ## 许可证
 
 Released under the [Apache License 2.0](https://github.com/singchia/geminio/blob/main/LICENSE)
 
 ---
 
-已经看到这里，点个Star⭐️是莫大的认可♥️
+已经看到这里，点个Star⭐️吧♥️
