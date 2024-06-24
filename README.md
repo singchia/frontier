@@ -1182,7 +1182,7 @@ replicaset.apps/frontiercluster-frontlas-85c4fb6d9b   1         1         1     
 ## 群组
 
 <p align=center>
-<img src="./docs/diagram/wechat.jpg" width="30%" height="30%">
+<img src="./docs/diagram/wechat.JPG" width="30%" height="30%">
 </p>
 
 ## 许可证
