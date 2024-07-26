@@ -1185,6 +1185,8 @@ replicaset.apps/frontiercluster-frontlas-85c4fb6d9b   1         1         1     
 <img src="./docs/diagram/wechat.JPG" width="30%" height="30%">
 </p>
 
+添加以加入微信群组
+
 ## 许可证
 
 Released under the [Apache License 2.0](https://github.com/singchia/geminio/blob/main/LICENSE)
