@@ -24,3 +24,13 @@ go.work
 
 .DS_Store
 docs/.DS_Store
+
+# binary output of Makefile
+bin/
+
+# editor
+.idea/
+
+# tmp file on linux,
+*swp
+*~
