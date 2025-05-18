@@ -1,0 +1,9 @@
+edgebound:
+  listen:
+    network: udp
+    addr: 0.0.0.0:30012
+  edgeid_alloc_when_no_idservice_on: true
+servicebound:
+  listen:
+    network: udp
+    addr: 0.0.0.0:30011
