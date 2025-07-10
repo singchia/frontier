@@ -1,5 +1,5 @@
 <p align=center>
-<img src="./docs/diagram/frontier-logo.png" width="30%" height="30%">
+<img src="./docs/diagram/frontier-logo.png" width="30%">
 </p>
 
 <div align="center">
@@ -32,7 +32,7 @@ Frontier是一个go开发的全双工开源长连接网关，旨在让微服务�
 
 ### 组件Frontier
 
-<img src="./docs/diagram/frontier.png" width="100%" height="100%">
+<img src="./docs/diagram/frontier.png" width="100%">
 
 
 - _Service End_：微服务侧的功能入口，默认连接
@@ -147,7 +147,7 @@ make examples
 
 在bin目录下得到```rtmp_service```和```rtmp_edge```可执行程序，运行后，使用[OBS](https://obsproject.com/)连接rtmp_edge即可直播代理：
 
-<img src="./docs/diagram/rtmp.png" width="100%" height="100%">
+<img src="./docs/diagram/rtmp.png" width="100%">
 
 在这个示例你可以看到Multiplexer和Stream功能。
 
@@ -939,7 +939,7 @@ helm install frontier ./ -f values.yaml
 
 ### Frontier + Frontlas架构
 
-<img src="./docs/diagram/frontlas.png" width="100%" height="100%">
+<img src="./docs/diagram/frontlas.png" width="100%">
 
 新增Frontlas组件用于构建集群，Frontlas同样也是无状态组件，并不在内存里留存其他信息，因此需要额外依赖Redis，你需要提供一个Redis连接信息给到Frontlas，支持 ```redis``` ```sentinel```和```redis-cluster```。
 
@@ -1182,7 +1182,7 @@ replicaset.apps/frontiercluster-frontlas-85c4fb6d9b   1         1         1     
 ## 群组
 
 <p align=center>
-<img src="./docs/diagram/wechat.JPG" width="30%" height="30%">
+<img src="./docs/diagram/wechat.JPG" width="30%">
 </p>
 
 添加以加入微信群组
