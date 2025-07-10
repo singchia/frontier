@@ -1,5 +1,5 @@
 <p align=center>
-<img src="./docs/diagram/frontier-logo.png" width="30%" height="30%">
+<img src="./docs/diagram/frontier-logo.png" width="30%">
 </p>
 
 <div align="center">
@@ -33,7 +33,7 @@ Frontier is a full-duplex, open-source long-connection gateway developed in Go. 
 
 **Frontier Component**
 
-<img src="./docs/diagram/frontier.png" width="100%" height="100%">
+<img src="./docs/diagram/frontier.png" width="100%">
 
 - _Service End_: The entry point for microservice functions, connecting by default.
 - _Edge End_: The entry point for edge node or client functions.
@@ -918,7 +918,7 @@ See the cluster deployment section below.
 
 ### Frontier + Frontlas 
 
-<img src="./docs/diagram/frontlas.png" width="100%" height="100%">
+<img src="./docs/diagram/frontlas.png" width="100%">
 
 The additional Frontlas component is used to build the cluster. Frontlas is also a stateless component and does not store other information in memory, so it requires additional dependency on Redis. You need to provide a Redis connection information to Frontlas, supporting `redis`, `sentinel`, and `redis-cluster`.
 
