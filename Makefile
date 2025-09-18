@@ -58,6 +58,24 @@ install-example-iclm: examples
 	install -m 0755 ./bin/iclm_service $(DESTDIR)$(BINDIR)
 	install -m 0755 ./bin/iclm_edge $(DESTDIR)$(BINDIR)
 
+.PHONY: install-systemd
+install-systemd: frontier
+	@echo "Installing frontier systemd service..."
+	@if [ "$(shell id -u)" -ne 0 ]; then \
+		echo "Error: This target requires root privileges. Please run with sudo."; \
+		exit 1; \
+	fi
+	./dist/systemd/install.sh
+
+.PHONY: uninstall-systemd
+uninstall-systemd:
+	@echo "Uninstalling frontier systemd service..."
+	@if [ "$(shell id -u)" -ne 0 ]; then \
+		echo "Error: This target requires root privileges. Please run with sudo."; \
+		exit 1; \
+	fi
+	./dist/systemd/uninstall.sh
+
 # image
 .PHONY: image-frontier
 image-frontier:
