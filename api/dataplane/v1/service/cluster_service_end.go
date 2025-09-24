@@ -247,7 +247,8 @@ func (end *clusterServiceEnd) newServiceEnd(addr string) (*serviceEnd, error) {
 		OptionServiceName(end.serviceOption.service),
 		OptionServiceReceiveTopics(end.serviceOption.topics),
 		OptionServiceTimer(end.serviceOption.tmr),
-		OptionServiceID(end.serviceOption.serviceID))
+		OptionServiceID(end.serviceOption.serviceID),
+		OptionServiceBufferSize(end.serviceOption.readBufferSize, end.serviceOption.writeBufferSize))
 	if err != nil {
 		return nil, err
 	}
