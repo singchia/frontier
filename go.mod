@@ -14,7 +14,7 @@ require (
 	github.com/nats-io/nats.go v1.33.1
 	github.com/nsqio/go-nsq v1.1.0
 	github.com/rabbitmq/amqp091-go v1.9.0
-	github.com/singchia/geminio v1.1.8-rc.1
+	github.com/singchia/geminio v1.1.8
 	github.com/singchia/go-timer/v2 v2.2.1
 	github.com/singchia/joy4 v0.0.0-20240621074108-53a2b0132ec6
 	github.com/soheilhy/cmux v0.1.5
