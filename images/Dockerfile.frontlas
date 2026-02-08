@@ -1,4 +1,4 @@
-FROM golang:1.22.0 AS builder
+FROM golang:1.24.0 AS builder
 
 # an automatic platform ARG enabled by Docker BuildKit.
 ARG TARGETOS

@@ -1,0 +1,52 @@
+# Multi-stage Dockerfile for building binaries
+# This Dockerfile is used for cross-compilation via Docker
+# Note: CGO is enabled for Linux, disabled for Windows and macOS (cross-compilation)
+
+FROM golang:1.24.0 AS builder
+
+# Build arguments for target platform
+ARG TARGETOS=linux
+ARG TARGETARCH=amd64
+ARG BINARY_NAME=frontier
+ARG BUILD_PATH=cmd/frontier/main.go
+ARG CGO_ENABLED=1
+
+# Set CGO based on target OS
+# Linux: Enable CGO (native build in Linux container)
+# Windows/macOS: Disable CGO (cross-compilation from Linux)
+ENV GO111MODULE=on \
+    GOPROXY=https://goproxy.io,direct
+
+WORKDIR /build
+
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build the binary
+# For Windows, add .exe extension
+RUN if [ "${TARGETOS}" = "windows" ]; then \
+        GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 \
+        go build -trimpath -ldflags "-s -w" \
+        -o /build/bin/${BINARY_NAME}.exe \
+        ${BUILD_PATH}; \
+    elif [ "${TARGETOS}" = "darwin" ]; then \
+        GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 \
+        go build -trimpath -ldflags "-s -w" \
+        -o /build/bin/${BINARY_NAME} \
+        ${BUILD_PATH}; \
+    else \
+        GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=1 \
+        go build -trimpath -ldflags "-s -w" \
+        -o /build/bin/${BINARY_NAME} \
+        ${BUILD_PATH}; \
+    fi
+
+# Output stage - just copy the binary
+FROM scratch AS output
+ARG TARGETOS=linux
+ARG BINARY_NAME=frontier
+COPY --from=builder /build/bin/${BINARY_NAME}* /binary

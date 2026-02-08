@@ -1,5 +1,5 @@
-//go:build darwin
-// +build darwin
+//go:build windows
+// +build windows
 
 package utils
 
@@ -8,6 +8,8 @@ import (
 	"net"
 )
 
+// GetDefaultRouteIP gets the default route IP by dialing to the target address.
+// This is a cross-platform approach that works on Windows.
 func GetDefaultRouteIP(network, target string) (net.IP, error) {
 	conn, err := net.Dial(network, target)
 	if err != nil {
