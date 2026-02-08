@@ -1,0 +1,40 @@
+[Unit]
+Description=Frontier - Edge Computing Platform
+Documentation=https://github.com/singchia/frontier
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=frontier
+Group=frontier
+ExecStart=/usr/bin/frontier --config /usr/conf/frontier.yaml
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=frontier
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/frontier /var/lib/frontier
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=32768
+
+# Environment
+Environment=GOMAXPROCS=0
+
+[Install]
+WantedBy=multi-user.target
