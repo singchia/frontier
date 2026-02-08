@@ -135,6 +135,20 @@ https://github.com/singchia/frontier/assets/15531166/18b01d96-e30b-450f-9610-917
 
 In this example, you can see features like online/offline notifications and message publishing.
 
+**Live Streaming**
+
+In the [examples/rtmp](./examples/rtmp) directory, there is a simple live streaming example implemented in just 80 lines of code. You can get the executable programs `rtmp_service` and `rtmp_edge` by running:
+
+```
+make examples
+```
+
+After running, use [OBS](https://obsproject.com/) to connect to `rtmp_edge` for live streaming proxy:
+
+<img src="./docs/diagram/rtmp.png" width="100%">
+
+In this example, you can see Multiplexer and Stream functionality.
+
 ### How microservice use
 
 **Getting Service on the Microservice Side**:
@@ -910,6 +924,74 @@ helm install frontier ./ -f values.yaml
 
 Your microservice should connect to ```service/frontier-servicebound-svc:30011```, and your edge node can connect to the NodePort where `:30012` is located.
 
+### systemd
+
+If you need to run Frontier as a service on a Linux system, you can deploy it using systemd.
+
+#### Quick Installation
+
+```bash
+# Use Makefile to install systemd service (recommended)
+sudo make install-systemd
+
+# Enable and start the service
+sudo systemctl enable frontier
+sudo systemctl start frontier
+```
+
+Or install manually:
+
+```bash
+# Build frontier binary
+make frontier
+
+# Run installation script with root privileges
+sudo ./dist/systemd/install.sh
+
+# Enable and start the service
+sudo systemctl enable frontier
+sudo systemctl start frontier
+```
+
+#### Service Management
+
+```bash
+# Check service status
+sudo systemctl status frontier
+
+# View real-time logs
+sudo journalctl -u frontier -f
+
+# Restart service
+sudo systemctl restart frontier
+
+# Stop service
+sudo systemctl stop frontier
+```
+
+#### Configuration Notes
+
+- **Service User**: Runs as dedicated `frontier` user for improved security
+- **Auto Restart**: Automatically restarts when service exits abnormally
+- **Port Configuration**: Default listens on ports 30011 (microservice) and 30012 (edge node)
+- **Configuration File**: `/usr/conf/frontier.yaml`
+- **Log Management**: Outputs to systemd journal
+
+#### Uninstallation
+
+```bash
+# Use Makefile to uninstall systemd service (recommended)
+sudo make uninstall-systemd
+```
+
+Or uninstall manually:
+
+```bash
+sudo ./dist/systemd/uninstall.sh
+```
+
+For more detailed information, please refer to [dist/systemd/README.md](./dist/systemd/README.md)
+
 ### Operator
 
 See the cluster deployment section below.
@@ -1153,6 +1235,14 @@ If you wish to submit features or more quickly address project issues, you are w
 ### Stream Function
 
 <img src="./docs/diagram/stream.png" width="100%">
+
+## Community
+
+<p align=center>
+<img src="./docs/diagram/wechat.JPG" width="30%">
+</p>
+
+Join our WeChat group for discussions and support.
 
 ## License
 

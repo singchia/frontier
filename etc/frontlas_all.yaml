@@ -10,11 +10,11 @@ control_plane:
       insecure_skip_verify: false
       mtls: false
 daemon:
-  p_prof:
+  pprof:
     addr: 0.0.0.0:6061
     cpu_profile_rate: 0
     enable: true
-  r_limit:
+  rlimit:
     enable: false
     num_file: 1024
 frontier_manager:
