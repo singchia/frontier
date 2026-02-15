@@ -396,6 +396,23 @@ docker-frontlas-windows-amd64:
 
 docker-frontlas-windows-arm64:
 	$(call docker-build-platform,windows,arm64,windows,frontlas,cmd/frontlas/main.go)
+.PHONY: install-systemd
+install-systemd: frontier
+	@echo "Installing frontier systemd service..."
+	@if [ "$(shell id -u)" -ne 0 ]; then \
+		echo "Error: This target requires root privileges. Please run with sudo."; \
+		exit 1; \
+	fi
+	./dist/systemd/install.sh
+
+.PHONY: uninstall-systemd
+uninstall-systemd:
+	@echo "Uninstalling frontier systemd service..."
+	@if [ "$(shell id -u)" -ne 0 ]; then \
+		echo "Error: This target requires root privileges. Please run with sudo."; \
+		exit 1; \
+	fi
+	./dist/systemd/uninstall.sh
 
 # image
 .PHONY: image-frontier

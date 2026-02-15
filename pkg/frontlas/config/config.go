@@ -29,8 +29,8 @@ type PProf struct {
 }
 
 type Daemon struct {
-	RLimit RLimit `yaml:"rlimit" json:"r_limit"`
-	PProf  PProf  `yaml:"pprof" json:"p_prof"`
+	RLimit RLimit `yaml:"rlimit" json:"rlimit"`
+	PProf  PProf  `yaml:"pprof" json:"pprof"`
 }
 
 // for rest and grpc

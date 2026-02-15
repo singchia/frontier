@@ -931,6 +931,74 @@ helm install frontier ./ -f values.yaml
 
 你的微服务应该连接`service/frontier-servicebound-svc:30011`，你的边缘节点可以连接`:30012`所在的NodePort。
 
+### systemd
+
+如果你需要在Linux系统上以服务方式运行Frontier，可以使用systemd进行部署。
+
+#### 快速安装
+
+```bash
+# 使用Makefile安装systemd服务（推荐）
+sudo make install-systemd
+
+# 启用并启动服务
+sudo systemctl enable frontier
+sudo systemctl start frontier
+```
+
+或者手动安装：
+
+```bash
+# 构建frontier二进制文件
+make frontier
+
+# 以root权限运行安装脚本
+sudo ./dist/systemd/install.sh
+
+# 启用并启动服务
+sudo systemctl enable frontier
+sudo systemctl start frontier
+```
+
+#### 服务管理
+
+```bash
+# 查看服务状态
+sudo systemctl status frontier
+
+# 查看实时日志
+sudo journalctl -u frontier -f
+
+# 重启服务
+sudo systemctl restart frontier
+
+# 停止服务
+sudo systemctl stop frontier
+```
+
+#### 配置说明
+
+- **服务用户**: 以专用`frontier`用户运行，提高安全性
+- **自动重启**: 服务异常退出时自动重启
+- **端口配置**: 默认监听30011（微服务）和30012（边缘节点）端口
+- **配置文件**: `/usr/conf/frontier.yaml`
+- **日志管理**: 输出到systemd journal
+
+#### 卸载
+
+```bash
+# 使用Makefile卸载systemd服务（推荐）
+sudo make uninstall-systemd
+```
+
+或者手动卸载：
+
+```bash
+sudo ./dist/systemd/uninstall.sh
+```
+
+更多详细信息请参考 [dist/systemd/README.md](./dist/systemd/README.md)
+
 ### operator
 
 见下面集群部署章节
