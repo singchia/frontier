@@ -115,7 +115,7 @@ func (sm *serviceManager) handleConn(conn net.Conn) error {
 	// stream handler
 	opt.SetAcceptStreamFunc(sm.acceptStream)
 	opt.SetClosedStreamFunc(sm.closedStream)
-	opt.SetBufferSize(8192, 8192)
+	opt.SetBufferSize(512, 512)
 	end, err := server.NewEndWithConn(conn, opt)
 	if err != nil {
 		klog.Errorf("service manager geminio server new end err: %s", err)
