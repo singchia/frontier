@@ -102,7 +102,7 @@ func main() {
 	methods := pflag.String("methods", "", "method name, support echo")
 	printmessage = pflag.Bool("printmessage", false, "whether print message out")
 	nostdin = pflag.Bool("nostdin", false, "nostdin mode, no stdin will be accepted")
-	buffersize := pflag.Int("buffer", 8192, "buffer size set for service")
+	buffersize := pflag.Int("buffer", 1024, "buffer size set for service")
 	stats := pflag.Bool("stats", false, "print statistics or not")
 
 	pflag.Parse()

@@ -146,7 +146,7 @@ func (em *edgeManager) handleConn(conn net.Conn) error {
 	// stream handler
 	opt.SetAcceptStreamFunc(em.acceptStream)
 	opt.SetClosedStreamFunc(em.closedStream)
-	opt.SetBufferSize(8192, 8192)
+	opt.SetBufferSize(512, 512)
 	end, err := server.NewEndWithConn(conn, opt)
 	if err != nil {
 		klog.Warningf("edge manager geminio server new end err: %s, addr: %s", err, conn.RemoteAddr())
