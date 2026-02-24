@@ -202,71 +202,10 @@ Your microservice should connect to ```service/frontier-servicebound-svc:30011``
 
 ### systemd
 
-If you need to run Frontier as a service on a Linux system, you can deploy it using systemd.
+Use the dedicated systemd docs:
 
-#### Quick Installation
-
-```bash
-# Use Makefile to install systemd service (recommended)
-sudo make install-systemd
-
-# Enable and start the service
-sudo systemctl enable frontier
-sudo systemctl start frontier
-```
-
-Or install manually:
-
-```bash
-# Build frontier binary
-make frontier
-
-# Run installation script with root privileges
-sudo ./dist/systemd/install.sh
-
-# Enable and start the service
-sudo systemctl enable frontier
-sudo systemctl start frontier
-```
-
-#### Service Management
-
-```bash
-# Check service status
-sudo systemctl status frontier
-
-# View real-time logs
-sudo journalctl -u frontier -f
-
-# Restart service
-sudo systemctl restart frontier
-
-# Stop service
-sudo systemctl stop frontier
-```
-
-#### Configuration Notes
-
-- **Service User**: Runs as dedicated `frontier` user for improved security
-- **Auto Restart**: Automatically restarts when service exits abnormally
-- **Port Configuration**: Default listens on ports 30011 (microservice) and 30012 (edge node)
-- **Configuration File**: `/usr/conf/frontier.yaml`
-- **Log Management**: Outputs to systemd journal
-
-#### Uninstallation
-
-```bash
-# Use Makefile to uninstall systemd service (recommended)
-sudo make uninstall-systemd
-```
-
-Or uninstall manually:
-
-```bash
-sudo ./dist/systemd/uninstall.sh
-```
-
-For more detailed information, please refer to [dist/systemd/README.md](./dist/systemd/README.md)
+- English: [dist/systemd/README_en.md](./dist/systemd/README_en.md)
+- 中文: [dist/systemd/README.md](./dist/systemd/README.md)
 
 ### Operator
 
