@@ -16,7 +16,7 @@ English | [简体中文](./README_zh.md)
 
 # Frontier
 
-Frontier is a full-duplex, open-source long-connection gateway written in Go. It enables microservices to directly reach edge nodes or clients, and vice versa. It provides full-duplex bidirectional RPC, messaging, and point-to-point streams. Frontier follows cloud-native architecture principles, supports fast cluster deployment via Operator, and is built for high availability and elastic scaling to millions of online edge nodes or clients.
+Frontier is a **full-duplex**, open-source long-connection gateway written in Go. It enables microservices to directly reach edge nodes or clients, and vice versa. It provides full-duplex **bidirectional RPC**, **messaging**, and **point-to-point streams**. Frontier follows **cloud-native** architecture principles, supports fast cluster deployment via Operator, and is built for **high availability** and **elastic scaling** to millions of online edge nodes or clients.
 
 ## Table of Contents
 
@@ -57,7 +57,9 @@ Run the chatroom example:
 ./bin/chatroom_agent
 ```
 
-Demo video: https://github.com/singchia/frontier/assets/15531166/18b01d96-e30b-450f-9610-917d65259c30
+Demo video:
+
+https://github.com/singchia/frontier/assets/15531166/18b01d96-e30b-450f-9610-917d65259c30
 
 ## Features
 
