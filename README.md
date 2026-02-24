@@ -9,56 +9,98 @@
 [![Go Reference](https://pkg.go.dev/badge/badge/github.com/singchia/frontier.svg)](https://pkg.go.dev/github.com/singchia/frontier/api/dataplane/v1/service)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-简体中文 | [English](./README_en.md)
+English | [简体中文](./README_zh.md)
 
 </div>
 
-Frontier是一个go开发的全双工开源长连接网关，旨在让微服务直达边缘节点或客户端，反之边缘节点或客户端也同样直达微服务。对于两者，提供了全双工的单双向RPC调用，消息发布和接收，以及点对点流的功能。Frontier符合云原生架构，可以使用Operator快速部署一个集群，具有高可用和弹性，轻松支撑百万边缘节点或客户端在线的需求。
+
+# Frontier
+
+Frontier is a full-duplex, open-source long-connection gateway written in Go. It enables microservices to directly reach edge nodes or clients, and vice versa. It provides full-duplex bidirectional RPC, messaging, and point-to-point streams. Frontier follows cloud-native architecture principles, supports fast cluster deployment via Operator, and is built for high availability and elastic scaling to millions of online edge nodes or clients.
+
+## Table of Contents
+
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Architecture](#architecture)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Deployment](#deployment)
+- [Cluster](#cluster)
+- [Kubernetes](#kubernetes)
+- [Development](#development)
+- [Testing](#testing)
+- [Community](#community)
+- [License](#license)
+
+## Quick Start
+
+1. Run a single Frontier instance:
+
+```bash
+docker run -d --name frontier -p 30011:30011 -p 30012:30012 singchia/frontier:1.1.0
+```
+
+2. Build and run examples:
+
+```bash
+make examples
+```
+
+Run the chatroom example:
+
+```bash
+# Terminal 1
+./bin/chatroom_service
+
+# Terminal 2
+./bin/chatroom_agent
+```
+
+## Features
+
+- **RPC**: Microservices and edges can call each other's functions (pre-registered), with load balancing supported on the microservice side.
+- **Messaging**: Microservices and edges can publish to each other's topics, and edges can publish to external MQ topics, with load balancing supported on the microservice side.
+- **Multiplexing/Streams**: Microservices can directly open a stream (connection) on edge nodes, enabling functions like file upload and proxy, turning obstacles into pathways.
+- **Online/Offline Control**: Microservices can register to get edge node IDs, and callbacks for online/offline events. When these events occur, Frontier will invoke these functions.
+- **Simple API**: The project provides well-packaged SDKs in the api directory for both edges and microservices, making development based on this SDK very simple.
+- **Easy Deployment**: Supports various deployment methods (docker, docker-compose, helm, and operator) to deploy Frontier instances or clusters.
+- **Horizontal Scaling**: Provides Frontier and Frontlas clusters. When single instance performance reaches a bottleneck, you can horizontally scale Frontier instances or clusters.
+- **High Availability**: Supports cluster deployment and allows microservices and edge nodes to permanently reconnect using the SDK. In case of current instance failure, it switches to a new available instance to continue services.
+- **Control Plane Support**: Provides gRPC and REST interfaces, allowing operation personnel to query or delete microservices and edge nodes. Deletion will force the target offline.
 
 
-## 特性
+## Architecture
 
-- **RPC**  微服务和边缘可以Call对方的函数（提前注册），并且在微服务侧支持负载均衡
-- **消息**  微服务和边缘可以Publish对方的Topic，边缘可以Publish到外部MQ的Topic，微服务侧支持负载均衡
-- **多路复用/流**  微服务可以直接在边缘节点打开一个流（连接），可以封装例如文件上传、代理等，天堑变通途
-- **上线离线控制**  微服务可以注册边缘节点获取ID、上线离线回调，当这些事件发生，Frontier会调用这些函数
-- **API简单**  在项目api目录下，分别对边缘和微服务提供了封装好的sdk，可以非常简单的基于这个sdk做开发
-- **部署简单**  支持多种部署方式(docker docker-compose helm以及operator)来部署Frontier实例或集群
-- **水平扩展**  提供了Frontiter和Frontlas集群，在单实例性能达到瓶颈下，可以水平扩展Frontier实例或集群
-- **高可用**  支持集群部署，支持微服务和边缘节点永久重连sdk，在当前实例宕机情况时，切换新可用实例继续服务
-- **支持控制面**  提供了gRPC和rest接口，允许运维人员对微服务和边缘节点查询或删除，删除即踢除目标下线
-
-## 架构
-
-### 组件Frontier
+**Frontier Component**
 
 <img src="./docs/diagram/frontier.png" width="100%">
 
-
-- _Service End_：微服务侧的功能入口，默认连接
-- _Edge End_：边缘节点或客户端侧的功能入口
-- _Publish/Receive_：发布和接收消息
-- _Call/Register_：调用和注册函数
-- _OpenStream/AcceptStream_：打开和接收点到点流（连接）
--  _外部MQ_：Frontier支持将从边缘节点Publish的消息根据配置的Topic转发到外部MQ
-
-Frontier需要微服务和边缘节点两方都主动连接到Frontier，Service和Edge的元信息（接收Topic，RPC，Service名等）可以在连接的时候携带过来。连接的默认端口是：
-
-- ```:30011``` 提供给微服务连接，获取Service
-- ```:30012``` 提供给边缘节点连接，获取Edge
-- ```:30010``` 提供给运维人员或者程序使用的控制面
+- _Service End_: The entry point for microservice functions, connecting by default.
+- _Edge End_: The entry point for edge node or client functions.
+- _Publish/Receive_: Publishing and receiving messages.
+- _Call/Register_: Calling and registering functions.
+- _OpenStream/AcceptStream_: Opening and accepting point-to-point streams (connections).
+- _External MQ_: Frontier supports forwarding messages published from edge nodes to external MQ topics based on configuration.
 
 
-### 功能
+Frontier requires both microservices and edge nodes to actively connect to Frontier. The metadata of Service and Edge (receiving topics, RPC, service names, etc.) can be carried during the connection. The default connection ports are:
+
+- :30011: For microservices to connect and obtain Service.
+- :30012: For edge nodes to connect and obtain Edge.
+- :30010: For operations personnel or programs to use the control plane.
+
+
+### Functionality
 
 <table><thead>
   <tr>
-    <th>功能</th>
-    <th>发起方</th>
-    <th>接收方</th>
-    <th>方法</th>
-    <th>路由方式</th>
-    <th>描述</th>
+    <th>Function</th>
+    <th>Initiator</th>
+    <th>Receiver</th>
+    <th>Method</th>
+    <th>Routing Method</th>
+    <th>Description</th>
   </tr></thead>
 <tbody>
   <tr>
@@ -67,14 +109,14 @@ Frontier需要微服务和边缘节点两方都主动连接到Frontier，Service
     <td>Edge</td>
     <td>Publish</td>
     <td>EdgeID+Topic</td>
-    <td>必须Publish到具体的EdgeID，默认Topic为空，Edge调用Receive接收，接收处理完成后必须调用msg.Done()或msg.Error(err)保障消息一致性</td>
+    <td>Must publish to a specific EdgeID, the default topic is empty. The edge calls Receive to receive the message, and after processing, must call msg.Done() or msg.Error(err) to ensure message consistency.</td>
   </tr>
   <tr>
     <td>Edge</td>
-    <td>Service或外部MQ</td>
+    <td>Service or External MQ</td>
     <td>Publish</td>
     <td>Topic</td>
-    <td>必须Publish到Topic，由Frontier根据Topic选择某个Service或MQ</td>
+    <td>Must publish to a topic, and Frontier selects a specific Service or MQ based on the topic.</td>
   </tr>
   <tr>
     <td rowspan="2">RPCer</td>
@@ -82,14 +124,14 @@ Frontier需要微服务和边缘节点两方都主动连接到Frontier，Service
     <td>Edge</td>
     <td>Call</td>
     <td>EdgeID+Method</td>
-    <td>必须Call到具体的EdgeID，需要携带Method</td>
+    <td>Must call a specific EdgeID, carrying the method name.</td>
   </tr>
   <tr>
     <td>Edge</td>
     <td>Service</td>
     <td>Call</td>
     <td>Method</td>
-    <td>必须Call到Method，由Frontier根据Method选择某个的Service</td>
+    <td>Must call a method, and Frontier selects a specific Service based on the method name.</td>
   </tr>
   <tr>
     <td rowspan="2">Multiplexer</td>
@@ -97,63 +139,60 @@ Frontier需要微服务和边缘节点两方都主动连接到Frontier，Service
     <td>Edge</td>
     <td>OpenStream</td>
     <td>EdgeID</td>
-    <td>必须OpenStream到具体的EdgeID</td>
+    <td>Must open a stream to a specific EdgeID.</td>
   </tr>
   <tr>
     <td>Edge</td>
     <td>Service</td>
     <td>OpenStream</td>
     <td>ServiceName</td>
-    <td>必须OpenStream到ServiceName，该ServiceName由Service初始化时携带的service.OptionServiceName指定</td>
+    <td>Must open a stream to a ServiceName, specified by service.OptionServiceName during Service initialization.</td>
   </tr>
 </tbody></table>
 
-主要遵守以下设计原则：
+**Key design principles include**:
 
-1. 所有的消息、RPC和Stream都是点到点的传递
-	- 从微服务到边缘，一定要指定边缘节点ID
-	- 从边缘到微服务，Frontier根据Topic和Method路由，最终哈希选择一个微服务或外部MQ，默认根据```edgeid```哈希，你也可以选择```random```或```srcip```
-2. 消息需要接收方明确结束
-	- 为了保障消息的传达语义，接收方一定需要msg.Done()或msg.Error(err)，保障传达一致性
-3. Multiplexer打开的流在逻辑上是微服务与边缘节点的直接通信
-	- 对方接收到流后，所有在这个流上功能都会直达对方，不会经过Frontierd的路由策略
+1. All messages, RPCs, and Streams are point-to-point transmissions.
+	- From microservices to edges, the edge node ID must be specified.
+	- From edges to microservices, Frontier routes based on Topic and Method, and finally selects a microservice or external MQ through hashing. The default is hashing based on edgeid, but you can choose random or srcip.
+2. Messages require explicit acknowledgment by the receiver.
+	- To ensure message delivery semantics, the receiver must call msg.Done() or msg.Error(err) to ensure delivery consistency.
+3. Streams opened by the Multiplexer logically represent direct communication between microservices and edge nodes.
+	- Once the other side receives the stream, all functionalities on this stream will directly reach the other side, bypassing Frontier's routing policies.
 
+## Usage
 
-## 使用
+### Examples
 
-### 示例
-
-**聊天室**
-
-目录[examples/chatroom](./examples/chatroom)下有简单的聊天室示例，仅100行代码实现一个的聊天室功能，可以通过
+In the [examples/chatroom](./examples/chatroom) directory, there is a simple chatroom example implemented in just 100 lines of code. You can get the executable programs chatroom\_service and chatroom\_agent by running:
 
 ```
 make examples
 ```
 
-在bin目录下得到```chatroom_service```和```chatroom_egent```可执行程序，运行示例：
+Run the example:
 
 https://github.com/singchia/frontier/assets/15531166/18b01d96-e30b-450f-9610-917d65259c30
 
-在这个示例你可以看到上线离线通知，消息Publish等功能。
+In this example, you can see features like online/offline notifications and message publishing.
 
-**直播**
+**Live Streaming**
 
-目录[examples/rtmp](./examples/rtmp)下有简单的直播示例，仅80行代码实现一个的直播代理功能，可以通过
+In the [examples/rtmp](./examples/rtmp) directory, there is a simple live streaming example implemented in just 80 lines of code. You can get the executable programs `rtmp_service` and `rtmp_edge` by running:
 
 ```
 make examples
 ```
 
-在bin目录下得到```rtmp_service```和```rtmp_edge```可执行程序，运行后，使用[OBS](https://obsproject.com/)连接rtmp_edge即可直播代理：
+After running, use [OBS](https://obsproject.com/) to connect to `rtmp_edge` for live streaming proxy:
 
 <img src="./docs/diagram/rtmp.png" width="100%">
 
-在这个示例你可以看到Multiplexer和Stream功能。
+In this example, you can see Multiplexer and Stream functionality.
 
-### 微服务如何使用
+### Using Frontier in Microservices
 
-**微服务侧获取Service**：
+**Getting Service on the Microservice Side**:
 
 ```golang
 package main
@@ -168,11 +207,11 @@ func main() {
 		return net.Dial("tcp", "127.0.0.1:30011")
 	}
 	svc, err := service.NewService(dialer)
-	// 开始使用service
+	// Start using the service
 }
 ```
 
-**微服务接收获取ID、上线/离线通知**：
+**Receiving ID, Online/Offline Notifications on Microservice Side**:
 
 ```golang
 package main
@@ -193,26 +232,25 @@ func main() {
 	svc.RegisterEdgeOffline(context.TODO(), offline)
 }
 
-// service可以根据meta分配id给edge
+// The service can assign IDs to edges based on metadata
 func getID(meta []byte) (uint64, error) {
 	return 0, nil
 }
 
-// edge上线
+// Edge goes online
 func online(edgeID uint64, meta []byte, addr net.Addr) error {
 	return nil
 }
 
-// edge离线
+// Edge goes offline
 func offline(edgeID uint64, meta []byte, addr net.Addr) error {
 	return nil
 }
 ```
 
-**微服务发布消息到边缘节点**：
+**Microservice Publishing Messages to Edge Nodes**:
 
-前提需要该Edge在线，否则会找不到Edge
-
+The edge must be online beforehand, otherwise the edge cannot be found.
 ```golang
 package main
 
@@ -228,13 +266,13 @@ func main() {
 	}
 	svc, _ := service.NewService(dialer)
 	msg := svc.NewMessage([]byte("test"))
-	// 发布一条消息到ID为1001的边缘节点
+	// Publish a message to the edge node with ID 1001
 	err := svc.Publish(context.TODO(), 1001, msg)
 	// ...
 }
 ```
 
-**微服务声明接收Topic**：
+**Microservice Declaring Topic to Receive**:
 
 ```golang
 package main
@@ -251,27 +289,26 @@ func main() {
 	dialer := func() (net.Conn, error) {
 		return net.Dial("tcp", "127.0.0.1:30011")
 	}
-	// 在获取svc时声明需要接收的topic
+	// Declare the topic to receive when getting the service
 	svc, _ := service.NewService(dialer, service.OptionServiceReceiveTopics([]string{"foo"}))
 	for {
-		// 接收消息
+		// Receive messages
 		msg, err := svc.Receive(context.TODO())
 		if err == io.EOF {
-			// 收到EOF表示svc生命周期已终结，不可以再使用
+			// Receiving EOF indicates the lifecycle of the service has ended and it can no longer be used
 			return
 		}
 		if err != nil {
 			fmt.Println("receive err:", err)
 			continue
 		}
-		// 处理完msg后，需要通知调用方已完成
+		// After processing the message, notify the caller it is done
 		msg.Done()
 	}
 }
-
 ```
 
-**微服务调用边缘节点的RPC**：
+**Microservice Calling Edge Node RPC**:
 
 ```golang
 package main
@@ -288,13 +325,13 @@ func main() {
 	}
 	svc, _ := service.NewService(dialer)
 	req := svc.NewRequest([]byte("test"))
-	// 调用ID为1001边缘节点的foo方法，前提是边缘节点需要预注册该方法
+	// Call the "foo" method on the edge node with ID 1001. The edge node must have pre-registered this method.
 	rsp, err := svc.Call(context.TODO(), 1001, "foo", req)
 	// ...
 }
 ```
 
-**微服务注册方法以供边缘节点调用**：
+**Microservice Registering Methods for Edge Nodes to Call**:
 
 ```golang
 package main
@@ -311,7 +348,7 @@ func main() {
 		return net.Dial("tcp", "127.0.0.1:30011")
 	}
 	svc, _ := service.NewService(dialer)
-	// 注册一个"echo"方法
+	// Register an "echo" method
 	svc.Register(context.TODO(), "echo", echo)
 	// ...
 }
@@ -322,7 +359,7 @@ func echo(ctx context.Context, req geminio.Request, rsp geminio.Response) {
 }
 ```
 
-**微服务打开边缘节点的点到点流**：
+**Microservice Opening Point-to-Point Stream on Edge Node**:
 
 ```golang
 package main
@@ -338,14 +375,13 @@ func main() {
 		return net.Dial("tcp", "127.0.0.1:30011")
 	}
 	svc, _ := service.NewService(dialer)
-	// 打开ID为1001边缘节点的新流（同时st也是一个net.Conn），前提是edge需要AcceptStream接收该流
+	// Open a new stream to the edge node with ID 1001 (st is also a net.Conn). The edge must accept the stream with AcceptStream.
 	st, err := svc.OpenStream(context.TODO(), 1001)
 }
 ```
-基于这个新打开流，你可以用来传递文件、代理流量等。
+Based on this newly opened stream, you can transfer files, proxy traffic, etc.
 
-
-**微服务接收流**
+**Microservice Receives Stream**:
 
 ```golang
 package main
@@ -361,24 +397,24 @@ func main() {
 	dialer := func() (net.Conn, error) {
 		return net.Dial("tcp", "127.0.0.1:30011")
 	}
-	// 在获取svc时声明需要微服务名，在边缘打开流时需要指定该微服务名
+	// Declare the service name when getting the service, required when the edge opens a stream to specify the service name.
 	svc, _ := service.NewService(dialer, service.OptionServiceName("service-name"))
 	for {
 		st, err := svc.AcceptStream()
 		if err == io.EOF {
-			// 收到EOF表示svc生命周期已终结，不可以再使用
+			// Receiving EOF indicates the lifecycle of the service has ended and it can no longer be used
 			return
 		} else if err != nil {
 			fmt.Println("accept stream err:", err)
 			continue
 		}
-		// 使用stream，这个stream同时是个net.Conn，你可以Read/Write/Close，同时也可以RPC和消息
+		// Use the stream. This stream is also a net.Conn. You can Read/Write/Close, and also use RPC and messaging.
 	}
 }
 ```
-基于这个新打开流，你可以用来传递文件、代理流量等。
+Based on this newly opened stream, you can transfer files, proxy traffic, etc.
 
-**消息、RPC和流一起来吧！**
+**Messages, RPC, and Streams Together!**:
 
 ```golang
 package main
@@ -396,39 +432,39 @@ func main() {
 	dialer := func() (net.Conn, error) {
 		return net.Dial("tcp", "127.0.0.1:30011")
 	}
-	// 在获取svc时声明需要微服务名，在边缘打开流时需要指定该微服务名
+	// Declare the service name when getting the service, required when the edge opens a stream to specify the service name.
 	svc, _ := service.NewService(dialer, service.OptionServiceName("service-name"))
 
-	// 接收流
+	// Receive streams
 	go func() {
 		for {
 			st, err := svc.AcceptStream()
 			if err == io.EOF {
-				// 收到EOF表示svc生命周期已终结，不可以再使用
+				// Receiving EOF indicates the lifecycle of the service has ended and it can no longer be used
 				return
 			} else if err != nil {
 				fmt.Println("accept stream err:", err)
 				continue
 			}
-			// 使用stream，这个stream同时是个net.Conn，你可以Read/Write/Close，同时也可以RPC和消息
+			// Use the stream. This stream is also a net.Conn. You can Read/Write/Close, and also use RPC and messaging.
 		}
 	}()
 
-	// 注册一个"echo"方法
+	// Register an "echo" method
 	svc.Register(context.TODO(), "echo", echo)
 
-	// 接收消息
+	// Receive messages
 	for {
 		msg, err := svc.Receive(context.TODO())
 		if err == io.EOF {
-			// 收到EOF表示svc生命周期已终结，不可以再使用
+			// Receiving EOF indicates the lifecycle of the service has ended and it can no longer be used
 			return
 		}
 		if err != nil {
 			fmt.Println("receive err:", err)
 			continue
 		}
-		// 处理完msg后，需要通知调用方已完成
+		// After processing the message, notify the caller it is done
 		msg.Done()
 	}
 }
@@ -439,9 +475,9 @@ func echo(ctx context.Context, req geminio.Request, rsp geminio.Response) {
 }
 ```
 
-### 边缘节点/客户端如何使用
+### Using Frontier on Edge Nodes
 
-**边缘节点侧获取Edge**：
+**Getting Edge on the Edge Node Side**:
 
 ```golang
 package main
@@ -456,13 +492,13 @@ func main() {
 		return net.Dial("tcp", "127.0.0.1:30012")
 	}
 	eg, _ := edge.NewEdge(dialer)
-	// 开始使用eg ...
+	// Start using eg ...
 }
 ```
 
-**边缘节点发布消息到Topic**：
+**Edge Node Publishes Message to Topic**:
 
-Service需要提前声明接收该Topic，或者在配置文件中配置外部MQ。
+The service needs to declare receiving the topic in advance, or configure an external MQ in the configuration file.
 
 ```golang
 package main
@@ -478,15 +514,14 @@ func main() {
 		return net.Dial("tcp", "127.0.0.1:30012")
 	}
 	eg, _ := edge.NewEdge(dialer)
-	// 开始使用eg
+	// Start using eg
 	msg := eg.NewMessage([]byte("test"))
 	err := eg.Publish(context.TODO(), "foo", msg)
 	// ...
 }
-
 ```
 
-**边缘节点接收消息**：
+**Edge Node Receives Messages**:
 
 ```golang
 package main
@@ -505,25 +540,24 @@ func main() {
 	}
 	eg, _ := edge.NewEdge(dialer)
 	for {
-		// 接收消息
+		// Receive messages
 		msg, err := eg.Receive(context.TODO())
 		if err == io.EOF {
-			// 收到EOF表示eg生命周期已终结，不可以再使用
+			// Receiving EOF indicates the lifecycle of eg has ended and it can no longer be used
 			return
 		}
 		if err != nil {
 			fmt.Println("receive err:", err)
 			continue
 		}
-		// 处理完msg后，需要通知调用方已完成
+		// After processing the message, notify the caller it is done
 		msg.Done()
 	}
 	// ...
 }
-
 ```
 
-**边缘节点调用微服务RPC**：
+**Edge Node Calls RPC on Microservice**:
 
 ```golang
 package main
@@ -539,15 +573,14 @@ func main() {
 		return net.Dial("tcp", "127.0.0.1:30012")
 	}
 	eg, _ := edge.NewEdge(dialer)
-	// 开始使用eg
+	// Start using eg
 	req := eg.NewRequest([]byte("test"))
-	// 调用echo方法，Frontier会查找并转发请求到相应的微服务
+	// Call the "echo" method. Frontier will look up and forward the request to the corresponding microservice.
 	rsp, err := eg.Call(context.TODO(), "echo", req)
 }
-
 ```
 
-**边缘节点注册RPC**：
+**Edge Node Registers RPC**:
 
 ```golang
 package main
@@ -564,7 +597,7 @@ func main() {
 		return net.Dial("tcp", "127.0.0.1:30012")
 	}
 	eg, _ := edge.NewEdge(dialer)
-	// 注册一个"echo"方法
+	// Register an "echo" method
 	eg.Register(context.TODO(), "echo", echo)
 	// ...
 }
@@ -575,7 +608,7 @@ func echo(ctx context.Context, req geminio.Request, rsp geminio.Response) {
 }
 ```
 
-**边缘节点打开微服务的点到点流**：
+**Edge Node Opens Point-to-Point Stream to Microservice**:
 
 ```golang
 package main
@@ -594,9 +627,10 @@ func main() {
 	// ...
 }
 ```
-基于这个新打开流，你可以用来传递文件、代理流量等。
 
-**边缘节点接收流**：
+Based on this newly opened stream, you can transfer files, proxy traffic, etc.
+
+**Edge Node Receives Stream**:
 
 ```golang
 package main
@@ -616,64 +650,62 @@ func main() {
 	for {
 		stream, err := eg.AcceptStream()
 		if err == io.EOF {
-			// 收到EOF表示eg生命周期已终结，不可以再使用
+			// Receiving EOF indicates the lifecycle of eg has ended and it can no longer be used
 			return
 		} else if err != nil {
 			fmt.Println("accept stream err:", err)
 			continue
 		}
-		// 使用stream，这个stream同时是个net.Conn，你可以Read/Write/Close，同时也可以RPC和消息
+		// Use the stream. This stream is also a net.Conn. You can Read/Write/Close, and also use RPC and messaging.
 	}
 }
 ```
 
-### 错误处理
+### Error Handling
 
 <table><thead>
   <tr>
-    <th>错误</th>
-    <th>描述和处理</th>
+    <th>Error</th>
+    <th>Description and Handling</th>
   </tr></thead>
 <tbody>
   <tr>
     <td>io.EOF</td>
-    <td>收到EOF表示流或连接已关闭，需要退出Receive、AcceptStream等操作</td>
+    <td>Receiving EOF indicates that the stream or connection has been closed, and you need to exit operations such as Receive and AcceptStream.</td>
   </tr>
   <tr>
     <td>io.ErrShortBuffer</td>
-    <td>发送端或者接收端的Buffer已满，可以设置OptionServiceBufferSize或OptionEdgeBufferSize来调整</td>
+    <td>The buffer on the sender or receiver is full. You can adjust the buffer size by setting OptionServiceBufferSize or OptionEdgeBufferSize.</td>
   </tr>
   <tr>
     <td>apis.ErrEdgeNotOnline</td>
-    <td>表示该边缘节点不在线，需要检查边缘连接</td>
+    <td>This indicates that the edge node is not online, and you need to check the edge connection.</td>
   </tr>
   <tr>
     <td>apis.ServiceNotOnline</td>
-    <td>表示微服务不在线，需要检查微服务连接信息或连接</td>
+    <td>This indicates that the microservice is not online, and you need to check the microservice connection information or connection.</td>
   </tr>
   <tr>
     <td>apis.RPCNotOnline</td>
-    <td>表示Call的RPC不在线</td>
+    <td>This indicates that the RPC called is not online.</td>
   </tr>
   <tr>
-    <td>apis.TopicOnline</td>
-    <td>表示Publish的Topic不在线</td>
+    <td>apis.TopicNotOnline</td>
+    <td>This indicates that the topic to be published is not online.</td>
   </tr>
   <tr>
-    <td>其他错误</td>
-    <td>还存在Timeout、BufferFull等</td>
+    <td>Other Errors</td>
+    <td>There are also errors like Timeout, BufferFull, etc.</td>
   </tr>
 </tbody>
 </table>
+It should be noted that if the stream is closed, any blocking methods on the stream will immediately receive io.EOF. If the entry point (Service and Edge) is closed, all streams on it will immediately receive io.EOF for blocking methods.
 
-需要注意的是，如果关闭流，在流上正在阻塞的方法都会立即得到io.EOF，如果关闭入口（Service和Edge），则所有在此之上的流，阻塞的方法都会立即得到io.EOF。
+### Control Plane
 
-### 控制面
+The Frontier control plane provides gRPC and REST interfaces. Operators can use these APIs to determine the connection status of the current instance. Both gRPC and REST are served on the default port :`30010`.
 
-Frontier控制面提供gRPC和Rest接口，运维人员可以使用这些api来确定本实例的连接情况，gRPC和Rest都由默认端口```:30010```提供服务。
-
-**GRPC**  详见[Protobuf定义](./api/controlplane/frontier/v1/controlplane.proto) 
-
+**GRPC**  See[Protobuf Definition](./api/controlplane/frontier/v1/controlplane.proto) 
 
 ```protobuf
 service ControlPlane {
@@ -689,52 +721,53 @@ service ControlPlane {
 }
 ```
 
-**REST** Swagger详见[Swagger定义](./docs/swagger/swagger.yaml)
+REST Swagger definition can be found at [Swagger Definition](./docs/swagger/swagger.yaml)
 
-例如你可以使用下面请求来踢除某个边缘节点下线：
+For example, you can use the following request to kick an edge node offline:
 
 ```
 curl -X DELETE http://127.0.0.1:30010/v1/edges/{edge_id} 
 ```
-或查看某个微服务注册了哪些RPC：
+
+Or check which RPCs a microservice has registered:
+
 
 ```
 curl -X GET http://127.0.0.1:30010/v1/services/rpcs?service_id={service_id}
 ```
 
-**注意**：gRPC/Rest依赖dao backend，有两个选项```buntdb```和```sqlite```，都是使用的in-memory模式，为性能考虑，默认backend使用buntdb，并且列表接口返回字段count永远是-1，当你配置backend为sqlite3时，会认为你对在Frontier上连接的微服务和边缘节点有强烈的OLTP需求，例如在Frontier上封装web，此时count才会返回总数。
+Note: gRPC/REST depends on the DAO backend, with two options: ```buntdb``` and ```sqlite3```. Both use in-memory mode. For performance considerations, the default backend uses buntdb, and the count field in the list interface always returns -1. When you configure the backend to ```sqlite3```, it means you have a strong OLTP requirement for connected microservices and edge nodes on Frontier, such as encapsulating the web on Frontier. In this case, the count will return the total number.
 
+## Configuration
 
-## Frontier配置
+If you need to further customize your Frontier instance, you can learn how various configurations work in this section. Customize your configuration, save it as ```frontier.yaml```, and mount it to the container at ```/usr/conf/frontier.yaml``` to take effect.
 
-如果需要更近一步定制你的Frontier实例，可以在这一节了解各个配置是如何工作的。定制完你的配置，保存为```frontier.yaml```，挂载到容器```/usr/conf/frontier.yaml```位置生效。
+### Minimal Configuration
 
-### 最小化配置
-
-简单起，你可以仅配置面向微服务和边缘节点的服务监听地址：
+To get started, you can simply configure the service listening addresses for microservices and edge nodes:
 
 ```yaml
-# 微服务端配置
+# Microservice configuration
 servicebound:
-  # 监听网络
+  # Listening network
   listen:
     network: tcp
-    # 监听地址
+    # Listening address
     addr: 0.0.0.0:30011
-# 边缘节点端配置
+# Edge node configuration
 edgebound:
-  # 监听网络
+  # Listening network
   listen:
     network: tcp
-    # 监听地址
+    # Listening address
     addr: 0.0.0.0:30012
-  # 找不到注册的GetEdgeID时，是否允许Frontier分配edgeID
+  # Whether to allow Frontier to allocate edgeID if no ID service is registered
   edgeid_alloc_when_no_idservice_on: true
 ```
 
 ### TLS
 
-对于用户来说，比较重要的TLS配置在微服务、边缘节点和控制面都是支持的，另支持mTLS，Frontier由此校验客户端携带的证书。
+TLS configuration is supported for microservices, edge nodes, and control planes. mTLS is also supported, where Frontier verifies the client certificate.
 
 ```yaml
 servicebound:
@@ -742,15 +775,15 @@ servicebound:
     addr: 0.0.0.0:30011
     network: tcp
     tls:
-      # 是否开启TLS，默认不开启
+      # Whether to enable TLS, default is disabled
       enable: false
-      # 证书和私钥，允许配置多对证书，由客户端协商确定
+      # Certificates and private keys, multiple pairs of certificates are allowed for client negotiation
       certs:
       - cert: servicebound.cert
         key: servicebound.key
-      # 是否启用mtls，启动会校验客户端携带的证书是否由下面的CA签发
+      # Whether to enable mTLS, client certificates will be verified by the following CA
       mtls: false
-      # CA证书，用于校验客户端证书
+      # CA certificates for verifying client certificates
       ca_certs:
       - ca1.cert
 edgebound:
@@ -758,272 +791,273 @@ edgebound:
     addr: 0.0.0.0:30012
     network: tcp
     tls:
-      # 是否开启TLS，默认不开启
+      # Whether to enable TLS, default is disabled
       enable: false
-      # 证书和私钥，允许配置多对证书，由客户端协商确定
+      # Certificates and private keys, multiple pairs of certificates are allowed for client negotiation
       certs:
       - cert: edgebound.cert
         key: edgebound.key
       insecure_skip_verify: false
-      # 是否启用mtls，启动会校验客户端携带的证书是否由下面的CA签发
+      # Whether to enable mTLS, client certificates will be verified by the following CA
       mtls: false
-      # CA证书，用于校验客户端证书
+      # CA certificates for verifying client certificates
       ca_certs:
       - ca1.cert
 ```
 
-### 外部MQ
+### External MQ
 
-如果你需要配置外部MQ，Frontier也支持将相应的Topic转Publish到这些MQ。
+If you need to configure an external MQ, Frontier supports publishing the corresponding topic to these MQs.
 
 **AMQP**
 
 ```yaml
 mqm:
   amqp:
-    # 是否允许
+    # Whether to allow
     enable: false
-    # AMQP地址
+    # AMQP addresses
     addrs: null
-    # 生产者
+    # Producer
     producer:
-       # exchange名
+       # Exchange name
       exchange: ""
-      # 等于Frontier内Topic的概念，数组值
+      # Equivalent to Frontier's internal topic concept, array values
       routing_keys: null
 ```
-对于AMQP来说，以上是最小配置，边缘节点Publish的消息Topic如果在routing_keys内，Frontier会Publish到exchange中，如果还有微服务或其他外部MQ也声明了该Topic，Frontier仍然会按照hashby来选择一个Publish。
+
+For AMQP, the above is the minimal configuration. If the topic of the message published by the edge node is in `routing_keys`, Frontier will publish to the `exchange.` If there are also microservices or other external MQs that declare the topic, Frontier will still choose one to publish based on hashby.
 
 **Kafka**
 
 ```yaml
 mqm:
   kafka:
-    # 是否允许
+    # Whether to allow
     enable: false
-    # kafka地址
+    # Kafka addresses
     addrs: null
-    # 生产者
-    producer:
-       # 数组值
+    # Producer
+       # Array values
       topics: null
 ```
-对于Kafka来说，以上是最小配置，边缘节点Publish的消息Topic如果在上面数组中，Frontier会Publish过来。如果还有微服务或其他外部MQ也声明了该Topic，Frontier仍然会按照hashby来选择一个Publish。
+
+For Kafka, the above is the minimal configuration. If the topic of the message published by the edge node is in the above array, Frontier will publish it. If there are also microservices or other external MQs that declare the topic, Frontier will still choose one to publish based on hashby.
 
 **NATS**
 
 ```yaml
 mqm:
   nats:
-    # 是否允许
+    # Whether to allow
     enable: false
-    # NATS地址
+    # NATS addresses
     addrs: null
     producer:
-      # 等于Frontier内Topic的概念，数组值
+      # Equivalent to Frontier's internal topic concept, array values
       subjects: null
-    # 如果允许jetstream，会优先Publish到jetstream
+    # If Jetstream is allowed, it will be prioritized for publishing
     jetstream:
       enable: false
-      # jetstream名
+      # Jetstream name
       name: ""
       producer:
-        # 等于Frontier内Topic的概念，数组值
+        # Equivalent to Frontier's internal topic concept, array values
         subjects: null
 ```
-NATS配置里，如果允许Jetstream，会优先使用Publish到Jetstream。如果还有微服务或其他外部MQ也声明了该Topic，Frontier仍然会按照hashby来选择一个Publish。
+
+In NATS configuration, if Jetstream is allowed, it will be prioritized for publishing. If there are also microservices or other external MQs that declare the topic, Frontier will still choose one to publish based on hashby.
 
 **NSQ**
 
 ```yaml
 mqm:
   nsq:
-    # 是否允许
+    # Whether to allow
     enable: false
-    # NSQ地址
+    # NSQ addresses
     addrs: null
     producer:
-      # 数组值
+      # Array values
       topics: null
 ```
-NSQ的Topic里，如果还有微服务或其他外部MQ也声明了该Topic，Frontier仍然会按照hashby来选择一个Publish。
+In NSQ's topics, if there are also microservices or other external MQs that declare the topic, Frontier will still choose one to publish based on hashby.
 
 **Redis**
 
 ```yaml
 mqm:
   redis:
-    # 是否允许
+    # Whether to allow
     enable: false
-    # Redis地址
+    # Redis addresses
     addrs: null
     # Redis DB
     db: 0
-    # 密码
+    # Password
     password: ""
     producer:
-      # 等于Frontier内Topic的概念，数组值
+      # Equivalent to Frontier's internal topic concept, array values
       channels: null
 ```
-如果还有微服务或其他外部MQ也声明了该Topic，Frontier仍然会按照hashby来选择一个Publish。
 
+If there are also microservices or other external MQs that declare the topic, Frontier will still choose one to publish based on hashby.
 
-### 其他配置
+**Other Configurations**
 
 ```yaml
 daemon:
-  # 是否开启PProf
+  # Whether to enable PProf
   pprof:
     addr: 0.0.0.0:6060
     cpu_profile_rate: 0
     enable: true
-  # 资源限制
+  # Resource limits
   rlimit:
     enable: true
     nofile: 102400
-  # 控制面开启
+  # Control plane enable
 controlplane:
   enable: false
   listen:
     network: tcp
     addr: 0.0.0.0:30010
 dao:
-  # 支持buntdb和sqlite3，都使用的in-memory模式，保持无状态
+  # Supports buntdb and sqlite3, both use in-memory mode to remain stateless
   backend: buntdb
-  # sqlite debug开启
+  # SQLite debug enable
   debug: false
 exchange:
-  # Frontier根据edgeid srcip或random的哈希策略转发边缘节点的消息、RPC和打开流到微服务，默认edgeid
-  # 即相同的边缘节点总是会请求到相同的微服务。
+  # Frontier forwards edge node messages, RPCs, and open streams to microservices based on hash strategy: edgeid, srcip, or random, default is edgeid.
+  # That is, the same edge node will always request the same microservice.
   hashby: edgeid
 ```
 
-更多详细配置见 [frontier_all.yaml](./etc/frontier_all.yaml)
+For more detailed configurations, see [frontier_all.yaml](./etc/frontier_all.yaml).
 
-## Frontier部署
+## Deployment
 
-在单Frontier实例下，可以根据环境选择以下方式部署你的Frontier实例。
+In a single Frontier instance, you can choose the following methods to deploy your Frontier instance based on your environment.
 
-### docker
+### Docker
 
-```
+```bash
 docker run -d --name frontier -p 30011:30011 -p 30012:30012 singchia/frontier:1.1.0
 ```
 
+### Docker-Compose
 
-### docker-compose
-
-```
+```bash
 git clone https://github.com/singchia/frontier.git
 cd dist/compose
 docker-compose up -d frontier
 ```
 
-### helm
+### Helm
 
-如果你是在k8s环境下，可以使用helm快速部署一个实例
+If you are in a Kubernetes environment, you can use Helm to quickly deploy an instance.
 
-```
+```bash
 git clone https://github.com/singchia/frontier.git
 cd dist/helm
 helm install frontier ./ -f values.yaml
 ```
 
-你的微服务应该连接`service/frontier-servicebound-svc:30011`，你的边缘节点可以连接`:30012`所在的NodePort。
+Your microservice should connect to ```service/frontier-servicebound-svc:30011```, and your edge node can connect to the NodePort where `:30012` is located.
 
 ### systemd
 
-如果你需要在Linux系统上以服务方式运行Frontier，可以使用systemd进行部署。
+If you need to run Frontier as a service on a Linux system, you can deploy it using systemd.
 
-#### 快速安装
+#### Quick Installation
 
 ```bash
-# 使用Makefile安装systemd服务（推荐）
+# Use Makefile to install systemd service (recommended)
 sudo make install-systemd
 
-# 启用并启动服务
+# Enable and start the service
 sudo systemctl enable frontier
 sudo systemctl start frontier
 ```
 
-或者手动安装：
+Or install manually:
 
 ```bash
-# 构建frontier二进制文件
+# Build frontier binary
 make frontier
 
-# 以root权限运行安装脚本
+# Run installation script with root privileges
 sudo ./dist/systemd/install.sh
 
-# 启用并启动服务
+# Enable and start the service
 sudo systemctl enable frontier
 sudo systemctl start frontier
 ```
 
-#### 服务管理
+#### Service Management
 
 ```bash
-# 查看服务状态
+# Check service status
 sudo systemctl status frontier
 
-# 查看实时日志
+# View real-time logs
 sudo journalctl -u frontier -f
 
-# 重启服务
+# Restart service
 sudo systemctl restart frontier
 
-# 停止服务
+# Stop service
 sudo systemctl stop frontier
 ```
 
-#### 配置说明
+#### Configuration Notes
 
-- **服务用户**: 以专用`frontier`用户运行，提高安全性
-- **自动重启**: 服务异常退出时自动重启
-- **端口配置**: 默认监听30011（微服务）和30012（边缘节点）端口
-- **配置文件**: `/usr/conf/frontier.yaml`
-- **日志管理**: 输出到systemd journal
+- **Service User**: Runs as dedicated `frontier` user for improved security
+- **Auto Restart**: Automatically restarts when service exits abnormally
+- **Port Configuration**: Default listens on ports 30011 (microservice) and 30012 (edge node)
+- **Configuration File**: `/usr/conf/frontier.yaml`
+- **Log Management**: Outputs to systemd journal
 
-#### 卸载
+#### Uninstallation
 
 ```bash
-# 使用Makefile卸载systemd服务（推荐）
+# Use Makefile to uninstall systemd service (recommended)
 sudo make uninstall-systemd
 ```
 
-或者手动卸载：
+Or uninstall manually:
 
 ```bash
 sudo ./dist/systemd/uninstall.sh
 ```
 
-更多详细信息请参考 [dist/systemd/README.md](./dist/systemd/README.md)
+For more detailed information, please refer to [dist/systemd/README.md](./dist/systemd/README.md)
 
-### operator
+### Operator
 
-见下面集群部署章节
+See the cluster deployment section below.
 
-## 集群
+## Cluster
 
-### Frontier + Frontlas架构
+### Frontier + Frontlas Architecture
 
 <img src="./docs/diagram/frontlas.png" width="100%">
 
-新增Frontlas组件用于构建集群，Frontlas同样也是无状态组件，并不在内存里留存其他信息，因此需要额外依赖Redis，你需要提供一个Redis连接信息给到Frontlas，支持 ```redis``` ```sentinel```和```redis-cluster```。
+The additional Frontlas component is used to build the cluster. Frontlas is also a stateless component and does not store other information in memory, so it requires additional dependency on Redis. You need to provide a Redis connection information to Frontlas, supporting `redis`, `sentinel`, and `redis-cluster`.
 
-- _Frontier_：微服务和边缘数据面通信组件
-- _Frontlas_：命名取自Frontier Atlas，集群管理组件，将微服务和边缘的元信息、活跃信息记录在Redis里
+- _Frontier_: Communication component between microservices and edge data planes.
+- _Frontlas_: Named Frontier Atlas, a cluster management component that records metadata and active information of microservices and edges in Redis.
 
-Frontier需要主动连接Frontlas以上报自己、微服务和边缘的活跃和状态，默认Frontlas的端口是：
+Frontier needs to proactively connect to Frontlas to report its own, microservice, and edge active and status. The default ports for Frontlas are:
 
-- ```:40011``` 提供给微服务连接，代替微服务在单Frontier实例下连接的30011端口
-- ```:40012``` 提供给Frontier连接，上报状态
+- `:40011` for microservices connection, replacing the 30011 port in a single Frontier instance.
+- `:40012` for Frontier connection to report status.
 
-你可以根据需要部署任意多个Frontier实例，而对于Frontlas，分开部署两个即可保障HA（高可用），因为不存储状态没有一致性问题。
+You can deploy any number of Frontier instances as needed, and for Frontlas, deploying two instances separately can ensure HA (High Availability) since it does not store state and has no consistency issues.
 
-### 配置
+### Configuration
 
-**Frontier**的frontier.yaml需要添加如下配置：
+**Frontier**'s `frontier.yaml` needs to add the following configuration:
 
 ```yaml
 frontlas:
@@ -1032,37 +1066,36 @@ frontlas:
     network: tcp
     addr:
       - 127.0.0.1:40012
-    tls:
   metrics:
     enable: false
     interval: 0
 daemon:
-  # Frontier集群内的唯一ID
+  # Unique ID within the Frontier cluster
   frontier_id: frontier01
 ```
-Frontier需要连接Frontlas，用来上报自己、微服务和边缘的活跃和状态。
 
+Frontier needs to connect to Frontlas to report its own, microservice, and edge active and status.
 
-**Frontlas**的frontlas.yaml最小化配置：
+**Frontlas**'s `frontlas.yaml` minimal configuration:
 
 ```yaml
 control_plane:
   listen:
-    # 微服务改连接这个地址，用来发现集群的边缘节点所在的Frontier
+    # Microservices connect to this address to discover edges in the cluster
     network: tcp
     addr: 0.0.0.0:40011
 frontier_plane:
-  # Frontier连接这个地址
+  # Frontier connects to this address
   listen:
     network: tcp
     addr: 0.0.0.0:40012
   expiration:
-    # 微服务在redis内元信息的过期时间
+    # Expiration time for microservice metadata in Redis
     service_meta: 30
-    # 边缘节点在redis内元信息的过期时间
+    # Expiration time for edge metadata in Redis
     edge_meta: 30
 redis:
-  # 支持连接standalone、sentinel和cluster
+  # Support for standalone, sentinel, and cluster connections
   mode: standalone
   standalone:
     network: tcp
@@ -1070,41 +1103,40 @@ redis:
     db: 0
 ```
 
-更多详细配置见 [frontlas_all.yaml](./etc/frontlas_all.yaml)
+### Usage
 
-### 使用
+Since Frontlas is used to discover available Frontiers, microservices need to adjust as follows:
 
-由于使用Frontlas来发现可用的Frontier，因此微服务需要做出调整如下：
-
-**微服务获取Service**
+**Microservice Getting Service**
 
 ```golang
 package main
 
 import (
-	"net"
-	"github.com/singchia/frontier/api/dataplane/v1/service"
+  "net"
+  "github.com/singchia/frontier/api/dataplane/v1/service"
 )
 
 func main() {
-	// 改使用NewClusterService来获取Service
-	svc, err := service.NewClusterService("127.0.0.1:40011")
-	// 开始使用service，其他一切保持不变
+  // Use NewClusterService to get Service
+  svc, err := service.NewClusterService("127.0.0.1:40011")
+  // Start using service, everything else remains unchanged
 }
 ```
 
-**边缘节点获取连接地址**
+**Edge Node Getting Connection Address**
 
-对于边缘节点来说，依然连接Frontier，不过可以从Frontlas来获取可用的Frontier地址，Frontlas提供了列举Frontier实例接口：
+For edge nodes, they still connect to Frontier but can get available Frontier addresses from Frontlas. Frontlas provides an interface to list Frontier instances:
 
+```bash
+curl -X GET http://127.0.0.1:40011/cluster/v1/frontiers
 ```
-curl -X http://127.0.0.1:40011/cluster/v1/frontiers
-```
-你可以在这个接口上封装一下，提供给边缘节点做负载均衡或者高可用，或加上mTLS直接提供给边缘节点（不建议）。
 
-**控制面GRPC** 详见[Protobuf定义](./api/controlplane/frontlas/v1/cluster.proto) 
+You can wrap this interface to provide load balancing or high availability for edge nodes, or add mTLS to directly provide to edge nodes (not recommended).
 
-Frontlas控制面与Frontier不同，是面向集群的控制面，目前只提供了读取集群的接口
+Control Plane gRPC See [Protobuf Definition](./api/controlplane/frontlas/v1/cluster.proto).
+
+The Frontlas control plane differs from Frontier as it is a cluster-oriented control plane, currently providing only read interfaces for the cluster.
 
 ```protobuf
 service ClusterService {
@@ -1115,40 +1147,39 @@ service ClusterService {
     rpc GetEdgeByID(GetEdgeByIDRequest) returns (GetEdgeByIDResponse);
     rpc GetEdgesCount(GetEdgesCountRequest) returns (GetEdgesCountResponse);
 
-    rpc ListServices(ListServicesRequest) returns (ListServicesResponse) ;
-    rpc GetServiceByID(GetServiceByIDRequest) returns (GetServiceByIDResponse) ;
-    rpc GetServicesCount(GetServicesCountRequest) returns (GetServicesCountResponse) ;
+    rpc ListServices(ListServicesRequest) returns (ListServicesResponse);
+    rpc GetServiceByID(GetServiceByIDRequest) returns (GetServiceByIDResponse);
+    rpc GetServicesCount(GetServicesCountRequest) returns (GetServicesCountResponse);
 }
 ```
 
-
-## k8s
+## Kubernetes
 
 ### Operator
 
-**安装CRD和Operator**
+**Install CRD and Operator**
 
-按照以下步骤安装和部署Operator到你的.kubeconfig环境中：
+Follow these steps to install and deploy the Operator to your .kubeconfig environment:
 
-```
+```bash
 git clone https://github.com/singchia/frontier.git
 cd dist/crd
 kubectl apply -f install.yaml
 ```
 
-查看CRD：
+Check CRD:
 
-```
+```bash
 kubectl get crd frontierclusters.frontier.singchia.io
 ```
 
-查看Operator：
+Check Operator:
 
-```
+```bash
 kubectl get all -n frontier-system
 ```
 
-**FrontierCluster集群**
+**FrontierCluster**
 
 ```yaml
 apiVersion: frontier.singchia.io/v1alpha1
@@ -1160,22 +1191,22 @@ metadata:
   name: frontiercluster
 spec:
   frontier:
-    # 单实例Frontier
+    # Single instance Frontier
     replicas: 2
-    # 微服务侧端口
+    # Microservice side port
     servicebound:
       port: 30011
-    # 边缘节点侧端口
+    # Edge node side port
     edgebound:
       port: 30012
   frontlas:
-    # 单实例Frontlas
+    # Single instance Frontlas
     replicas: 1
-    # 控制面端口
+    # Control plane port
     controlplane:
       port: 40011
     redis:
-      # 依赖的Redis配置
+      # Dependent Redis configuration
       addrs:
         - rfs-redisfailover:26379
       password: your-password
@@ -1183,19 +1214,20 @@ spec:
       redisType: sentinel
 ```
 
-保存为`frontiercluster.yaml`，执行
+Save as`frontiercluster.yaml`，and
 
 ```
 kubectl apply -f frontiercluster.yaml
 ```
 
-1分钟，你即可拥有一个2实例Frontier+1实例Frontlas的集群。
+In 1 minute, you will have a 2-instance Frontier + 1-instance Frontlas cluster.
 
-通过一下来检查资源部署情况 
+Check resource deployment status with:
 
-> kubectl get all -l app=frontiercluster-frontier  
-> kubectl get all -l app=frontiercluster-frontlas
-
+```bash
+kubectl get all -l app=frontiercluster-frontier  
+kubectl get all -l app=frontiercluster-frontlas
+```
 
 ```
 NAME                                           READY   STATUS    RESTARTS   AGE
@@ -1221,44 +1253,41 @@ NAME                                                  DESIRED   CURRENT   READY 
 replicaset.apps/frontiercluster-frontlas-85c4fb6d9b   1         1         1       8m11s
 ```
 
-你的微服务应该连接`service/frontiercluster-frontlas-svc:40011`，你的边缘节点可以连接`:30012`所在的NodePort。
+Your microservice should connect to `service/frontiercluster-frontlas-svc:40011`, and your edge node can connect to the NodePort where `:30012` is located.
 
-## 开发
+## Development
 
-### 路线图
- 
- 详见 [ROADMAP](./ROADMAP.md)
+### Roadmap
 
-### 贡献
+See [ROADMAP](./ROADMAP.md)
 
-如果你发现任何Bug，请提出Issue，项目Maintainers会及时响应相关问题。
- 
- 如果你希望能够提交Feature，更快速解决项目问题，满足以下简单条件下欢迎提交PR：
- 
- * 代码风格保持一致
- * 每次提交一个Feature
- * 提交的代码都携带单元测试
+### Contributions
 
+If you find any bugs, please open an issue, and project maintainers will respond promptly.
 
-## 测试
+If you wish to submit features or more quickly address project issues, you are welcome to submit PRs under these simple conditions:
 
-### 流功能测试
+- Code style remains consistent
+- Each submission includes one feature
+- Submitted code includes unit tests
+
+## Testing
+
+### Stream Function
 
 <img src="./docs/diagram/stream.png" width="100%">
 
-
-## 群组
+## Community
 
 <p align=center>
 <img src="./docs/diagram/wechat.JPG" width="30%">
 </p>
 
-添加以加入微信群组
+Join our WeChat group for discussions and support.
 
-## 许可证
+## License
 
-Released under the [Apache License 2.0](https://github.com/singchia/geminio/blob/main/LICENSE)
+ Released under the [Apache License 2.0](https://github.com/singchia/geminio/blob/main/LICENSE)
 
 ---
-
-已经看到这里，点个Star⭐️吧♥️
+A Star ⭐️ would be greatly appreciated ♥️

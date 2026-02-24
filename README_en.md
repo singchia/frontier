@@ -9,12 +9,53 @@
 [![Go Reference](https://pkg.go.dev/badge/badge/github.com/singchia/frontier.svg)](https://pkg.go.dev/github.com/singchia/frontier/api/dataplane/v1/service)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-[简体中文](./README.md) | English
+English | [简体中文](./README_zh.md)
 
 </div>
 
 
-Frontier is a full-duplex, open-source long-connection gateway developed in Go. It aims to allow microservices to directly reach edge nodes or clients, and vice versa. It provides full-duplex bidirectional RPC calls, message publishing and receiving, and point-to-point stream functionality for both. Frontier complies with cloud-native architecture, enabling quick deployment of a cluster using Operator, ensuring high availability and elasticity, and easily supporting the requirement of millions of online edge nodes or clients.
+# Frontier
+
+Frontier is a full-duplex, open-source long-connection gateway written in Go. It enables microservices to directly reach edge nodes or clients, and vice versa. It provides full-duplex bidirectional RPC, messaging, and point-to-point streams. Frontier follows cloud-native architecture principles, supports fast cluster deployment via Operator, and is built for high availability and elastic scaling to millions of online edge nodes or clients.
+
+## Table of Contents
+
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Architecture](#architecture)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Deployment](#deployment)
+- [Cluster](#cluster)
+- [Kubernetes](#kubernetes)
+- [Development](#development)
+- [Testing](#testing)
+- [Community](#community)
+- [License](#license)
+
+## Quick Start
+
+1. Run a single Frontier instance:
+
+```bash
+docker run -d --name frontier -p 30011:30011 -p 30012:30012 singchia/frontier:1.1.0
+```
+
+2. Build and run examples:
+
+```bash
+make examples
+```
+
+Run the chatroom example:
+
+```bash
+# Terminal 1
+./bin/chatroom_service
+
+# Terminal 2
+./bin/chatroom_agent
+```
 
 ## Features
 
@@ -121,7 +162,7 @@ Frontier requires both microservices and edge nodes to actively connect to Front
 
 ## Usage
 
-### Example
+### Examples
 
 In the [examples/chatroom](./examples/chatroom) directory, there is a simple chatroom example implemented in just 100 lines of code. You can get the executable programs chatroom\_service and chatroom\_agent by running:
 
@@ -149,7 +190,7 @@ After running, use [OBS](https://obsproject.com/) to connect to `rtmp_edge` for 
 
 In this example, you can see Multiplexer and Stream functionality.
 
-### How microservice use
+### Using Frontier in Microservices
 
 **Getting Service on the Microservice Side**:
 
@@ -434,7 +475,7 @@ func echo(ctx context.Context, req geminio.Request, rsp geminio.Response) {
 }
 ```
 
-### How edge use
+### Using Frontier on Edge Nodes
 
 **Getting Edge on the Edge Node Side**:
 
@@ -660,7 +701,7 @@ func main() {
 </table>
 It should be noted that if the stream is closed, any blocking methods on the stream will immediately receive io.EOF. If the entry point (Service and Edge) is closed, all streams on it will immediately receive io.EOF for blocking methods.
 
-### Controlplane
+### Control Plane
 
 The Frontier control plane provides gRPC and REST interfaces. Operators can use these APIs to determine the connection status of the current instance. Both gRPC and REST are served on the default port :`30010`.
 
@@ -697,7 +738,7 @@ curl -X GET http://127.0.0.1:30010/v1/services/rpcs?service_id={service_id}
 
 Note: gRPC/REST depends on the DAO backend, with two options: ```buntdb``` and ```sqlite3```. Both use in-memory mode. For performance considerations, the default backend uses buntdb, and the count field in the list interface always returns -1. When you configure the backend to ```sqlite3```, it means you have a strong OLTP requirement for connected microservices and edge nodes on Frontier, such as encapsulating the web on Frontier. In this case, the count will return the total number.
 
-## Frontier Configuration
+## Configuration
 
 If you need to further customize your Frontier instance, you can learn how various configurations work in this section. Customize your configuration, save it as ```frontier.yaml```, and mount it to the container at ```/usr/conf/frontier.yaml``` to take effect.
 
@@ -894,7 +935,7 @@ exchange:
 
 For more detailed configurations, see [frontier_all.yaml](./etc/frontier_all.yaml).
 
-## Frontier Deployment
+## Deployment
 
 In a single Frontier instance, you can choose the following methods to deploy your Frontier instance based on your environment.
 
@@ -998,7 +1039,7 @@ See the cluster deployment section below.
 
 ## Cluster
 
-### Frontier + Frontlas 
+### Frontier + Frontlas Architecture
 
 <img src="./docs/diagram/frontlas.png" width="100%">
 
