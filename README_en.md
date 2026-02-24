@@ -9,24 +9,65 @@
 [![Go Reference](https://pkg.go.dev/badge/badge/github.com/singchia/frontier.svg)](https://pkg.go.dev/github.com/singchia/frontier/api/dataplane/v1/service)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-[简体中文](./README.md) | English
+English | [简体中文](./README_zh.md)
 
 </div>
 
 
-Frontier is a full-duplex, open-source long-connection gateway developed in Go. It aims to allow microservices to directly reach edge nodes or clients, and vice versa. It provides full-duplex bidirectional RPC calls, message publishing and receiving, and point-to-point stream functionality for both. Frontier complies with cloud-native architecture, enabling quick deployment of a cluster using Operator, ensuring high availability and elasticity, and easily supporting the requirement of millions of online edge nodes or clients.
+# Frontier
+
+Frontier is a full-duplex, open-source long-connection gateway written in Go. It enables microservices to directly reach edge nodes or clients, and vice versa. It provides full-duplex bidirectional RPC, messaging, and point-to-point streams. Frontier follows cloud-native architecture principles, supports fast cluster deployment via Operator, and is built for high availability and elastic scaling to millions of online edge nodes or clients.
+
+## Table of Contents
+
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Architecture](#architecture)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Deployment](#deployment)
+- [Cluster](#cluster)
+- [Kubernetes](#kubernetes)
+- [Development](#development)
+- [Testing](#testing)
+- [Community](#community)
+- [License](#license)
+
+## Quick Start
+
+1. Run a single Frontier instance:
+
+```bash
+docker run -d --name frontier -p 30011:30011 -p 30012:30012 singchia/frontier:1.1.0
+```
+
+2. Build and run examples:
+
+```bash
+make examples
+```
+
+Run the chatroom example:
+
+```bash
+# Terminal 1
+./bin/chatroom_service
+
+# Terminal 2
+./bin/chatroom_agent
+```
+
+Demo video: https://github.com/singchia/frontier/assets/15531166/18b01d96-e30b-450f-9610-917d65259c30
 
 ## Features
 
-- **RPC**: Microservices and edges can call each other's functions (pre-registered), with load balancing supported on the microservice side.
-- **Messaging**: Microservices and edges can publish to each other's topics, and edges can publish to external MQ topics, with load balancing supported on the microservice side.
-- **Multiplexing/Streams**: Microservices can directly open a stream (connection) on edge nodes, enabling functions like file upload and proxy, turning obstacles into pathways.
-- **Online/Offline Control**: Microservices can register to get edge node IDs, and callbacks for online/offline events. When these events occur, Frontier will invoke these functions.
-- **Simple API**: The project provides well-packaged SDKs in the api directory for both edges and microservices, making development based on this SDK very simple.
-- **Easy Deployment**: Supports various deployment methods (docker, docker-compose, helm, and operator) to deploy Frontier instances or clusters.
-- **Horizontal Scaling**: Provides Frontier and Frontlas clusters. When single instance performance reaches a bottleneck, you can horizontally scale Frontier instances or clusters.
-- **High Availability**: Supports cluster deployment and allows microservices and edge nodes to permanently reconnect using the SDK. In case of current instance failure, it switches to a new available instance to continue services.
-- **Control Plane Support**: Provides gRPC and REST interfaces, allowing operation personnel to query or delete microservices and edge nodes. Deletion will force the target offline.
+- **Bidirectional RPC**: Services and edges can call each other with load balancing.
+- **Messaging**: Topic-based publish/receive between services, edges, and external MQ.
+- **Point-to-Point Streams**: Open direct streams for proxying, file transfer, and custom traffic.
+- **Cloud-Native Deployment**: Run via Docker, Compose, Helm, or Operator.
+- **High Availability and Scaling**: Support for reconnect, clustering, and horizontal scale with Frontlas.
+- **Auth and Presence**: Edge auth and online/offline notifications.
+- **Control Plane APIs**: gRPC and REST APIs for querying and managing online nodes.
 
 
 ## Architecture
@@ -121,780 +162,13 @@ Frontier requires both microservices and edge nodes to actively connect to Front
 
 ## Usage
 
-### Example
+Detailed usage guide: [docs/USAGE.md](./docs/USAGE.md)
 
-In the [examples/chatroom](./examples/chatroom) directory, there is a simple chatroom example implemented in just 100 lines of code. You can get the executable programs chatroom\_service and chatroom\_agent by running:
+## Configuration
 
-```
-make examples
-```
+Detailed configuration guide: [docs/CONFIGURATION.md](./docs/CONFIGURATION.md)
 
-Run the example:
-
-https://github.com/singchia/frontier/assets/15531166/18b01d96-e30b-450f-9610-917d65259c30
-
-In this example, you can see features like online/offline notifications and message publishing.
-
-**Live Streaming**
-
-In the [examples/rtmp](./examples/rtmp) directory, there is a simple live streaming example implemented in just 80 lines of code. You can get the executable programs `rtmp_service` and `rtmp_edge` by running:
-
-```
-make examples
-```
-
-After running, use [OBS](https://obsproject.com/) to connect to `rtmp_edge` for live streaming proxy:
-
-<img src="./docs/diagram/rtmp.png" width="100%">
-
-In this example, you can see Multiplexer and Stream functionality.
-
-### How microservice use
-
-**Getting Service on the Microservice Side**:
-
-```golang
-package main
-
-import (
-	"net"
-	"github.com/singchia/frontier/api/dataplane/v1/service"
-)
-
-func main() {
-	dialer := func() (net.Conn, error) {
-		return net.Dial("tcp", "127.0.0.1:30011")
-	}
-	svc, err := service.NewService(dialer)
-	// Start using the service
-}
-```
-
-**Receiving ID, Online/Offline Notifications on Microservice Side**:
-
-```golang
-package main
-
-import (
-	"context"
-	"net"
-	"github.com/singchia/frontier/api/dataplane/v1/service"
-)
-
-func main() {
-	dialer := func() (net.Conn, error) {
-		return net.Dial("tcp", "127.0.0.1:30011")
-	}
-	svc, _ := service.NewService(dialer)
-	svc.RegisterGetEdgeID(context.TODO(), getID)
-	svc.RegisterEdgeOnline(context.TODO(), online)
-	svc.RegisterEdgeOffline(context.TODO(), offline)
-}
-
-// The service can assign IDs to edges based on metadata
-func getID(meta []byte) (uint64, error) {
-	return 0, nil
-}
-
-// Edge goes online
-func online(edgeID uint64, meta []byte, addr net.Addr) error {
-	return nil
-}
-
-// Edge goes offline
-func offline(edgeID uint64, meta []byte, addr net.Addr) error {
-	return nil
-}
-```
-
-**Microservice Publishing Messages to Edge Nodes**:
-
-The edge must be online beforehand, otherwise the edge cannot be found.
-```golang
-package main
-
-import (
-	"context"
-	"net"
-	"github.com/singchia/frontier/api/dataplane/v1/service"
-)
-
-func main() {
-	dialer := func() (net.Conn, error) {
-		return net.Dial("tcp", "127.0.0.1:30011")
-	}
-	svc, _ := service.NewService(dialer)
-	msg := svc.NewMessage([]byte("test"))
-	// Publish a message to the edge node with ID 1001
-	err := svc.Publish(context.TODO(), 1001, msg)
-	// ...
-}
-```
-
-**Microservice Declaring Topic to Receive**:
-
-```golang
-package main
-
-import (
-	"context"
-	"fmt"
-	"io"
-	"net"
-	"github.com/singchia/frontier/api/dataplane/v1/service"
-)
-
-func main() {
-	dialer := func() (net.Conn, error) {
-		return net.Dial("tcp", "127.0.0.1:30011")
-	}
-	// Declare the topic to receive when getting the service
-	svc, _ := service.NewService(dialer, service.OptionServiceReceiveTopics([]string{"foo"}))
-	for {
-		// Receive messages
-		msg, err := svc.Receive(context.TODO())
-		if err == io.EOF {
-			// Receiving EOF indicates the lifecycle of the service has ended and it can no longer be used
-			return
-		}
-		if err != nil {
-			fmt.Println("receive err:", err)
-			continue
-		}
-		// After processing the message, notify the caller it is done
-		msg.Done()
-	}
-}
-```
-
-**Microservice Calling Edge Node RPC**:
-
-```golang
-package main
-
-import (
-	"context"
-	"net"
-	"github.com/singchia/frontier/api/dataplane/v1/service"
-)
-
-func main() {
-	dialer := func() (net.Conn, error) {
-		return net.Dial("tcp", "127.0.0.1:30011")
-	}
-	svc, _ := service.NewService(dialer)
-	req := svc.NewRequest([]byte("test"))
-	// Call the "foo" method on the edge node with ID 1001. The edge node must have pre-registered this method.
-	rsp, err := svc.Call(context.TODO(), 1001, "foo", req)
-	// ...
-}
-```
-
-**Microservice Registering Methods for Edge Nodes to Call**:
-
-```golang
-package main
-
-import (
-	"context"
-	"net"
-	"github.com/singchia/frontier/api/dataplane/v1/service"
-	"github.com/singchia/geminio"
-)
-
-func main() {
-	dialer := func() (net.Conn, error) {
-		return net.Dial("tcp", "127.0.0.1:30011")
-	}
-	svc, _ := service.NewService(dialer)
-	// Register an "echo" method
-	svc.Register(context.TODO(), "echo", echo)
-	// ...
-}
-
-func echo(ctx context.Context, req geminio.Request, rsp geminio.Response) {
-	value := req.Data()
-	rsp.SetData(value)
-}
-```
-
-**Microservice Opening Point-to-Point Stream on Edge Node**:
-
-```golang
-package main
-
-import (
-	"context"
-	"net"
-	"github.com/singchia/frontier/api/dataplane/v1/service"
-)
-
-func main() {
-	dialer := func() (net.Conn, error) {
-		return net.Dial("tcp", "127.0.0.1:30011")
-	}
-	svc, _ := service.NewService(dialer)
-	// Open a new stream to the edge node with ID 1001 (st is also a net.Conn). The edge must accept the stream with AcceptStream.
-	st, err := svc.OpenStream(context.TODO(), 1001)
-}
-```
-Based on this newly opened stream, you can transfer files, proxy traffic, etc.
-
-**Microservice Receives Stream**:
-
-```golang
-package main
-
-import (
-	"fmt"
-	"io"
-	"net"
-	"github.com/singchia/frontier/api/dataplane/v1/service"
-)
-
-func main() {
-	dialer := func() (net.Conn, error) {
-		return net.Dial("tcp", "127.0.0.1:30011")
-	}
-	// Declare the service name when getting the service, required when the edge opens a stream to specify the service name.
-	svc, _ := service.NewService(dialer, service.OptionServiceName("service-name"))
-	for {
-		st, err := svc.AcceptStream()
-		if err == io.EOF {
-			// Receiving EOF indicates the lifecycle of the service has ended and it can no longer be used
-			return
-		} else if err != nil {
-			fmt.Println("accept stream err:", err)
-			continue
-		}
-		// Use the stream. This stream is also a net.Conn. You can Read/Write/Close, and also use RPC and messaging.
-	}
-}
-```
-Based on this newly opened stream, you can transfer files, proxy traffic, etc.
-
-**Messages, RPC, and Streams Together!**:
-
-```golang
-package main
-
-import (
-	"context"
-	"fmt"
-	"io"
-	"net"
-	"github.com/singchia/frontier/api/dataplane/v1/service"
-	"github.com/singchia/geminio"
-)
-
-func main() {
-	dialer := func() (net.Conn, error) {
-		return net.Dial("tcp", "127.0.0.1:30011")
-	}
-	// Declare the service name when getting the service, required when the edge opens a stream to specify the service name.
-	svc, _ := service.NewService(dialer, service.OptionServiceName("service-name"))
-
-	// Receive streams
-	go func() {
-		for {
-			st, err := svc.AcceptStream()
-			if err == io.EOF {
-				// Receiving EOF indicates the lifecycle of the service has ended and it can no longer be used
-				return
-			} else if err != nil {
-				fmt.Println("accept stream err:", err)
-				continue
-			}
-			// Use the stream. This stream is also a net.Conn. You can Read/Write/Close, and also use RPC and messaging.
-		}
-	}()
-
-	// Register an "echo" method
-	svc.Register(context.TODO(), "echo", echo)
-
-	// Receive messages
-	for {
-		msg, err := svc.Receive(context.TODO())
-		if err == io.EOF {
-			// Receiving EOF indicates the lifecycle of the service has ended and it can no longer be used
-			return
-		}
-		if err != nil {
-			fmt.Println("receive err:", err)
-			continue
-		}
-		// After processing the message, notify the caller it is done
-		msg.Done()
-	}
-}
-
-func echo(ctx context.Context, req geminio.Request, rsp geminio.Response) {
-	value := req.Data()
-	rsp.SetData(value)
-}
-```
-
-### How edge use
-
-**Getting Edge on the Edge Node Side**:
-
-```golang
-package main
-
-import (
-	"net"
-	"github.com/singchia/frontier/api/dataplane/v1/edge"
-)
-
-func main() {
-	dialer := func() (net.Conn, error) {
-		return net.Dial("tcp", "127.0.0.1:30012")
-	}
-	eg, _ := edge.NewEdge(dialer)
-	// Start using eg ...
-}
-```
-
-**Edge Node Publishes Message to Topic**:
-
-The service needs to declare receiving the topic in advance, or configure an external MQ in the configuration file.
-
-```golang
-package main
-
-import (
-	"context"
-	"net"
-	"github.com/singchia/frontier/api/dataplane/v1/edge"
-)
-
-func main() {
-	dialer := func() (net.Conn, error) {
-		return net.Dial("tcp", "127.0.0.1:30012")
-	}
-	eg, _ := edge.NewEdge(dialer)
-	// Start using eg
-	msg := eg.NewMessage([]byte("test"))
-	err := eg.Publish(context.TODO(), "foo", msg)
-	// ...
-}
-```
-
-**Edge Node Receives Messages**:
-
-```golang
-package main
-
-import (
-	"context"
-	"fmt"
-	"io"
-	"net"
-	"github.com/singchia/frontier/api/dataplane/v1/edge"
-)
-
-func main() {
-	dialer := func() (net.Conn, error) {
-		return net.Dial("tcp", "127.0.0.1:30012")
-	}
-	eg, _ := edge.NewEdge(dialer)
-	for {
-		// Receive messages
-		msg, err := eg.Receive(context.TODO())
-		if err == io.EOF {
-			// Receiving EOF indicates the lifecycle of eg has ended and it can no longer be used
-			return
-		}
-		if err != nil {
-			fmt.Println("receive err:", err)
-			continue
-		}
-		// After processing the message, notify the caller it is done
-		msg.Done()
-	}
-	// ...
-}
-```
-
-**Edge Node Calls RPC on Microservice**:
-
-```golang
-package main
-
-import (
-	"context"
-	"net"
-	"github.com/singchia/frontier/api/dataplane/v1/edge"
-)
-
-func main() {
-	dialer := func() (net.Conn, error) {
-		return net.Dial("tcp", "127.0.0.1:30012")
-	}
-	eg, _ := edge.NewEdge(dialer)
-	// Start using eg
-	req := eg.NewRequest([]byte("test"))
-	// Call the "echo" method. Frontier will look up and forward the request to the corresponding microservice.
-	rsp, err := eg.Call(context.TODO(), "echo", req)
-}
-```
-
-**Edge Node Registers RPC**:
-
-```golang
-package main
-
-import (
-	"context"
-	"net"
-	"github.com/singchia/frontier/api/dataplane/v1/edge"
-	"github.com/singchia/geminio"
-)
-
-func main() {
-	dialer := func() (net.Conn, error) {
-		return net.Dial("tcp", "127.0.0.1:30012")
-	}
-	eg, _ := edge.NewEdge(dialer)
-	// Register an "echo" method
-	eg.Register(context.TODO(), "echo", echo)
-	// ...
-}
-
-func echo(ctx context.Context, req geminio.Request, rsp geminio.Response) {
-	value := req.Data()
-	rsp.SetData(value)
-}
-```
-
-**Edge Node Opens Point-to-Point Stream to Microservice**:
-
-```golang
-package main
-
-import (
-	"net"
-	"github.com/singchia/frontier/api/dataplane/v1/edge"
-)
-
-func main() {
-	dialer := func() (net.Conn, error) {
-		return net.Dial("tcp", "127.0.0.1:30012")
-	}
-	eg, _ := edge.NewEdge(dialer)
-	st, err := eg.OpenStream("service-name")
-	// ...
-}
-```
-
-Based on this newly opened stream, you can transfer files, proxy traffic, etc.
-
-**Edge Node Receives Stream**:
-
-```golang
-package main
-
-import (
-	"net"
-	"fmt"
-	"io"
-	"github.com/singchia/frontier/api/dataplane/v1/edge"
-)
-
-func main() {
-	dialer := func() (net.Conn, error) {
-		return net.Dial("tcp", "127.0.0.1:30012")
-	}
-	eg, _ := edge.NewEdge(dialer)
-	for {
-		stream, err := eg.AcceptStream()
-		if err == io.EOF {
-			// Receiving EOF indicates the lifecycle of eg has ended and it can no longer be used
-			return
-		} else if err != nil {
-			fmt.Println("accept stream err:", err)
-			continue
-		}
-		// Use the stream. This stream is also a net.Conn. You can Read/Write/Close, and also use RPC and messaging.
-	}
-}
-```
-
-### Error Handling
-
-<table><thead>
-  <tr>
-    <th>Error</th>
-    <th>Description and Handling</th>
-  </tr></thead>
-<tbody>
-  <tr>
-    <td>io.EOF</td>
-    <td>Receiving EOF indicates that the stream or connection has been closed, and you need to exit operations such as Receive and AcceptStream.</td>
-  </tr>
-  <tr>
-    <td>io.ErrShortBuffer</td>
-    <td>The buffer on the sender or receiver is full. You can adjust the buffer size by setting OptionServiceBufferSize or OptionEdgeBufferSize.</td>
-  </tr>
-  <tr>
-    <td>apis.ErrEdgeNotOnline</td>
-    <td>This indicates that the edge node is not online, and you need to check the edge connection.</td>
-  </tr>
-  <tr>
-    <td>apis.ServiceNotOnline</td>
-    <td>This indicates that the microservice is not online, and you need to check the microservice connection information or connection.</td>
-  </tr>
-  <tr>
-    <td>apis.RPCNotOnline</td>
-    <td>This indicates that the RPC called is not online.</td>
-  </tr>
-  <tr>
-    <td>apis.TopicNotOnline</td>
-    <td>This indicates that the topic to be published is not online.</td>
-  </tr>
-  <tr>
-    <td>Other Errors</td>
-    <td>There are also errors like Timeout, BufferFull, etc.</td>
-  </tr>
-</tbody>
-</table>
-It should be noted that if the stream is closed, any blocking methods on the stream will immediately receive io.EOF. If the entry point (Service and Edge) is closed, all streams on it will immediately receive io.EOF for blocking methods.
-
-### Controlplane
-
-The Frontier control plane provides gRPC and REST interfaces. Operators can use these APIs to determine the connection status of the current instance. Both gRPC and REST are served on the default port :`30010`.
-
-**GRPC**  See[Protobuf Definition](./api/controlplane/frontier/v1/controlplane.proto) 
-
-```protobuf
-service ControlPlane {
-    rpc ListEdges(ListEdgesRequest) returns (ListEdgesResponse);
-    rpc GetEdge(GetEdgeRequest) returns (Edge);
-    rpc KickEdge(KickEdgeRequest) returns (KickEdgeResponse);
-    rpc ListEdgeRPCs(ListEdgeRPCsRequest) returns (ListEdgeRPCsResponse);
-    rpc ListServices(ListServicesRequest) returns (ListServicesResponse);
-    rpc GetService(GetServiceRequest) returns (Service);
-    rpc KickService(KickServiceRequest) returns (KickServiceResponse);
-    rpc ListServiceRPCs(ListServiceRPCsRequest) returns (ListServiceRPCsResponse);
-    rpc ListServiceTopics(ListServiceTopicsRequest) returns (ListServiceTopicsResponse);
-}
-```
-
-REST Swagger definition can be found at [Swagger Definition](./docs/swagger/swagger.yaml)
-
-For example, you can use the following request to kick an edge node offline:
-
-```
-curl -X DELETE http://127.0.0.1:30010/v1/edges/{edge_id} 
-```
-
-Or check which RPCs a microservice has registered:
-
-
-```
-curl -X GET http://127.0.0.1:30010/v1/services/rpcs?service_id={service_id}
-```
-
-Note: gRPC/REST depends on the DAO backend, with two options: ```buntdb``` and ```sqlite3```. Both use in-memory mode. For performance considerations, the default backend uses buntdb, and the count field in the list interface always returns -1. When you configure the backend to ```sqlite3```, it means you have a strong OLTP requirement for connected microservices and edge nodes on Frontier, such as encapsulating the web on Frontier. In this case, the count will return the total number.
-
-## Frontier Configuration
-
-If you need to further customize your Frontier instance, you can learn how various configurations work in this section. Customize your configuration, save it as ```frontier.yaml```, and mount it to the container at ```/usr/conf/frontier.yaml``` to take effect.
-
-### Minimal Configuration
-
-To get started, you can simply configure the service listening addresses for microservices and edge nodes:
-
-```yaml
-# Microservice configuration
-servicebound:
-  # Listening network
-  listen:
-    network: tcp
-    # Listening address
-    addr: 0.0.0.0:30011
-# Edge node configuration
-edgebound:
-  # Listening network
-  listen:
-    network: tcp
-    # Listening address
-    addr: 0.0.0.0:30012
-  # Whether to allow Frontier to allocate edgeID if no ID service is registered
-  edgeid_alloc_when_no_idservice_on: true
-```
-
-### TLS
-
-TLS configuration is supported for microservices, edge nodes, and control planes. mTLS is also supported, where Frontier verifies the client certificate.
-
-```yaml
-servicebound:
-  listen:
-    addr: 0.0.0.0:30011
-    network: tcp
-    tls:
-      # Whether to enable TLS, default is disabled
-      enable: false
-      # Certificates and private keys, multiple pairs of certificates are allowed for client negotiation
-      certs:
-      - cert: servicebound.cert
-        key: servicebound.key
-      # Whether to enable mTLS, client certificates will be verified by the following CA
-      mtls: false
-      # CA certificates for verifying client certificates
-      ca_certs:
-      - ca1.cert
-edgebound:
-  listen:
-    addr: 0.0.0.0:30012
-    network: tcp
-    tls:
-      # Whether to enable TLS, default is disabled
-      enable: false
-      # Certificates and private keys, multiple pairs of certificates are allowed for client negotiation
-      certs:
-      - cert: edgebound.cert
-        key: edgebound.key
-      insecure_skip_verify: false
-      # Whether to enable mTLS, client certificates will be verified by the following CA
-      mtls: false
-      # CA certificates for verifying client certificates
-      ca_certs:
-      - ca1.cert
-```
-
-### External MQ
-
-If you need to configure an external MQ, Frontier supports publishing the corresponding topic to these MQs.
-
-**AMQP**
-
-```yaml
-mqm:
-  amqp:
-    # Whether to allow
-    enable: false
-    # AMQP addresses
-    addrs: null
-    # Producer
-    producer:
-       # Exchange name
-      exchange: ""
-      # Equivalent to Frontier's internal topic concept, array values
-      routing_keys: null
-```
-
-For AMQP, the above is the minimal configuration. If the topic of the message published by the edge node is in `routing_keys`, Frontier will publish to the `exchange.` If there are also microservices or other external MQs that declare the topic, Frontier will still choose one to publish based on hashby.
-
-**Kafka**
-
-```yaml
-mqm:
-  kafka:
-    # Whether to allow
-    enable: false
-    # Kafka addresses
-    addrs: null
-    # Producer
-       # Array values
-      topics: null
-```
-
-For Kafka, the above is the minimal configuration. If the topic of the message published by the edge node is in the above array, Frontier will publish it. If there are also microservices or other external MQs that declare the topic, Frontier will still choose one to publish based on hashby.
-
-**NATS**
-
-```yaml
-mqm:
-  nats:
-    # Whether to allow
-    enable: false
-    # NATS addresses
-    addrs: null
-    producer:
-      # Equivalent to Frontier's internal topic concept, array values
-      subjects: null
-    # If Jetstream is allowed, it will be prioritized for publishing
-    jetstream:
-      enable: false
-      # Jetstream name
-      name: ""
-      producer:
-        # Equivalent to Frontier's internal topic concept, array values
-        subjects: null
-```
-
-In NATS configuration, if Jetstream is allowed, it will be prioritized for publishing. If there are also microservices or other external MQs that declare the topic, Frontier will still choose one to publish based on hashby.
-
-**NSQ**
-
-```yaml
-mqm:
-  nsq:
-    # Whether to allow
-    enable: false
-    # NSQ addresses
-    addrs: null
-    producer:
-      # Array values
-      topics: null
-```
-In NSQ's topics, if there are also microservices or other external MQs that declare the topic, Frontier will still choose one to publish based on hashby.
-
-**Redis**
-
-```yaml
-mqm:
-  redis:
-    # Whether to allow
-    enable: false
-    # Redis addresses
-    addrs: null
-    # Redis DB
-    db: 0
-    # Password
-    password: ""
-    producer:
-      # Equivalent to Frontier's internal topic concept, array values
-      channels: null
-```
-
-If there are also microservices or other external MQs that declare the topic, Frontier will still choose one to publish based on hashby.
-
-**Other Configurations**
-
-```yaml
-daemon:
-  # Whether to enable PProf
-  pprof:
-    addr: 0.0.0.0:6060
-    cpu_profile_rate: 0
-    enable: true
-  # Resource limits
-  rlimit:
-    enable: true
-    nofile: 102400
-  # Control plane enable
-controlplane:
-  enable: false
-  listen:
-    network: tcp
-    addr: 0.0.0.0:30010
-dao:
-  # Supports buntdb and sqlite3, both use in-memory mode to remain stateless
-  backend: buntdb
-  # SQLite debug enable
-  debug: false
-exchange:
-  # Frontier forwards edge node messages, RPCs, and open streams to microservices based on hash strategy: edgeid, srcip, or random, default is edgeid.
-  # That is, the same edge node will always request the same microservice.
-  hashby: edgeid
-```
-
-For more detailed configurations, see [frontier_all.yaml](./etc/frontier_all.yaml).
-
-## Frontier Deployment
+## Deployment
 
 In a single Frontier instance, you can choose the following methods to deploy your Frontier instance based on your environment.
 
@@ -924,73 +198,11 @@ helm install frontier ./ -f values.yaml
 
 Your microservice should connect to ```service/frontier-servicebound-svc:30011```, and your edge node can connect to the NodePort where `:30012` is located.
 
-### systemd
+### Systemd
 
-If you need to run Frontier as a service on a Linux system, you can deploy it using systemd.
+Use the dedicated Systemd docs:
 
-#### Quick Installation
-
-```bash
-# Use Makefile to install systemd service (recommended)
-sudo make install-systemd
-
-# Enable and start the service
-sudo systemctl enable frontier
-sudo systemctl start frontier
-```
-
-Or install manually:
-
-```bash
-# Build frontier binary
-make frontier
-
-# Run installation script with root privileges
-sudo ./dist/systemd/install.sh
-
-# Enable and start the service
-sudo systemctl enable frontier
-sudo systemctl start frontier
-```
-
-#### Service Management
-
-```bash
-# Check service status
-sudo systemctl status frontier
-
-# View real-time logs
-sudo journalctl -u frontier -f
-
-# Restart service
-sudo systemctl restart frontier
-
-# Stop service
-sudo systemctl stop frontier
-```
-
-#### Configuration Notes
-
-- **Service User**: Runs as dedicated `frontier` user for improved security
-- **Auto Restart**: Automatically restarts when service exits abnormally
-- **Port Configuration**: Default listens on ports 30011 (microservice) and 30012 (edge node)
-- **Configuration File**: `/usr/conf/frontier.yaml`
-- **Log Management**: Outputs to systemd journal
-
-#### Uninstallation
-
-```bash
-# Use Makefile to uninstall systemd service (recommended)
-sudo make uninstall-systemd
-```
-
-Or uninstall manually:
-
-```bash
-sudo ./dist/systemd/uninstall.sh
-```
-
-For more detailed information, please refer to [dist/systemd/README.md](./dist/systemd/README.md)
+[dist/systemd/README.md](./dist/systemd/README.md)
 
 ### Operator
 
@@ -998,7 +210,7 @@ See the cluster deployment section below.
 
 ## Cluster
 
-### Frontier + Frontlas 
+### Frontier + Frontlas Architecture
 
 <img src="./docs/diagram/frontlas.png" width="100%">
 
