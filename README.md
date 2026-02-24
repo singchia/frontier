@@ -57,7 +57,7 @@ Run the chatroom example:
 ./bin/chatroom_agent
 ```
 
-Demo video: [chatroom-min.mov](./chatroom-min.mov)
+Demo video: https://github.com/singchia/frontier/assets/15531166/18b01d96-e30b-450f-9610-917d65259c30
 
 ## Features
 
@@ -66,7 +66,7 @@ Demo video: [chatroom-min.mov](./chatroom-min.mov)
 - **Point-to-Point Streams**: Open direct streams for proxying, file transfer, and custom traffic.
 - **Cloud-Native Deployment**: Run via Docker, Compose, Helm, or Operator.
 - **High Availability and Scaling**: Support for reconnect, clustering, and horizontal scale with Frontlas.
-- **Authentication and Presence Control**: Support authentication control and online/offline event notifications for edge nodes.
+- **Auth and Presence**: Edge auth and online/offline notifications.
 - **Control Plane APIs**: gRPC and REST APIs for querying and managing online nodes.
 
 
