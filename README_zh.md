@@ -54,8 +54,9 @@ make examples
 ./bin/chatroom_agent
 ```
 
-演示视频: https://github.com/singchia/frontier/assets/15531166/18b01d96-e30b-450f-9610-917d65259c30
+演示视频: 
 
+https://github.com/singchia/frontier/assets/15531166/18b01d96-e30b-450f-9610-917d65259c30
 
 ## 特性
 
