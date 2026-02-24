@@ -14,8 +14,6 @@ English | [简体中文](./README_zh.md)
 </div>
 
 
-# Frontier
-
 Frontier is a **full-duplex**, open-source long-connection gateway written in Go. It enables microservices to directly reach edge nodes or clients, and vice versa. It provides full-duplex **bidirectional RPC**, **messaging**, and **point-to-point streams**. Frontier follows **cloud-native** architecture principles, supports fast cluster deployment via Operator, and is built for **high availability** and **elastic scaling** to millions of online edge nodes or clients.
 
 ## Table of Contents
