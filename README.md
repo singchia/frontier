@@ -204,7 +204,7 @@ Your microservice should connect to ```service/frontier-servicebound-svc:30011``
 
 Use the dedicated Systemd docs:
 
-- English: [dist/systemd/README_en.md](./dist/systemd/README_en.md)
+[dist/systemd/README.md](./dist/systemd/README.md)
 
 ### Operator
 

@@ -162,7 +162,7 @@ helm install frontier ./ -f values.yaml
 
 使用独立的 Systemd 文档：
 
-- 中文: [dist/systemd/README.md](./dist/systemd/README.md)
+[dist/systemd/README_cn.md](./dist/systemd/README_cn.md)
 
 ### operator
 
