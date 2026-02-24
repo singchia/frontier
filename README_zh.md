@@ -158,12 +158,11 @@ helm install frontier ./ -f values.yaml
 
 你的微服务应该连接`service/frontier-servicebound-svc:30011`，你的边缘节点可以连接`:30012`所在的NodePort。
 
-### systemd
+### Systemd
 
-使用独立的 systemd 文档：
+使用独立的 Systemd 文档：
 
 - 中文: [dist/systemd/README.md](./dist/systemd/README.md)
-- English: [dist/systemd/README_en.md](./dist/systemd/README_en.md)
 
 ### operator
 
