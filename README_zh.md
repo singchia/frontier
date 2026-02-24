@@ -13,7 +13,50 @@
 
 </div>
 
+# Frontier
+
 Frontier是一个go开发的全双工开源长连接网关，旨在让微服务直达边缘节点或客户端，反之边缘节点或客户端也同样直达微服务。对于两者，提供了全双工的单双向RPC调用，消息发布和接收，以及点对点流的功能。Frontier符合云原生架构，可以使用Operator快速部署一个集群，具有高可用和弹性，轻松支撑百万边缘节点或客户端在线的需求。
+
+## 目录
+
+- [特性](#特性)
+- [快速开始](#快速开始)
+- [架构](#架构)
+- [使用](#使用)
+- [配置](#配置)
+- [部署](#部署)
+- [集群](#集群)
+- [Kubernetes](#kubernetes)
+- [开发](#开发)
+- [测试](#测试)
+- [社区](#社区)
+- [许可证](#许可证)
+
+## 快速开始
+
+1. 启动单实例 Frontier：
+
+```bash
+docker run -d --name frontier -p 30011:30011 -p 30012:30012 singchia/frontier:1.1.0
+```
+
+2. 构建并运行示例：
+
+```bash
+make examples
+```
+
+运行 chatroom 示例：
+
+```bash
+# 终端 1
+./bin/chatroom_service
+
+# 终端 2
+./bin/chatroom_agent
+```
+
+演示视频: https://github.com/singchia/frontier/assets/15531166/18b01d96-e30b-450f-9610-917d65259c30
 
 
 ## 特性
@@ -287,7 +330,7 @@ service ClusterService {
 ```
 
 
-## k8s
+## Kubernetes
 
 ### Operator
 
@@ -412,7 +455,7 @@ replicaset.apps/frontiercluster-frontlas-85c4fb6d9b   1         1         1     
 <img src="./docs/diagram/stream.png" width="100%">
 
 
-## 群组
+## 社区
 
 <p align=center>
 <img src="./docs/diagram/wechat.JPG" width="30%">
