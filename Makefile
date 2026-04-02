@@ -52,6 +52,12 @@ help:
 	@echo "  make frontier-windows-amd64  - Build frontier for Windows amd64"
 	@echo "  make frontier-windows-arm64 - Build frontier for Windows arm64"
 	@echo ""
+	@echo "Docker images (REGISTRY=, VERSION=):"
+	@echo "  make image-frontier        - Build frontier image (current platform)"
+	@echo "  make image-frontier-linux  - Build frontier image for linux/amd64"
+	@echo "  make image-frontlas        - Build frontlas image (current platform)"
+	@echo "  make image-frontlas-linux  - Build frontlas image for linux/amd64"
+	@echo ""
 	@echo "Other targets:"
 	@echo "  make clean            - Clean local build artifacts"
 	@echo "  make clean-dist       - Clean cross-compilation artifacts"
@@ -419,9 +425,17 @@ uninstall-systemd:
 image-frontier:
 	docker buildx build -t ${REGISTRY}/frontier:${VERSION} -f images/Dockerfile.frontier .
 
+.PHONY: image-frontier-linux
+image-frontier-linux:
+	docker buildx build --platform linux/amd64 -t ${REGISTRY}/frontier:${VERSION} -f images/Dockerfile.frontier .
+
 .PHONY: image-frontlas
 image-frontlas:
 	docker buildx build -t ${REGISTRY}/frontlas:${VERSION} -f images/Dockerfile.frontlas .
+
+.PHONY: image-frontlas-linux
+image-frontlas-linux:
+	docker buildx build --platform linux/amd64 -t ${REGISTRY}/frontlas:${VERSION} -f images/Dockerfile.frontlas .
 
 .PHONY: image-gen-api
 image-gen-api:
