@@ -6,7 +6,7 @@ ARG TARGETOS
 ARG TARGETARCH
 
 ENV GO111MODULE=on \
-    GOPROXY=https://goproxy.io,direct
+    GOPROXY=https://goproxy.cn,https://goproxy.io,https://proxy.golang.org,direct
 
 WORKDIR /go/src/github.com/singchia/frontier
 RUN --mount=type=bind,readwrite,target=/go/src/github.com/singchia/frontier \
