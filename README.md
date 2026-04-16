@@ -13,13 +13,22 @@ English | [简体中文](./README_zh.md)
 
 </div>
 
+# Frontier
 
-Frontier is a **full-duplex**, open-source long-connection gateway written in Go. It enables microservices to directly reach edge nodes or clients, and vice versa. It provides full-duplex **bidirectional RPC**, **messaging**, and **point-to-point streams**. Frontier follows **cloud-native** architecture principles, supports fast cluster deployment via Operator, and is built for **high availability** and **elastic scaling** to millions of online edge nodes or clients.
+> Bidirectional service-to-edge gateway for long-lived connections
+
+Frontier is an open-source gateway written in Go for **service <-> edge communication**. It lets backend services and edge nodes talk to each other over long-lived connections, with built-in **bidirectional RPC**, **messaging**, and **point-to-point streams**.
+
+It is built for systems where both sides stay online and need to actively call, notify, or open streams to each other. Frontier is **not a reverse proxy** and **not just a message broker**. It is infrastructure for addressing and operating large fleets of connected edge nodes from backend services.
 
 ## Table of Contents
 
-- [Features](#features)
+- [Why Frontier](#why-frontier)
+- [When to Use Frontier](#when-to-use-frontier)
+- [Real-World Use Cases](#real-world-use-cases)
+- [Comparison](#comparison)
 - [Quick Start](#quick-start)
+- [Features](#features)
 - [Architecture](#architecture)
 - [Usage](#usage)
 - [Configuration](#configuration)
@@ -31,21 +40,75 @@ Frontier is a **full-duplex**, open-source long-connection gateway written in Go
 - [Community](#community)
 - [License](#license)
 
+## Why Frontier
+
+Most infrastructure is optimized for one of these models:
+
+- **service -> service** via HTTP or gRPC
+- **client -> service** via API gateways and reverse proxies
+- **event fan-out** via message brokers
+
+Frontier is optimized for a different model:
+
+- **service <-> edge** over long-lived, stateful connections
+- backend services calling a specific online edge node
+- edge nodes calling backend services without exposing inbound ports
+- opening direct streams between services and edge nodes when RPC is not enough
+
+## When to Use Frontier
+
+Use Frontier if you need:
+
+- Backend services to call specific online devices, agents, clients, or connectors
+- Edge nodes to call backend services over the same connectivity model
+- Long-lived connections at large scale
+- One data plane for RPC, messaging, and streams
+- Cluster deployment and high availability for service-to-edge connectivity
+
+Do not use Frontier if:
+
+- You only need service-to-service RPC; gRPC is a simpler fit
+- You only need HTTP ingress, routing, or proxying; use an API gateway or Envoy
+- You only need pub/sub or event streaming; use NATS or Kafka
+- You only need a generic tunnel; use frp or another tunneling tool
+
+## Real-World Use Cases
+
+- IoT and device fleets
+- Remote agents and connectors
+- IM and other real-time systems
+- Game backends talking to online clients or edge nodes
+- Zero-trust internal access based on connector-style agents
+- File transfer, media relay, or traffic proxy over point-to-point streams
+
+## Comparison
+
+| Capability | Frontier | gRPC | NATS | frp | Envoy |
+| --- | --- | --- | --- | --- | --- |
+| Built for service <-> edge communication | Yes | No | Partial | No | No |
+| Backend can address a specific online edge node | Yes | No | Partial | Partial | No |
+| Edge can call backend services | Yes | Partial | Yes | No | No |
+| Point-to-point streams between service and edge | Yes | Partial | No | Tunnel only | No |
+| Unified RPC + messaging + streams model | Yes | No | No | No | No |
+| Long-lived connection fleet as a primary model | Yes | No | Partial | Partial | No |
+
+`Partial` here means the capability can be assembled with extra patterns, but it is not the system's primary communication model.
+
 ## Quick Start
 
-1. Run a single Frontier instance:
+1. Start a single Frontier instance:
 
 ```bash
-docker run -d --name frontier -p 30011:30011 -p 30012:30012 singchia/frontier:1.1.0
+docker run -d --name frontier -p 30011:30011 -p 30012:30012 singchia/frontier:1.2.2
 ```
 
-2. Build and run examples:
+2. Build the examples:
 
 ```bash
 make examples
 ```
 
-Run the chatroom example:
+3. Run the chatroom demo:
 
 ```bash
 # Terminal 1
@@ -55,40 +118,50 @@ Run the chatroom example:
 ./bin/chatroom_agent
 ```
 
+The chatroom example shows the basic Frontier interaction model: long-lived connectivity, edge online/offline events, and service <-> edge messaging.
+
+You can also run the RTMP example if you want to see Frontier's stream model used for traffic relay:
+
+```bash
+# Terminal 1
+./bin/rtmp_service
+
+# Terminal 2
+./bin/rtmp_edge
+```
+
 Demo video:
 
 https://github.com/singchia/frontier/assets/15531166/18b01d96-e30b-450f-9610-917d65259c30
 
 ## Features
 
-- **Bidirectional RPC**: Services and edges can call each other with load balancing.
-- **Messaging**: Topic-based publish/receive between services, edges, and external MQ.
-- **Point-to-Point Streams**: Open direct streams for proxying, file transfer, and custom traffic.
-- **Cloud-Native Deployment**: Run via Docker, Compose, Helm, or Operator.
-- **High Availability and Scaling**: Support for reconnect, clustering, and horizontal scale with Frontlas.
-- **Auth and Presence**: Edge auth and online/offline notifications.
+- **Bidirectional RPC**: Services can call edges, and edges can call services.
+- **Messaging**: Send messages between services and edges, and forward edge-published topics to external MQ.
+- **Point-to-Point Streams**: Open direct streams for proxying, file transfer, media relay, and custom traffic.
+- **Presence and Lifecycle Hooks**: Handle edge ID assignment plus online/offline notifications.
 - **Control Plane APIs**: gRPC and REST APIs for querying and managing online nodes.
-
+- **Cluster and HA**: Scale out with Frontlas, reconnect clients, and run highly available topologies.
+- **Cloud-Native Deployment**: Run via Docker, Compose, Helm, or Operator.
 
 ## Architecture
 
-**Frontier Component**
+Frontier sits between backend services and connected edge nodes. Both sides establish outbound long-lived connections to Frontier, then Frontier exposes a unified model for RPC, messaging, and streams.
 
 <img src="./docs/diagram/frontier.png" width="100%">
 
-- _Service End_: The entry point for microservice functions, connecting by default.
-- _Edge End_: The entry point for edge node or client functions.
-- _Publish/Receive_: Publishing and receiving messages.
-- _Call/Register_: Calling and registering functions.
-- _OpenStream/AcceptStream_: Opening and accepting point-to-point streams (connections).
-- _External MQ_: Frontier supports forwarding messages published from edge nodes to external MQ topics based on configuration.
+- _Service End_: Entry point for backend services.
+- _Edge End_: Entry point for edge nodes or clients.
+- _Publish/Receive_: Message publishing and receiving.
+- _Call/Register_: RPC calling and method registration.
+- _OpenStream/AcceptStream_: Point-to-point stream establishment.
+- _External MQ_: Optional forwarding of edge-published messages to external MQ topics.
 
+The default ports are:
 
-Frontier requires both microservices and edge nodes to actively connect to Frontier. The metadata of Service and Edge (receiving topics, RPC, service names, etc.) can be carried during the connection. The default connection ports are:
-
-- :30011: For microservices to connect and obtain Service.
-- :30012: For edge nodes to connect and obtain Edge.
-- :30010: For operations personnel or programs to use the control plane.
+- `:30011` for backend services to connect and obtain Service.
+- `:30012` for edge nodes to connect and obtain Edge.
+- `:30010` for operators or programs using the control plane.
 
 
 ### Functionality
@@ -152,13 +225,13 @@ Frontier requires both microservices and edge nodes to actively connect to Front
 
 **Key design principles include**:
 
-1. All messages, RPCs, and Streams are point-to-point transmissions.
-	- From microservices to edges, the edge node ID must be specified.
-	- From edges to microservices, Frontier routes based on Topic and Method, and finally selects a microservice or external MQ through hashing. The default is hashing based on edgeid, but you can choose random or srcip.
-2. Messages require explicit acknowledgment by the receiver.
-	- To ensure message delivery semantics, the receiver must call msg.Done() or msg.Error(err) to ensure delivery consistency.
-3. Streams opened by the Multiplexer logically represent direct communication between microservices and edge nodes.
-	- Once the other side receives the stream, all functionalities on this stream will directly reach the other side, bypassing Frontier's routing policies.
+1. All messages, RPCs, and streams are point-to-point.
+   - From services to edges, the edge node ID must be specified.
+   - From edges to services, Frontier routes by topic or method, then selects a service or external MQ through hashing. The default hash key is `edgeid`, but `random` and `srcip` are also available.
+2. Messages require explicit completion by the receiver.
+   - Call `msg.Done()` or `msg.Error(err)` to preserve delivery semantics.
+3. Streams opened by the Multiplexer logically represent direct service-to-edge communication.
+   - Once the other side accepts the stream, traffic on that stream bypasses Frontier's higher-level routing rules.
 
 ## Usage
 
@@ -175,7 +248,7 @@ In a single Frontier instance, you can choose the following methods to deploy yo
 ### Docker
 
 ```bash
-docker run -d --name frontier -p 30011:30011 -p 30012:30012 singchia/frontier:1.1.0
+docker run -d --name frontier -p 30011:30011 -p 30012:30012 singchia/frontier:1.2.2
 ```
 
 ### Docker-Compose

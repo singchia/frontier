@@ -1,36 +1,66 @@
 ## 使用
 
+理解 Frontier 最快的方式，不是把它当成一个通用网关，而是把它看成 **service <-> edge 的双向连接层**。
+
+建议按下面顺序阅读：
+
+1. 先建立心智模型
+2. 先跑最贴近你场景的示例
+3. 再复制需要的 Service 侧或 Edge 侧 SDK 用法
+
+### 心智模型
+
+- **Service 侧**连接 `:30011`
+- **Edge 侧**连接 `:30012`
+- **Service -> Edge** 通常需要指定具体 `edgeID`
+- **Edge -> Service** 通常按 Method、Topic 或 ServiceName 路由
+- **Stream** 在逻辑上就是 service 和 edge 之间的直连 `net.Conn`
+
+如果只记住一句话，那就是：
+
+> Frontier 适合“后端服务需要主动触达在线边缘节点，同时边缘节点也需要主动触达后端服务”的系统。
+
 ### 示例
 
-**聊天室**
+先从最贴近你目标的示例开始。
 
-目录[examples/chatroom](../examples/chatroom)下有简单的聊天室示例，仅100行代码实现一个的聊天室功能，可以通过
+#### 聊天室：消息和在线态
+
+目录 [examples/chatroom](../examples/chatroom) 下有一个简单聊天室示例，大约 100 行代码，最适合用来理解：
+
+- service <-> edge 的消息交互
+- 边缘节点上线/离线通知
+- 长连接下的基本交互模型
+
+构建示例程序：
 
 ```
 make examples
 ```
 
-在bin目录下得到```chatroom_service```和```chatroom_egent```可执行程序，运行示例：
+在 `bin` 目录下得到 `chatroom_service` 和 `chatroom_agent` 可执行程序，运行示例：
 
 https://github.com/singchia/frontier/assets/15531166/18b01d96-e30b-450f-9610-917d65259c30
 
-在这个示例你可以看到上线离线通知，消息Publish等功能。
+#### 直播代理：点对点流
 
-**直播**
+目录 [examples/rtmp](../examples/rtmp) 下有一个简单直播代理示例，大约 80 行代码，最适合用来理解：
 
-目录[examples/rtmp](../examples/rtmp)下有简单的直播示例，仅80行代码实现一个的直播代理功能，可以通过
+- service 到 edge 的点对点建流
+- Frontier 不只是做 RPC，也可以做流承载
+- RTMP 这类协议的中继或代理方式
 
-```
-make examples
-```
-
-在bin目录下得到```rtmp_service```和```rtmp_edge```可执行程序，运行后，使用[OBS](https://obsproject.com/)连接rtmp_edge即可直播代理：
+运行后，使用 [OBS](https://obsproject.com/) 连接 `rtmp_edge` 即可做直播代理：
 
 <img src="./diagram/rtmp.png" width="100%">
 
-在这个示例你可以看到Multiplexer和Stream功能。
+#### 应该先跑哪个示例？
 
-### 微服务如何使用
+- 如果你关心命令下发、通知、设备/Agent 消息交互，先看 **chatroom**
+- 如果你关心文件传输、媒体中继或自定义协议代理，先看 **rtmp**
+- 如果你已经明确要接 SDK，继续看下面的代码片段
+
+### Service 侧常见模式
 
 **微服务侧获取Service**：
 
@@ -318,7 +348,7 @@ func echo(ctx context.Context, req geminio.Request, rsp geminio.Response) {
 }
 ```
 
-### 边缘节点/客户端如何使用
+### Edge 侧常见模式
 
 **边缘节点侧获取Edge**：
 
@@ -582,5 +612,3 @@ curl -X GET http://127.0.0.1:30010/v1/services/rpcs?service_id={service_id}
 ```
 
 **注意**：gRPC/Rest依赖dao backend，有两个选项```buntdb```和```sqlite```，都是使用的in-memory模式，为性能考虑，默认backend使用buntdb，并且列表接口返回字段count永远是-1，当你配置backend为sqlite3时，会认为你对在Frontier上连接的微服务和边缘节点有强烈的OLTP需求，例如在Frontier上封装web，此时count才会返回总数。
-
-
