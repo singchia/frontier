@@ -1,0 +1,8 @@
+.git
+.playwright-mcp
+website/node_modules
+website/.next
+website/screenshots
+website/.vercel
+website/.env*
+**/.DS_Store

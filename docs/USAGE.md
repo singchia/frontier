@@ -1,34 +1,66 @@
 ## Usage
 
+Frontier is easiest to understand if you think about it as **service <-> edge connectivity**, not as a generic gateway.
+
+Use this guide in the following order:
+
+1. Understand the mental model
+2. Run the example closest to your use case
+3. Copy the SDK pattern you need on the service side or edge side
+
+### Mental Model
+
+- **Service side** connects to `:30011`
+- **Edge side** connects to `:30012`
+- **Service -> Edge** operations usually target a specific `edgeID`
+- **Edge -> Service** operations route by declared method, topic, or service name
+- **Streams** behave like direct `net.Conn` links between service and edge
+
+If you only remember one thing, remember this:
+
+> Frontier is for systems where backend services need to actively reach online edge nodes, and edge nodes also need to actively reach backend services.
+
 ### Examples
 
-In the [examples/chatroom](../examples/chatroom) directory, there is a simple chatroom example implemented in just 100 lines of code. You can get the executable programs chatroom\_service and chatroom\_agent by running:
+Start with the example that matches the job you want Frontier to do.
+
+#### Chatroom: messaging and presence
+
+In [examples/chatroom](../examples/chatroom), there is a simple chatroom example implemented in about 100 lines of code. It is the fastest way to understand:
+
+- service <-> edge messaging
+- edge online/offline notifications
+- the basic long-lived connection model
+
+Build the example binaries:
 
 ```
 make examples
 ```
 
-Run the example:
+Run the demo:
 
 https://github.com/singchia/frontier/assets/15531166/18b01d96-e30b-450f-9610-917d65259c30
 
-In this example, you can see features like online/offline notifications and message publishing.
+#### RTMP: point-to-point streams
 
-**Live Streaming**
+In [examples/rtmp](../examples/rtmp), there is a simple live streaming example implemented in about 80 lines of code. It is the fastest way to understand:
 
-In the [examples/rtmp](../examples/rtmp) directory, there is a simple live streaming example implemented in just 80 lines of code. You can get the executable programs `rtmp_service` and `rtmp_edge` by running:
-
-```
-make examples
-```
+- service -> edge stream opening
+- using Frontier as a stream transport rather than only RPC
+- traffic relay for protocols such as RTMP
 
 After running, use [OBS](https://obsproject.com/) to connect to `rtmp_edge` for live streaming proxy:
 
 <img src="./diagram/rtmp.png" width="100%">
 
-In this example, you can see Multiplexer and Stream functionality.
+#### Which example should you start with?
 
-### Using Frontier in Microservices
+- If you care about commands, notifications, or device/agent messaging, start with **chatroom**
+- If you care about file transfer, media relay, or custom protocol tunneling, start with **rtmp**
+- If you want production integration patterns, continue with the SDK snippets below
+
+### Service-Side SDK Patterns
 
 **Getting Service on the Microservice Side**:
 
@@ -313,7 +345,7 @@ func echo(ctx context.Context, req geminio.Request, rsp geminio.Response) {
 }
 ```
 
-### Using Frontier on Edge Nodes
+### Edge-Side SDK Patterns
 
 **Getting Edge on the Edge Node Side**:
 
@@ -575,4 +607,3 @@ curl -X GET http://127.0.0.1:30010/v1/services/rpcs?service_id={service_id}
 ```
 
 Note: gRPC/REST depends on the DAO backend, with two options: ```buntdb``` and ```sqlite3```. Both use in-memory mode. For performance considerations, the default backend uses buntdb, and the count field in the list interface always returns -1. When you configure the backend to ```sqlite3```, it means you have a strong OLTP requirement for connected microservices and edge nodes on Frontier, such as encapsulating the web on Frontier. In this case, the count will return the total number.
-

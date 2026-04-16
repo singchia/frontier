@@ -34,3 +34,4 @@ bin/
 # tmp file on linux,
 *swp
 *~
+.vercel
