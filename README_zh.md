@@ -23,7 +23,7 @@ Frontier 是一个使用 Go 编写的开源网关，专门用于 **service <-> e
   <img src="./docs/diagram/frontier.png" width="100%" alt="Frontier 架构总览">
 </p>
 
-## 为什么别人会 Star Frontier
+## Frontier 的独特之处
 
 - **不是 API Gateway 那一类产品**：Frontier 解决的是 backend-to-edge 通信，不只是南北向 HTTP 流量。
 - **不是单纯 MQ**：它把双向 RPC、消息和流统一到同一套连接模型里。
@@ -57,7 +57,7 @@ Frontier 是一个使用 Go 编写的开源网关，专门用于 **service <-> e
 ## 目录
 
 - [为什么是 Frontier](#为什么是-frontier)
-- [为什么别人会 Star Frontier](#为什么别人会-star-frontier)
+- [Frontier 的独特之处](#frontier-的独特之处)
 - [你可以拿它做什么](#你可以拿它做什么)
 - [一眼看懂](#一眼看懂)
 - [什么时候适合用 Frontier](#什么时候适合用-frontier)

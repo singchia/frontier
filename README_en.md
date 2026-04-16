@@ -23,7 +23,7 @@ It is built for systems where both sides stay online and need to actively call, 
   <img src="./docs/diagram/frontier.png" width="100%" alt="Frontier architecture overview">
 </p>
 
-## Why People Star Frontier
+## What Makes Frontier Different
 
 - **Different from API gateways**: Frontier is designed for backend-to-edge communication, not just north-south HTTP traffic.
 - **Different from MQ**: It gives you bidirectional RPC, messaging, and streams in one connectivity model.
@@ -57,7 +57,7 @@ It is built for systems where both sides stay online and need to actively call, 
 ## Table of Contents
 
 - [Why Frontier](#why-frontier)
-- [Why People Star Frontier](#why-people-star-frontier)
+- [What Makes Frontier Different](#what-makes-frontier-different)
 - [What You Can Build](#what-you-can-build)
 - [At A Glance](#at-a-glance)
 - [When to Use Frontier](#when-to-use-frontier)
