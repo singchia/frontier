@@ -13,8 +13,6 @@ English | [简体中文](./README_zh.md)
 
 </div>
 
-# Frontier
-
 > Bidirectional service-to-edge gateway for long-lived connections
 
 Frontier is an open-source gateway written in Go for **service <-> edge communication**. It lets backend services and edge nodes talk to each other over long-lived connections, with built-in **bidirectional RPC**, **messaging**, and **point-to-point streams**.
