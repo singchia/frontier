@@ -21,9 +21,47 @@ Frontier is an open-source gateway written in Go for **service <-> edge communic
 
 It is built for systems where both sides stay online and need to actively call, notify, or open streams to each other. Frontier is **not a reverse proxy** and **not just a message broker**. It is infrastructure for addressing and operating large fleets of connected edge nodes from backend services.
 
+<p align="center">
+  <img src="./docs/diagram/frontier.png" width="100%" alt="Frontier architecture overview">
+</p>
+
+## Why People Star Frontier
+
+- **Different from API gateways**: Frontier is designed for backend-to-edge communication, not just north-south HTTP traffic.
+- **Different from MQ**: It gives you bidirectional RPC, messaging, and streams in one connectivity model.
+- **Different from tunnels**: Services can address a specific online edge node instead of only exposing a port.
+- **Made for real fleets**: Works for devices, agents, clients, and remote connectors that stay online for a long time.
+
+## What You Can Build
+
+<table>
+  <tr>
+    <td width="50%">
+      <img src="./docs/diagram/rtmp.png" alt="Frontier stream relay example">
+      <p><strong>Traffic relay and media streaming</strong><br>Open point-to-point streams for RTMP relay, file transfer, proxy traffic, or other custom protocols.</p>
+    </td>
+    <td width="50%">
+      <img src="./docs/diagram/stream.png" alt="Frontier stream architecture">
+      <p><strong>Remote agents and device fleets</strong><br>Keep edge nodes online, route service calls to a specific edge, and let the edge call backend services back.</p>
+    </td>
+  </tr>
+</table>
+
+## At A Glance
+
+| You need to... | Frontier gives you... |
+| --- | --- |
+| Call a specific online device or agent from your backend | Service -> Edge RPC and messaging over long-lived connections |
+| Let edge nodes initiate calls without opening inbound ports | Edge -> Service RPC on the same connection model |
+| Move bytes, not just request/response payloads | Point-to-point streams between service and edge |
+| Run one control plane for a large connected fleet | Presence, lifecycle hooks, control APIs, clustering |
+
 ## Table of Contents
 
 - [Why Frontier](#why-frontier)
+- [Why People Star Frontier](#why-people-star-frontier)
+- [What You Can Build](#what-you-can-build)
+- [At A Glance](#at-a-glance)
 - [When to Use Frontier](#when-to-use-frontier)
 - [Real-World Use Cases](#real-world-use-cases)
 - [Comparison](#comparison)
@@ -55,6 +93,10 @@ Frontier is optimized for a different model:
 - edge nodes calling backend services without exposing inbound ports
 - opening direct streams between services and edge nodes when RPC is not enough
 
+<p align="center">
+  <img src="./docs/diagram/frontlas.png" width="88%" alt="Frontier clustering with Frontlas">
+</p>
+
 ## When to Use Frontier
 
 Use Frontier if you need:
@@ -80,6 +122,15 @@ Do not use Frontier if:
 - Game backends talking to online clients or edge nodes
 - Zero-trust internal access based on connector-style agents
 - File transfer, media relay, or traffic proxy over point-to-point streams
+
+## Use Cases In One Screen
+
+| Scenario | Why Frontier fits |
+| --- | --- |
+| Device control plane | Address a specific online edge node, push commands, receive state, and keep the link alive |
+| Remote connector platform | Let connectors dial out, avoid inbound exposure, and keep service-side routing simple |
+| Real-time apps | Maintain long-lived sessions and combine notifications, RPC, and streams in one path |
+| Internal zero-trust access | Use agent-style edges as the last-mile bridge between backend systems and private resources |
 
 ## Comparison
 
