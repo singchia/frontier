@@ -2,7 +2,6 @@ package config
 
 import (
 	"encoding/json"
-	"flag"
 	"io"
 	"net"
 	"os"
@@ -13,7 +12,6 @@ import (
 	"github.com/singchia/frontier/pkg/config"
 	"github.com/spf13/pflag"
 	"gopkg.in/yaml.v2"
-	"k8s.io/klog/v2"
 )
 
 // daemon related
@@ -133,6 +131,8 @@ type FrontierManager struct {
 }
 
 type Configuration struct {
+	Log config.Log `yaml:"log,omitempty" json:"log"`
+
 	Daemon Daemon `yaml:"daemon" json:"daemon"`
 
 	ControlPlane ControlPlane `yaml:"control_plane" json:"control_plane"`
@@ -145,62 +145,69 @@ type Configuration struct {
 func Parse() (*Configuration, error) {
 	var (
 		argConfigFile         = pflag.String("config", "", "config file, default not configured")
+		argLogLevel           = pflag.String("loglevel", "", "log level: debug, info, warn, error")
+		argLogOutput          = pflag.String("log-output", "", "log output: stdout, stderr, file, both")
+		argLogFormat          = pflag.String("log-format", "", "log format: text, json")
+		argLogFile            = pflag.String("log-file", "", "log file path, used when output is file or both")
 		argDaemonRLimitNofile = pflag.Int("daemon-rlimit-nofile", -1, "SetRLimit for number of file of this daemon, default: -1 means ignore")
 		// TODO more command-line args
 
-		config *Configuration
+		conf *Configuration
 	)
 	pflag.Lookup("daemon-rlimit-nofile").NoOptDefVal = "1048576"
-
-	// set klog
-	klogFlags := flag.NewFlagSet("klog", flag.ExitOnError)
-	klog.InitFlags(klogFlags)
-
-	// sync the glog and klog flags.
-	pflag.CommandLine.VisitAll(func(f1 *pflag.Flag) {
-		f2 := klogFlags.Lookup(f1.Name)
-		if f2 != nil {
-			value := f1.Value.String()
-			if err := f2.Value.Set(value); err != nil {
-				klog.Fatal(err, "failed to set flag")
-				return
-			}
-		}
-	})
-
-	pflag.CommandLine.AddGoFlagSet(klogFlags)
-	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	pflag.Parse()
 
 	// config file
 	if *argConfigFile != "" {
-		// TODO the command-line is prior to config file
 		data, err := os.ReadFile(*argConfigFile)
 		if err != nil {
 			return nil, err
 		}
-		config = &Configuration{}
-		if err = yaml.Unmarshal(data, config); err != nil {
+		conf = &Configuration{}
+		if err = yaml.Unmarshal(data, conf); err != nil {
 			return nil, err
 		}
 	}
 
-	if config == nil {
-		config = &Configuration{}
+	if conf == nil {
+		conf = &Configuration{}
 	}
+
+	// env overrides for log (priority: flag > env > yaml > default)
+	config.ApplyLogEnvOverrides(&conf.Log)
+
+	// flag overrides for log (highest priority)
+	if *argLogLevel != "" {
+		conf.Log.Level = *argLogLevel
+	}
+	if *argLogOutput != "" {
+		conf.Log.Output = *argLogOutput
+	}
+	if *argLogFormat != "" {
+		conf.Log.Format = *argLogFormat
+	}
+	if *argLogFile != "" {
+		conf.Log.File.Path = *argLogFile
+	}
+
+	// setup unified logging
+	if err := config.SetupLogging(&conf.Log, "frontlas"); err != nil {
+		return nil, err
+	}
+
 	// daemon
-	config.Daemon.RLimit.NumFile = *argDaemonRLimitNofile
-	if config.Daemon.PProf.CPUProfileRate == 0 {
-		config.Daemon.PProf.CPUProfileRate = 10000
+	conf.Daemon.RLimit.NumFile = *argDaemonRLimitNofile
+	if conf.Daemon.PProf.CPUProfileRate == 0 {
+		conf.Daemon.PProf.CPUProfileRate = 10000
 	}
-	// env, set only exists
+	// env overrides for network
 	cpPort := os.Getenv("FRONTLAS_CONTROLPLANE_PORT")
 	if cpPort != "" {
-		host, _, err := net.SplitHostPort(config.ControlPlane.Listen.Addr)
+		host, _, err := net.SplitHostPort(conf.ControlPlane.Listen.Addr)
 		if err != nil {
 			return nil, err
 		}
-		config.ControlPlane.Listen.Addr = net.JoinHostPort(host, cpPort)
+		conf.ControlPlane.Listen.Addr = net.JoinHostPort(host, cpPort)
 	}
 	redisType := os.Getenv("REDIS_TYPE")
 	redisAddrs := os.Getenv("REDIS_ADDRS")
@@ -215,30 +222,42 @@ func Parse() (*Configuration, error) {
 		if err != nil {
 			return nil, err
 		}
-		config.Redis.Standalone.DB = db
-		config.Redis.Standalone.Addr = addrs[0]
-		config.Redis.Username = redisUser
-		config.Redis.Password = redisPassword
-		config.Redis.Mode = redisType
+		conf.Redis.Standalone.DB = db
+		conf.Redis.Standalone.Addr = addrs[0]
+		conf.Redis.Username = redisUser
+		conf.Redis.Password = redisPassword
+		conf.Redis.Mode = redisType
 	case "sentinel":
 		addrs := strings.Split(redisAddrs, ",")
-		config.Redis.Sentinel.Addrs = addrs
-		config.Redis.Sentinel.MasterName = redisMasterName
-		config.Redis.Username = redisUser
-		config.Redis.Password = redisPassword
-		config.Redis.Mode = redisType
+		conf.Redis.Sentinel.Addrs = addrs
+		conf.Redis.Sentinel.MasterName = redisMasterName
+		conf.Redis.Username = redisUser
+		conf.Redis.Password = redisPassword
+		conf.Redis.Mode = redisType
 	case "cluster":
 		addrs := strings.Split(redisAddrs, ",")
-		config.Redis.Cluster.Addrs = addrs
-		config.Redis.Username = redisUser
-		config.Redis.Password = redisPassword
-		config.Redis.Mode = redisType
+		conf.Redis.Cluster.Addrs = addrs
+		conf.Redis.Username = redisUser
+		conf.Redis.Password = redisPassword
+		conf.Redis.Mode = redisType
 	}
-	return config, nil
+	return conf, nil
 }
 
 func genAllConfig(writer io.Writer) error {
 	conf := &Configuration{
+		Log: config.Log{
+			Level:  "info",
+			Output: "stdout",
+			Format: "text",
+			File: config.LogFile{
+				Path:       "/var/log/frontier/frontlas.log",
+				MaxSize:    100,
+				MaxBackups: 5,
+				MaxAge:     30,
+				Compress:   false,
+			},
+		},
 		Daemon: Daemon{
 			RLimit: RLimit{
 				NumFile: 1024,

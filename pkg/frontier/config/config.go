@@ -2,19 +2,15 @@ package config
 
 import (
 	"encoding/json"
-	"flag"
-	"fmt"
 	"io"
 	"net"
 	"os"
 
 	"github.com/IBM/sarama"
 	armio "github.com/jumboframes/armorigo/io"
-	"github.com/jumboframes/armorigo/log"
 	"github.com/singchia/frontier/pkg/config"
 	"github.com/spf13/pflag"
 	"gopkg.in/yaml.v2"
-	"k8s.io/klog/v2"
 )
 
 // daemon related
@@ -252,6 +248,8 @@ type Frontlas struct {
 }
 
 type Configuration struct {
+	Log config.Log `yaml:"log,omitempty" json:"log"`
+
 	Daemon Daemon `yaml:"daemon,omitempty" json:"daemon"`
 
 	Edgebound Edgebound `yaml:"edgebound" json:"edgebound"`
@@ -273,95 +271,104 @@ type Configuration struct {
 func Parse() (*Configuration, error) {
 	var (
 		argConfigFile         = pflag.String("config", "", "config file, default not configured")
-		argArmorigoLogLevel   = pflag.String("loglevel", "info", "log level for armorigo log")
+		argLogLevel           = pflag.String("loglevel", "", "log level: debug, info, warn, error")
+		argLogOutput          = pflag.String("log-output", "", "log output: stdout, stderr, file, both")
+		argLogFormat          = pflag.String("log-format", "", "log format: text, json")
+		argLogFile            = pflag.String("log-file", "", "log file path, used when output is file or both")
 		argDaemonRLimitNofile = pflag.Int("daemon-rlimit-nofile", -1, "SetRLimit for number of file of this daemon, default: -1 means ignore")
 		// TODO more command-line args
 
-		config *Configuration
+		conf *Configuration
 	)
 	pflag.Lookup("daemon-rlimit-nofile").NoOptDefVal = "1048576"
-
-	// set klog
-	klogFlags := flag.NewFlagSet("klog", flag.ExitOnError)
-	klog.InitFlags(klogFlags)
-
-	// sync the glog and klog flags.
-	pflag.CommandLine.VisitAll(func(f1 *pflag.Flag) {
-		f2 := klogFlags.Lookup(f1.Name)
-		if f2 != nil {
-			value := f1.Value.String()
-			if err := f2.Value.Set(value); err != nil {
-				klog.Fatal(err, "failed to set flag")
-				return
-			}
-		}
-	})
-
-	pflag.CommandLine.AddGoFlagSet(klogFlags)
-	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	pflag.Parse()
-
-	// armorigo log
-	level, err := log.ParseLevel(*argArmorigoLogLevel)
-	if err != nil {
-		fmt.Println("parse log level err:", err)
-		return nil, err
-	}
-	log.SetLevel(level)
-	log.SetOutput(os.Stdout)
 
 	// config file
 	if *argConfigFile != "" {
-		// TODO the command-line is prior to config file
 		data, err := os.ReadFile(*argConfigFile)
 		if err != nil {
 			return nil, err
 		}
-		config = &Configuration{}
-		if err = yaml.Unmarshal(data, config); err != nil {
+		conf = &Configuration{}
+		if err = yaml.Unmarshal(data, conf); err != nil {
 			return nil, err
 		}
 	}
 
-	if config == nil {
-		config = &Configuration{}
+	if conf == nil {
+		conf = &Configuration{}
 	}
+
+	// env overrides for log (priority: flag > env > yaml > default)
+	config.ApplyLogEnvOverrides(&conf.Log)
+
+	// flag overrides for log (highest priority)
+	if *argLogLevel != "" {
+		conf.Log.Level = *argLogLevel
+	}
+	if *argLogOutput != "" {
+		conf.Log.Output = *argLogOutput
+	}
+	if *argLogFormat != "" {
+		conf.Log.Format = *argLogFormat
+	}
+	if *argLogFile != "" {
+		conf.Log.File.Path = *argLogFile
+	}
+
+	// setup unified logging
+	if err := config.SetupLogging(&conf.Log, "frontier"); err != nil {
+		return nil, err
+	}
+
 	// daemon
-	config.Daemon.RLimit.NumFile = *argDaemonRLimitNofile
-	if config.Daemon.PProf.CPUProfileRate == 0 {
-		config.Daemon.PProf.CPUProfileRate = 10000
+	conf.Daemon.RLimit.NumFile = *argDaemonRLimitNofile
+	if conf.Daemon.PProf.CPUProfileRate == 0 {
+		conf.Daemon.PProf.CPUProfileRate = 10000
 	}
-	// env
+	// env overrides for network
 	sbPort := os.Getenv("FRONTIER_SERVICEBOUND_PORT")
 	if sbPort != "" {
-		host, _, err := net.SplitHostPort(config.Servicebound.Listen.Addr)
+		host, _, err := net.SplitHostPort(conf.Servicebound.Listen.Addr)
 		if err != nil {
 			return nil, err
 		}
-		config.Servicebound.Listen.Addr = net.JoinHostPort(host, sbPort)
+		conf.Servicebound.Listen.Addr = net.JoinHostPort(host, sbPort)
 	}
 	ebPort := os.Getenv("FRONTIER_EDGEBOUND_PORT")
 	if ebPort != "" {
-		host, _, err := net.SplitHostPort(config.Edgebound.Listen.Addr)
+		host, _, err := net.SplitHostPort(conf.Edgebound.Listen.Addr)
 		if err != nil {
 			return nil, err
 		}
-		config.Edgebound.Listen.Addr = net.JoinHostPort(host, ebPort)
+		conf.Edgebound.Listen.Addr = net.JoinHostPort(host, ebPort)
 	}
 	nodeName := os.Getenv("NODE_NAME")
 	if nodeName != "" {
-		config.Daemon.FrontierID = "frontier-" + nodeName
+		conf.Daemon.FrontierID = "frontier-" + nodeName
 	}
 	frontlasAddr := os.Getenv("FRONTLAS_ADDR")
 	if frontlasAddr != "" {
-		config.Frontlas.Enable = true
-		config.Frontlas.Dial.Addrs = []string{frontlasAddr}
+		conf.Frontlas.Enable = true
+		conf.Frontlas.Dial.Addrs = []string{frontlasAddr}
 	}
-	return config, nil
+	return conf, nil
 }
 
 func genAllConfig(writer io.Writer) error {
 	conf := &Configuration{
+		Log: config.Log{
+			Level:  "info",
+			Output: "stdout",
+			Format: "text",
+			File: config.LogFile{
+				Path:       "/var/log/frontier/frontier.log",
+				MaxSize:    100,
+				MaxBackups: 5,
+				MaxAge:     30,
+				Compress:   false,
+			},
+		},
 		Daemon: Daemon{
 			RLimit: RLimit{
 				Enable:  true,

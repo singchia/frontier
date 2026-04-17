@@ -31,6 +31,16 @@ frontier_manager:
       enable: false
       insecure_skip_verify: false
       mtls: false
+log:
+  file:
+    compress: false
+    max_age: 30
+    max_backups: 5
+    max_size: 100
+    path: /var/log/frontier/frontlas.log
+  format: text
+  level: info
+  output: stdout
 redis:
   client_name: ""
   cluster:

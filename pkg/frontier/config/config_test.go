@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/singchia/frontier/pkg/config"
 	"gopkg.in/yaml.v2"
 )
 
@@ -17,9 +18,23 @@ func TestParseFlags(t *testing.T) {
 		{
 			name: "tryrun",
 			want: Configuration{
+				Log: config.Log{
+					Level:  "info",
+					Output: "stdout",
+					Format: "text",
+					File: config.LogFile{
+						Path:       "/var/log/frontier/frontier.log",
+						MaxSize:    100,
+						MaxBackups: 5,
+						MaxAge:     30,
+					},
+				},
 				Daemon: Daemon{
 					RLimit: RLimit{
 						NumFile: -1,
+					},
+					PProf: PProf{
+						CPUProfileRate: 10000,
 					},
 				},
 			},
