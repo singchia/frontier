@@ -59,9 +59,14 @@ func main() {
 
 	backoff := time.Second
 	for ctx.Err() == nil {
-		err := runStream(cli, *serviceName, *pairID, udpConn, &lastSrc, logger)
+		opened, err := runStream(cli, *serviceName, *pairID, udpConn, &lastSrc, logger)
 		if ctx.Err() != nil {
 			return
+		}
+		if opened {
+			// Healthy session ended; next attempt should retry promptly
+			// rather than inheriting the open-failure backoff from earlier.
+			backoff = time.Second
 		}
 		logger.Printf("stream closed: %v (reconnect in %s)", err, backoff)
 		select {
@@ -87,21 +92,23 @@ func handleSignals(cancel context.CancelFunc, logger *log.Logger, udpConn *net.U
 
 // runStream runs one stream lifecycle: open, write pair-id, shuttle UDP <-> stream,
 // and return when any side errors out. The caller loops to reopen.
+// The first return value reports whether OpenStream succeeded, so the caller
+// can reset backoff after a healthy session.
 func runStream(
 	cli edge.Edge,
 	serviceName, pairID string,
 	udpConn *net.UDPConn,
 	lastSrc *atomic.Pointer[net.UDPAddr],
 	logger *log.Logger,
-) error {
+) (bool, error) {
 	stream, err := cli.OpenStream(serviceName)
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer stream.Close()
 
 	if err := frame.WriteFrame(stream, []byte(pairID)); err != nil {
-		return err
+		return true, err
 	}
 	logger.Printf("stream opened, pair-id=%q sent", pairID)
 
@@ -157,5 +164,5 @@ func runStream(
 	case <-errCh:
 	default:
 	}
-	return err
+	return true, err
 }
