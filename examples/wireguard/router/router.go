@@ -75,7 +75,7 @@ func main() {
 		stream, err := svc.AcceptStream()
 		if err != nil {
 			if ctx.Err() != nil {
-				return
+				break
 			}
 			logger.Printf("accept stream: %v", err)
 			time.Sleep(time.Second)
@@ -83,6 +83,7 @@ func main() {
 		}
 		go r.handleStream(stream)
 	}
+	r.closeAll()
 }
 
 func handleSignals(cancel context.CancelFunc, logger *log.Logger, svc service.Service) {
@@ -117,21 +118,37 @@ func (r *router) handleStream(s geminio.Stream) {
 	bridge(s, other, r.logger)
 }
 
+// closeAll drains the waiting map on shutdown: stop each pending stream's
+// timeout timer and close the stream. Active bridges are torn down
+// indirectly by closing the underlying service (svc.Close in handleSignals),
+// which propagates I/O errors to the pump goroutines.
+func (r *router) closeAll() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for id, p := range r.waiting {
+		p.timer.Stop()
+		p.stream.Close()
+		delete(r.waiting, id)
+	}
+}
+
 // matchOrPark returns (other, true) if a pending partner exists (removing it
 // from the waiting map and cancelling its timeout); returns (nil, false)
-// after parking s as the new pending partner. A third stream with the same
-// id is rejected by closing it and leaving the existing pending entry alone.
+// after parking s as the new pending partner.
+//
+// Pairing is arrival-order: the first two streams sharing a pair-id form a
+// bridge; once bridged, the map entry is consumed, so a later stream with
+// the same pair-id parks afresh and awaits its own partner. This is
+// deliberately NOT "reject third stream" — edges reconnecting after a
+// transient fault need to re-park and re-pair, and the reject semantics
+// would prevent recovery.
 func (r *router) matchOrPark(pairID string, s geminio.Stream) (geminio.Stream, bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	if existing, ok := r.waiting[pairID]; ok {
-		// Either the mate has arrived, or a third conflicting stream has.
-		// Distinguish by streamID: if the pending entry is a live stream,
-		// we pair with it. There is no "third stream" state tracked — the
-		// first matched pair consumes the pending entry.
 		if existing.stream == s {
-			// Should never happen; defensive.
+			// Defensive: a stream cannot pair with itself.
 			return nil, false
 		}
 		existing.timer.Stop()
