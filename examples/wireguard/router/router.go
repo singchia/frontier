@@ -48,7 +48,7 @@ func newRouter(pairTimeout time.Duration, maxPairIDLen int, logger *log.Logger) 
 
 func main() {
 	frontierAddr := pflag.String("frontier-addr", "127.0.0.1:30011", "frontier servicebound addr")
-	frontierNet := pflag.String("frontier-network", "udp", "tcp | udp")
+	frontierNet := pflag.String("frontier-network", "tcp", "tcp | udp (udp is experimental; see README)")
 	serviceName := pflag.String("service-name", "wg", "service name to register")
 	pairTimeout := pflag.Duration("pair-timeout", 60*time.Second, "max time a stream may wait for its peer")
 	maxPairIDLen := pflag.Int("max-pair-id-len", 256, "sanity limit on first-frame pair-id length")

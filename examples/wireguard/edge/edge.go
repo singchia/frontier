@@ -23,7 +23,7 @@ import (
 
 func main() {
 	frontierAddr := pflag.String("frontier-addr", "127.0.0.1:30012", "frontier edgebound addr")
-	frontierNet := pflag.String("frontier-network", "udp", "tcp | udp")
+	frontierNet := pflag.String("frontier-network", "tcp", "tcp | udp (udp is experimental; see README)")
 	listenAddr := pflag.String("listen", "127.0.0.1:51820", "UDP listen addr for local wg peer")
 	pairID := pflag.String("pair-id", "hello", "pairing identifier (both sides must match)")
 	serviceName := pflag.String("service-name", "wg", "frontier service name for router")
