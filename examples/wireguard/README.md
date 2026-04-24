@@ -15,7 +15,7 @@ networks), this example lets them meet through frontier as a relay.
 | udpping test helper | ✅ works |
 | demo script (TCP frontier transport) | ✅ verified end-to-end |
 | UDP frontier transport | ⚠️ experimental — geminio handshake currently times out over the pion-wrapped UDP listener; flag is plumbed but the path doesn't complete handshake. Tracked as a frontier-framework issue, not an example bug. |
-| real WireGuard walkthrough | 📝 documented below, not automated |
+| real WireGuard verification | ✅ automated on Linux via netns; 📝 walkthrough retained below |
 
 Default `--frontier-network` on all three binaries is `tcp`. Set to `udp`
 once the framework-side handshake issue is resolved.
@@ -43,7 +43,12 @@ From the repo root:
 make && make -C examples/wireguard all && ./examples/wireguard/scripts/demo.sh
 ```
 
-Expected output within a few seconds:
+Behavior now depends on the host OS:
+
+- macOS: keeps the original lightweight `udpping` send/echo demo running until Ctrl-C.
+- Linux: if run as `root` with `ip`, `wg`, and `ping` installed, creates two temporary network namespaces, brings up real `wg0` interfaces inside them, and exits after verifying end-to-end connectivity with `ping`. Pass `--hold` to keep the demo running after verification, or `--detach` to run it in the background.
+
+Expected macOS output within a few seconds:
 
 ```
 [udpping send] recv 7 bytes from 127.0.0.1:51820: "ping #1"
@@ -52,19 +57,32 @@ Expected output within a few seconds:
 ...
 ```
 
-Ctrl-C tears everything down. Per-process logs land under the `logs:` path
+Expected Linux output after a few seconds:
+
+```text
+mode: linux real WireGuard (netns)
+real WireGuard verification succeeded
+```
+
+Ctrl-C tears the macOS demo down. Linux mode is self-cleaning and removes its
+temporary namespaces on exit. Per-process logs land under the `logs:` path
 printed on startup (a mktemp dir under `$TMPDIR`).
 
-The script launches: `frontier` (TCP config `etc/frontier.yaml`),
+The macOS path launches: `frontier` (TCP config `etc/frontier.yaml`),
 `wg-router`, two `wg-edge` instances (ports 51820 / 51821, same
 `--pair-id demo`), and two `udpping` processes (one `send`, one `echo`).
-The path exercises:
+That path exercises:
 
 ```
 udpping(send) → wg-edge-A → frontier → wg-router → frontier → wg-edge-B → udpping(echo)
                                                                               │
 udpping(send) ← wg-edge-A ← frontier ← wg-router ← frontier ← wg-edge-B ←─────┘
 ```
+
+The Linux path launches `frontier` + `wg-router` in the host namespace, runs
+one `wg-edge` inside each temporary namespace, then configures a real
+WireGuard peer (`wg0`) per namespace with generated keypairs and verifies
+traffic over `10.44.0.0/24`.
 
 ### Piecewise build
 
@@ -74,7 +92,12 @@ If you prefer running build steps individually:
 make                                  # build bin/frontier
 make -C examples/wireguard all        # build wg-edge, wg-router, udpping
 ./examples/wireguard/scripts/demo.sh  # run the demo
+./examples/wireguard/scripts/demo.sh --hold  # Linux: keep it running after verify
+./examples/wireguard/scripts/demo.sh --detach  # run in background; see console.log in logs dir
 ```
+
+On Linux, rerun the last command with `sudo` so the script can create
+namespaces and WireGuard interfaces.
 
 ### Running tests
 
