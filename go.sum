@@ -152,11 +152,11 @@ github.com/redis/go-redis/v9 v9.5.5 h1:51VEyMF8eOO+NUHFm8fpg+IOc1xFuFOhxs3R+kPu1
 github.com/redis/go-redis/v9 v9.5.5/go.mod h1:hdY0cQFCN4fnSYT6TkisLufl/4W5UIXyv0b/CLO2V2M=
 github.com/rogpeppe/go-internal v1.10.0 h1:TMyTOH3F/DB16zRVcYyreMH6GnZZrwQVAoYjRBZyWFQ=
 github.com/rogpeppe/go-internal v1.10.0/go.mod h1:UQnix2H7Ngw/k4C5ijL5+65zddjncjaFoBhdsK/akog=
-github.com/singchia/geminio v1.3.0-rc.1 h1:kD62aBXU/Vh30nh3od6ptuc9yB7Zc7jyikLJiHU6Qis=
-github.com/singchia/geminio v1.3.0-rc.1/go.mod h1:Rt3a+5n4UzJajzDxEBWPeql6PfMINJAuO95Y95FXqh0=
+github.com/singchia/geminio v1.3.0-rc.2 h1:pkkRE7oQ6R255dgJji+30p8EvgwYV0VzmhhQj2reEcc=
+github.com/singchia/geminio v1.3.0-rc.2/go.mod h1:CFbCOY5tjr3Y7V2ceV6k98/pAqFeQwov4mshqn6gfVA=
 github.com/singchia/go-timer/v2 v2.0.3/go.mod h1:PgkEQc6io8slCUiT5rHzWKU4/P2HXHWk3WWfijZXAf4=
-github.com/singchia/go-timer/v2 v2.2.1 h1:gJucmL99fkuNzGk2AfNPFpa1X3/4+aGO21KkjFAG624=
-github.com/singchia/go-timer/v2 v2.2.1/go.mod h1:PgkEQc6io8slCUiT5rHzWKU4/P2HXHWk3WWfijZXAf4=
+github.com/singchia/go-timer/v2 v2.2.2 h1:r0VPTHfKMPv2MZfKDSG/aXsHYfmR0+GVyXZLhf53vds=
+github.com/singchia/go-timer/v2 v2.2.2/go.mod h1:PgkEQc6io8slCUiT5rHzWKU4/P2HXHWk3WWfijZXAf4=
 github.com/singchia/joy4 v0.0.0-20240621074108-53a2b0132ec6 h1:B9MVqDiyqKAjHmYYFNjOPYHqhml8rA1ogKs8rYTfZ00=
 github.com/singchia/joy4 v0.0.0-20240621074108-53a2b0132ec6/go.mod h1:apGwjKmzM7JlKFbd/KANpq6T8Y5Ntr8Jjhq1BmKU/FA=
 github.com/singchia/yafsm v1.0.1 h1:TTDSX7SBCr2YNdv/DZ76LjTer0rYwm7IPt24odNymUs=
