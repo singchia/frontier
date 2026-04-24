@@ -3,15 +3,27 @@ package utils
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"net"
 	"os"
 
+	"github.com/pion/transport/v2/udp"
 	"github.com/singchia/frontier/pkg/config"
 	"github.com/singchia/frontier/pkg/security"
 	"k8s.io/klog/v2"
 )
 
 func Listen(listen *config.Listen) (net.Listener, error) {
+	switch listen.Network {
+	case "tcp":
+		return listenTCP(listen)
+	case "udp":
+		return listenUDP(listen)
+	}
+	return nil, fmt.Errorf("unsupported network: %s", listen.Network)
+}
+
+func listenTCP(listen *config.Listen) (net.Listener, error) {
 	var (
 		ln      net.Listener
 		network string = listen.Network
@@ -76,4 +88,13 @@ func Listen(listen *config.Listen) (net.Listener, error) {
 		}
 	}
 	return ln, nil
+}
+
+func listenUDP(listen *config.Listen) (net.Listener, error) {
+	addr, err := net.ResolveUDPAddr(listen.Network, listen.Addr)
+	if err != nil {
+		klog.Errorf("listen resolve udp addr err: %s, network: %s, addr: %s", err, listen.Network, listen.Addr)
+		return nil, err
+	}
+	return udp.Listen("udp", addr)
 }
