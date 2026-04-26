@@ -1,5 +1,8 @@
 <p align=center>
-<img src="./docs/diagram/frontier-logo.png" width="30%">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./docs/diagram/frontier-logo-dark.png">
+  <img src="./docs/diagram/frontier-logo.png" width="30%">
+</picture>
 </p>
 
 <div align="center">
