@@ -24,6 +24,30 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+// PodOverrides 集中暴露 Frontier / Frontlas Pod 的可配置项，
+// 让用户在不破坏 v1alpha1 schema 的前提下，按生产需要覆盖资源、调度、
+// 安全上下文、探针、生命周期等关键字段。所有字段都是 optional——
+// 不填走 operator 内置默认值（见 internal/controller/podoverrides.go）。
+type PodOverrides struct {
+	Resources                     *corev1.ResourceRequirements      `json:"resources,omitempty"`
+	NodeSelector                  map[string]string                 `json:"nodeSelector,omitempty"`
+	Tolerations                   []corev1.Toleration               `json:"tolerations,omitempty"`
+	TopologySpreadConstraints     []corev1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
+	Affinity                      *corev1.Affinity                  `json:"affinity,omitempty"`
+	PriorityClassName             string                            `json:"priorityClassName,omitempty"`
+	ServiceAccountName            string                            `json:"serviceAccountName,omitempty"`
+	ImagePullSecrets              []corev1.LocalObjectReference     `json:"imagePullSecrets,omitempty"`
+	ImagePullPolicy               corev1.PullPolicy                 `json:"imagePullPolicy,omitempty"`
+	Annotations                   map[string]string                 `json:"annotations,omitempty"`
+	Labels                        map[string]string                 `json:"labels,omitempty"`
+	PodSecurityContext            *corev1.PodSecurityContext        `json:"podSecurityContext,omitempty"`
+	ContainerSecurityContext      *corev1.SecurityContext           `json:"containerSecurityContext,omitempty"`
+	TerminationGracePeriodSeconds *int64                            `json:"terminationGracePeriodSeconds,omitempty"`
+	LivenessProbe                 *corev1.Probe                     `json:"livenessProbe,omitempty"`
+	ReadinessProbe                *corev1.Probe                     `json:"readinessProbe,omitempty"`
+	Lifecycle                     *corev1.Lifecycle                 `json:"lifecycle,omitempty"`
+}
+
 // TLS is the configuration used to set up TLS encryption
 type TLS struct {
 	Enabled bool `json:"enabled"`
@@ -67,6 +91,11 @@ type Frontier struct {
 	Edgebound    Edgebound           `json:"edgebound"`
 	Image        string              `json:"image,omitempty"` // default singchia/frontier:1.1.0
 	NodeAffinity corev1.NodeAffinity `json:"nodeAffinity,omitempty"`
+	// Pod is the optional set of generic Pod-level overrides applied to the
+	// frontier Deployment. Fields here win over operator defaults; fields not
+	// provided fall back to defaults documented in PodOverrides.
+	// When Pod.Affinity is set it fully replaces the legacy NodeAffinity above.
+	Pod PodOverrides `json:"pod,omitempty"`
 }
 
 type ControlPlane struct {
@@ -85,12 +114,17 @@ const (
 )
 
 type Redis struct {
-	Addrs      []string  `json:"addrs"`
-	DB         int       `json:"db,omitempty"`
-	User       string    `json:"user,omitempty"`
-	Password   string    `json:"password,omitempty"`
-	RedisType  RedisType `json:"redisType"`
-	MasterName string    `json:"masterName,omitempty"`
+	Addrs []string `json:"addrs"`
+	DB    int      `json:"db,omitempty"`
+	User  string   `json:"user,omitempty"`
+	// Password 是密码明文，会被原样写进 Pod 环境变量。
+	// Deprecated: 生产场景请改用 PasswordSecret，避免密钥进 spec / event / describe 输出。
+	Password string `json:"password,omitempty"`
+	// PasswordSecret 引用一个 Secret 中的字段作为 Redis 密码来源。
+	// 设置后优先级高于 Password，env 通过 valueFrom.secretKeyRef 注入。
+	PasswordSecret *corev1.SecretKeySelector `json:"passwordSecret,omitempty"`
+	RedisType      RedisType                 `json:"redisType"`
+	MasterName     string                    `json:"masterName,omitempty"`
 }
 
 type Frontlas struct {
@@ -99,6 +133,9 @@ type Frontlas struct {
 	NodeAffinity corev1.NodeAffinity `json:"nodeAffinity,omitempty"`
 	Image        string              `json:"image,omitempty"`
 	Redis        Redis               `json:"redis"`
+	// Pod is the optional set of generic Pod-level overrides applied to the
+	// frontlas Deployment. See Frontier.Pod for semantics.
+	Pod PodOverrides `json:"pod,omitempty"`
 }
 
 // FrontierClusterSpec defines the desired state of FrontierCluster
