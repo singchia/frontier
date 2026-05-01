@@ -209,6 +209,14 @@ func Parse() (*Configuration, error) {
 		}
 		conf.ControlPlane.Listen.Addr = net.JoinHostPort(host, cpPort)
 	}
+	fpPort := os.Getenv("FRONTLAS_FRONTIERPLANE_PORT")
+	if fpPort != "" {
+		host, _, err := net.SplitHostPort(conf.FrontierManager.Listen.Addr)
+		if err != nil {
+			return nil, err
+		}
+		conf.FrontierManager.Listen.Addr = net.JoinHostPort(host, fpPort)
+	}
 	redisType := os.Getenv("REDIS_TYPE")
 	redisAddrs := os.Getenv("REDIS_ADDRS")
 	redisUser := os.Getenv("REDIS_USER")

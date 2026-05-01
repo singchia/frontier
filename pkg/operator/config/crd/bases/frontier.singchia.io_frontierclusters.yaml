@@ -309,6 +309,8 @@ spec:
                 properties:
                   controlplane:
                     properties:
+                      frontierPlanePort:
+                        type: integer
                       port:
                         type: integer
                       service:

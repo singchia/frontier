@@ -25,9 +25,10 @@ const (
 	NodeNameEnv = "NODE_NAME"
 
 	// port for frontier and frontlas
-	FrontierServiceboundPortEnv = "FRONTIER_SERVICEBOUND_PORT"
-	FrontierEdgeboundPortEnv    = "FRONTIER_EDGEBOUND_PORT"
-	FrontlasControlPlanePortEnv = "FRONTLAS_CONTROLPLANE_PORT"
+	FrontierServiceboundPortEnv    = "FRONTIER_SERVICEBOUND_PORT"
+	FrontierEdgeboundPortEnv       = "FRONTIER_EDGEBOUND_PORT"
+	FrontlasControlPlanePortEnv    = "FRONTLAS_CONTROLPLANE_PORT"
+	FrontlasFrontierPlanePortEnv   = "FRONTLAS_FRONTIERPLANE_PORT"
 
 	// tls for frontier
 	FrontierEdgeboundTLSCAMountPath      = "/app/conf/edgebound/tls/ca"
@@ -111,7 +112,7 @@ func (r *FrontierClusterReconciler) ensureFrontierDeployment(ctx context.Context
 			Name: "tls-secret",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName:  fc.EBTLSOperatorCASecretNamespacedName().Name,
+					SecretName:  fc.EBTLSOperatorCertKeyNamespacedName().Name,
 					DefaultMode: &permission,
 				},
 			},
@@ -230,7 +231,7 @@ func (r *FrontierClusterReconciler) ensureFrontlasDeployment(ctx context.Context
 		image = "singchia/frontlas:1.1.0"
 	}
 
-	service, _, cpport, _ := fc.FrontlasServicePort()
+	service, _, cpport, fpport := fc.FrontlasServicePort()
 
 	// container
 	container := container.Builder().
@@ -240,6 +241,9 @@ func (r *FrontierClusterReconciler) ensureFrontlasDeployment(ctx context.Context
 		SetEnvs([]corev1.EnvVar{{
 			Name:  FrontlasControlPlanePortEnv,
 			Value: strconv.Itoa(int(cpport.Port)),
+		}, {
+			Name:  FrontlasFrontierPlanePortEnv,
+			Value: strconv.Itoa(int(fpport.Port)),
 		}, {
 			Name:  FrontlasRedisAddrsEnv,
 			Value: strings.Join(fc.Spec.Frontlas.Redis.Addrs, ","),

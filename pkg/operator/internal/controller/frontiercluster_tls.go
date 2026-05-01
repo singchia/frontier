@@ -96,7 +96,7 @@ func getEBCertAndKeyFromSecret(ctx context.Context, getter secret.Getter, secret
 func getEBCAFromSecret(ctx context.Context, getter secret.Getter, secretName types.NamespacedName) (string, error) {
 	data, err := secret.ReadStringData(ctx, getter, secretName)
 	if err != nil {
-		return "", nil
+		return "", fmt.Errorf("read CA secret %s: %w", secretName, err)
 	}
 	if ca, ok := data[tlsCACertName]; !ok || ca == "" {
 		return "", ErrCANotFoundInSecret

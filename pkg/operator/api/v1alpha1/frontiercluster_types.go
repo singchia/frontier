@@ -70,9 +70,10 @@ type Frontier struct {
 }
 
 type ControlPlane struct {
-	Port        int                `json:"port,omitempty"` // control plane for service
-	ServiceName string             `json:"service,omitempty"`
-	ServiceType corev1.ServiceType `json:"serviceType,omitempty"` // typically edgebound should and default be ClusterIP
+	Port              int                `json:"port,omitempty"`              // control plane port exposed to service-side callers, default 40011
+	FrontierPlanePort int                `json:"frontierPlanePort,omitempty"` // frontier-plane port exposed to frontier nodes, default 40012
+	ServiceName       string             `json:"service,omitempty"`
+	ServiceType       corev1.ServiceType `json:"serviceType,omitempty"` // typically should default to ClusterIP
 }
 
 type RedisType string
