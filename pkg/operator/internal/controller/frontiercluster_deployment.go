@@ -12,7 +12,6 @@ import (
 	"github.com/singchia/frontier/operator/pkg/kube/deployment"
 	"github.com/singchia/frontier/operator/pkg/kube/podtemplatespec"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -25,10 +24,13 @@ const (
 	NodeNameEnv = "NODE_NAME"
 
 	// port for frontier and frontlas
-	FrontierServiceboundPortEnv    = "FRONTIER_SERVICEBOUND_PORT"
-	FrontierEdgeboundPortEnv       = "FRONTIER_EDGEBOUND_PORT"
-	FrontlasControlPlanePortEnv    = "FRONTLAS_CONTROLPLANE_PORT"
-	FrontlasFrontierPlanePortEnv   = "FRONTLAS_FRONTIERPLANE_PORT"
+	FrontierServiceboundPortEnv  = "FRONTIER_SERVICEBOUND_PORT"
+	FrontierEdgeboundPortEnv     = "FRONTIER_EDGEBOUND_PORT"
+	FrontlasControlPlanePortEnv  = "FRONTLAS_CONTROLPLANE_PORT"
+	FrontlasFrontierPlanePortEnv = "FRONTLAS_FRONTIERPLANE_PORT"
+
+	// graceful shutdown
+	FrontierDrainSecondsEnv = "FRONTIER_DRAIN_SECONDS"
 
 	// tls for frontier
 	FrontierEdgeboundTLSCAMountPath      = "/app/conf/edgebound/tls/ca"
@@ -148,11 +150,20 @@ func (r *FrontierClusterReconciler) ensureFrontierDeployment(ctx context.Context
 	_, _, ebport := fc.FrontierEdgeboundServicePort()
 	frontierservice, _, _, fpport := fc.FrontlasServicePort()
 
+	defaults := frontierDefaults(sbport.Port, ebport.Port)
+	pod := fc.Spec.Frontier.Pod
+	gracePeriod := pickGrace(pod.TerminationGracePeriodSeconds, defaults.terminationGracePeriodSeconds)
+	// drain 默认 = grace - 10s，给 Close() 自身留余量；下界 0，不会变负。
+	drainSeconds := gracePeriod - 10
+	if drainSeconds < 0 {
+		drainSeconds = 0
+	}
+
 	// container
 	container := container.Builder().
 		SetName("frontier").
 		SetImage(image).
-		SetImagePullPolicy(corev1.PullAlways).
+		SetImagePullPolicy(pickPullPolicy(pod.ImagePullPolicy, defaults.imagePullPolicy)).
 		SetEnvs([]corev1.EnvVar{{
 			Name:  FrontierServiceboundPortEnv,
 			Value: strconv.Itoa(int(sbport.Port)),
@@ -169,39 +180,48 @@ func (r *FrontierClusterReconciler) ensureFrontierDeployment(ctx context.Context
 		}, {
 			Name:  FrontlasAddrEnv,
 			Value: net.JoinHostPort(frontierservice, strconv.Itoa(int(fpport.Port))),
+		}, {
+			Name:  FrontierDrainSecondsEnv,
+			Value: strconv.FormatInt(drainSeconds, 10),
 		}}).
 		SetCommand(nil).
 		SetArgs(nil).
 		SetVolumeMounts(volumeMounts).
+		SetResources(pickResources(pod.Resources, defaults.resources)).
+		SetLivenessProbe(pickProbe(pod.LivenessProbe, defaults.livenessProbe)).
+		SetReadinessProbe(pickProbe(pod.ReadinessProbe, defaults.readinessProbe)).
+		SetLifecycle(pickLifecycle(pod.Lifecycle, defaults.lifecycle)).
+		SetSecurityContext(pickContainerSecurityContext(pod.ContainerSecurityContext, defaults.containerSecurityContext)).
 		Build()
 
+	specOver := extractPodSpecOverrides(pod)
+	mergedLabels := map[string]string{}
+	for k, v := range labels {
+		mergedLabels[k] = v
+	}
+
 	// pod
-	podTemplateSpec := podtemplatespec.Builder().
+	podBuilder := podtemplatespec.Builder().
 		SetName("frontier").
 		SetNamespace(fc.Namespace).
 		AddVolumes(volumes).
-		SetLabels(labels).
+		SetLabels(mergedLabels).
+		MergeLabels(specOver.Labels).
 		SetMatchLabels(labels).
-		SetNodeAffinity(&fc.Spec.Frontier.NodeAffinity).
+		SetAnnotations(specOver.Annotations).
 		SetOwnerReference(fc.OwnerReferences).
 		AddContainer(container).
-		SetPodAntiAffinity(&corev1.PodAntiAffinity{
-			RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
-				{
-					TopologyKey: "kubernetes.io/hostname",
-					LabelSelector: &metav1.LabelSelector{
-						MatchExpressions: []metav1.LabelSelectorRequirement{
-							{
-								Key:      "app",
-								Operator: metav1.LabelSelectorOpIn,
-								Values:   []string{app},
-							},
-						},
-					},
-				},
-			},
-		}).
-		Build()
+		SetTerminationGracePeriodSeconds(gracePeriod).
+		SetTolerations(specOver.Tolerations).
+		SetTopologySpreadConstraints(specOver.TopologySpreadConstraints).
+		SetNodeSelector(specOver.NodeSelector).
+		SetPriorityClassName(specOver.PriorityClassName).
+		SetServiceAccountName(specOver.ServiceAccountName).
+		SetImagePullSecrets(specOver.ImagePullSecrets).
+		SetPodSecurityContext(pickPodSecurityContext(pod.PodSecurityContext, defaults.podSecurityContext)).
+		SetAffinity(pickAffinity(pod.Affinity, preferredAntiAffinityByHost(app), &fc.Spec.Frontier.NodeAffinity))
+
+	podTemplateSpec := podBuilder.Build()
 
 	deploy, err := deployment.Builder().
 		SetName(fc.FrontierDeploymentNamespacedName().Name).
@@ -233,64 +253,49 @@ func (r *FrontierClusterReconciler) ensureFrontlasDeployment(ctx context.Context
 
 	service, _, cpport, fpport := fc.FrontlasServicePort()
 
+	defaults := frontlasDefaults(cpport.Port)
+	pod := fc.Spec.Frontlas.Pod
+
 	// container
 	container := container.Builder().
 		SetName("frontlas").
 		SetImage(image).
-		SetImagePullPolicy(corev1.PullAlways).
-		SetEnvs([]corev1.EnvVar{{
-			Name:  FrontlasControlPlanePortEnv,
-			Value: strconv.Itoa(int(cpport.Port)),
-		}, {
-			Name:  FrontlasFrontierPlanePortEnv,
-			Value: strconv.Itoa(int(fpport.Port)),
-		}, {
-			Name:  FrontlasRedisAddrsEnv,
-			Value: strings.Join(fc.Spec.Frontlas.Redis.Addrs, ","),
-		}, {
-			Name:  FrontlasRedisUserEnv,
-			Value: fc.Spec.Frontlas.Redis.User,
-		}, {
-			Name:  FrontlasRedisPasswordEnv,
-			Value: fc.Spec.Frontlas.Redis.Password,
-		}, {
-			Name:  FrontlasRedisTypeEnv,
-			Value: string(fc.Spec.Frontlas.Redis.RedisType),
-		}, {
-			Name:  FrontlasRedisDBEnv,
-			Value: strconv.Itoa(fc.Spec.Frontlas.Redis.DB),
-		}, {
-			Name:  FrontlasRedisMasterName,
-			Value: fc.Spec.Frontlas.Redis.MasterName,
-		}}).
-		SetReadinessProbe(&corev1.Probe{
-			ProbeHandler: corev1.ProbeHandler{
-				/* 1.24+
-				GRPC: &corev1.GRPCAction{
-					Port:    cpport.TargetPort.IntVal,
-					Service: &service,
-				},
-				*/
-				HTTPGet: &corev1.HTTPGetAction{
-					Port: cpport.TargetPort,
-					Path: "/cluster/v1/health",
-				},
-			},
-			PeriodSeconds: 5,
-		}).
+		SetImagePullPolicy(pickPullPolicy(pod.ImagePullPolicy, defaults.imagePullPolicy)).
+		SetEnvs(frontlasRedisEnvs(fc, cpport.Port, fpport.Port)).
 		SetCommand(nil).
 		SetArgs(nil).
+		SetResources(pickResources(pod.Resources, defaults.resources)).
+		SetLivenessProbe(pickProbe(pod.LivenessProbe, defaults.livenessProbe)).
+		SetReadinessProbe(pickProbe(pod.ReadinessProbe, defaults.readinessProbe)).
+		SetLifecycle(pickLifecycle(pod.Lifecycle, defaults.lifecycle)).
+		SetSecurityContext(pickContainerSecurityContext(pod.ContainerSecurityContext, defaults.containerSecurityContext)).
 		Build()
+
+	specOver := extractPodSpecOverrides(pod)
+	mergedLabels := map[string]string{}
+	for k, v := range labels {
+		mergedLabels[k] = v
+	}
 
 	// pod
 	podTemplateSpec := podtemplatespec.Builder().
 		SetName("frontlas").
 		SetNamespace(fc.Namespace).
-		SetLabels(labels).
+		SetLabels(mergedLabels).
+		MergeLabels(specOver.Labels).
 		SetMatchLabels(labels).
-		SetNodeAffinity(&fc.Spec.Frontlas.NodeAffinity).
+		SetAnnotations(specOver.Annotations).
 		SetOwnerReference(fc.OwnerReferences).
 		AddContainer(container).
+		SetTerminationGracePeriodSeconds(pickGrace(pod.TerminationGracePeriodSeconds, defaults.terminationGracePeriodSeconds)).
+		SetTolerations(specOver.Tolerations).
+		SetTopologySpreadConstraints(specOver.TopologySpreadConstraints).
+		SetNodeSelector(specOver.NodeSelector).
+		SetPriorityClassName(specOver.PriorityClassName).
+		SetServiceAccountName(specOver.ServiceAccountName).
+		SetImagePullSecrets(specOver.ImagePullSecrets).
+		SetPodSecurityContext(pickPodSecurityContext(pod.PodSecurityContext, defaults.podSecurityContext)).
+		SetAffinity(pickAffinity(pod.Affinity, preferredAntiAffinityByHost(app), &fc.Spec.Frontlas.NodeAffinity)).
 		Build()
 
 	deploy, err := deployment.Builder().
@@ -309,4 +314,31 @@ func (r *FrontierClusterReconciler) ensureFrontlasDeployment(ctx context.Context
 
 	_, err = deployment.CreateOrUpdate(ctx, r.client, deploy)
 	return err
+}
+
+// frontlasRedisEnvs 把端口 + Redis 配置组装成 EnvVar，
+// Password 与 PasswordSecret 互斥（PasswordSecret 优先，进 valueFrom；否则走明文兼容路径）。
+func frontlasRedisEnvs(fc v1alpha1.FrontierCluster, cpPort, fpPort int32) []corev1.EnvVar {
+	r := fc.Spec.Frontlas.Redis
+	envs := []corev1.EnvVar{
+		{Name: FrontlasControlPlanePortEnv, Value: strconv.Itoa(int(cpPort))},
+		{Name: FrontlasFrontierPlanePortEnv, Value: strconv.Itoa(int(fpPort))},
+		{Name: FrontlasRedisAddrsEnv, Value: strings.Join(r.Addrs, ",")},
+		{Name: FrontlasRedisUserEnv, Value: r.User},
+		{Name: FrontlasRedisTypeEnv, Value: string(r.RedisType)},
+		{Name: FrontlasRedisDBEnv, Value: strconv.Itoa(r.DB)},
+		{Name: FrontlasRedisMasterName, Value: r.MasterName},
+	}
+	if r.PasswordSecret != nil {
+		envs = append(envs, corev1.EnvVar{
+			Name:      FrontlasRedisPasswordEnv,
+			ValueFrom: &corev1.EnvVarSource{SecretKeyRef: r.PasswordSecret},
+		})
+	} else {
+		envs = append(envs, corev1.EnvVar{
+			Name:  FrontlasRedisPasswordEnv,
+			Value: r.Password,
+		})
+	}
+	return envs
 }
