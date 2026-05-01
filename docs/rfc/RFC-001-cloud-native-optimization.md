@@ -249,3 +249,5 @@ type Redis struct {
 | 日期 | 变更人 | 变更内容 | 原因 |
 |---|---|---|---|
 | 2026-05-01 | singchia | 初稿 | 立项 |
+| 2026-05-01 | singchia | M2 不再引入 v1alpha2，改为在 v1alpha1 原地追加 optional 字段（PodOverrides、Redis.PasswordSecret）；版本 bump 推迟到 M4 跟 Status Conditions 一起做（届时直接到 v1beta1，跳过 v1alpha2 临时态） | K8s 多版本 CRD 必须配 conversion strategy；`None` 要求版本 schema 严格等价（与本次扩字段冲突），`Webhook` 又把 M2 范围撑到需要起额外服务、写 webhook handler、签证书。原地扩 alpha 字段不破坏向后兼容（旧 YAML 全量可用），把版本演进集中到 M4 一起做，整体工作量更小、风险更低。|
+| 2026-05-01 | singchia | M2-M4 统一在 `feat/rfc-001-m1` 分支累积，不再每个里程碑独立 PR | 用户在 M1 验证完成后明确指示"剩下的我们继续吧，都在同一个分支继续"。整体一个 PR 评审，便于把握跨里程碑的连贯性 |
