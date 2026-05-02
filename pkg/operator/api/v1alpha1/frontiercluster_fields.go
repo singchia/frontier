@@ -73,10 +73,13 @@ func (fc *FrontierCluster) FrontlasServicePort() (string, corev1.ServiceType, co
 	cpport.TargetPort = intstr.FromInt32(cpport.Port)
 
 	fpport := corev1.ServicePort{
-		Port:       40012,
-		TargetPort: intstr.FromInt32(40012),
-		Name:       fc.Name + "-frontierplane",
+		Port: 40012,
+		Name: fc.Name + "-frontierplane",
 	}
+	if fc.Spec.Frontlas.ControlPlane.FrontierPlanePort != 0 {
+		fpport.Port = int32(fc.Spec.Frontlas.ControlPlane.FrontierPlanePort)
+	}
+	fpport.TargetPort = intstr.FromInt32(fpport.Port)
 	// service type
 	serviceType := corev1.ServiceTypeClusterIP
 	if fc.Spec.Frontlas.ControlPlane.ServiceType != "" {
@@ -114,14 +117,14 @@ func (fc *FrontierCluster) EBTLSCertKeySecretNamespacedName() types.NamespacedNa
 // operator ca and secret
 func (fc *FrontierCluster) EBTLSOperatorCASecretNamespacedName() types.NamespacedName {
 	return types.NamespacedName{
-		Name:      fc.Name + "edgebound-ca-certificate",
+		Name:      fc.Name + "-edgebound-ca-certificate",
 		Namespace: fc.Namespace,
 	}
 }
 
 func (fc *FrontierCluster) EBTLSOperatorCertKeyNamespacedName() types.NamespacedName {
 	return types.NamespacedName{
-		Name:      fc.Name + "edgebound-certkey-certificate",
+		Name:      fc.Name + "-edgebound-certkey-certificate",
 		Namespace: fc.Namespace,
 	}
 }

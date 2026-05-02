@@ -2,12 +2,14 @@ package frontier
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/singchia/frontier/pkg/frontier/apis"
 	"github.com/singchia/frontier/pkg/frontier/config"
 	"github.com/singchia/frontier/pkg/frontier/mq"
 	"github.com/singchia/frontier/pkg/frontier/repo"
 	"github.com/singchia/frontier/pkg/frontier/server"
+	"github.com/singchia/frontier/pkg/observability"
 	"github.com/singchia/frontier/pkg/utils"
 	"k8s.io/klog/v2"
 )
@@ -16,6 +18,7 @@ type Frontier struct {
 	repo   apis.Repo
 	mqm    apis.MQM
 	server *server.Server
+	obs    *observability.Server
 }
 
 func NewFrontier() (*Frontier, error) {
@@ -55,18 +58,31 @@ func NewFrontier() (*Frontier, error) {
 		return nil, err
 	}
 
+	// observability：默认开启；地址不填走 0.0.0.0:9091。
+	obsCfg := conf.Observability
+	if obsCfg.Addr == "" {
+		obsCfg.Addr = "0.0.0.0:9091"
+	}
+	if !obsCfg.Enable {
+		obsCfg.Enable = true // 默认开启；显式 false 才能关
+	}
+	obs := observability.New(observability.Config{Enable: obsCfg.Enable, Addr: obsCfg.Addr})
+
 	return &Frontier{
 		repo:   repo,
 		mqm:    mqm,
 		server: server,
+		obs:    obs,
 	}, nil
 }
 
 func (frontier *Frontier) Run() {
+	frontier.obs.Run()
 	frontier.server.Serve()
 }
 
 func (frontier *Frontier) Close() {
+	frontier.obs.Shutdown(5 * time.Second)
 	frontier.repo.Close()
 	frontier.mqm.Close()
 	frontier.server.Close()

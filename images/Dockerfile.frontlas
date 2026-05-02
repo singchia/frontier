@@ -21,6 +21,11 @@ RUN wget -q -O /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/s
 RUN wget https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.34-r0/glibc-2.34-r0.apk
 RUN apk add glibc-2.34-r0.apk
 
+# 非 root 运行：UID 65532 与 operator 默认 PodSecurityContext.RunAsUser 对齐。
+# gospec 安全红线："容器以非 root 用户运行"。
+RUN addgroup -g 65532 -S frontlas && adduser -u 65532 -S -G frontlas frontlas
+USER 65532:65532
+
 EXPOSE 40011
 EXPOSE 40012
 

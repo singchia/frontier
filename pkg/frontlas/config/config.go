@@ -130,6 +130,13 @@ type FrontierManager struct {
 	} `yaml:"expiration,omitempty" json:"expiration"`
 }
 
+// Observability 控制 /healthz、/readyz、/metrics HTTP 端点。
+// 注：原有 /cluster/v1/health gRPC-gateway 端点保留兼容。
+type Observability struct {
+	Enable bool   `yaml:"enable" json:"enable"`
+	Addr   string `yaml:"addr" json:"addr"` // 默认 0.0.0.0:9092
+}
+
 type Configuration struct {
 	Log config.Log `yaml:"log,omitempty" json:"log"`
 
@@ -140,6 +147,8 @@ type Configuration struct {
 	FrontierManager FrontierManager `yaml:"frontier_plane" json:"frontier_manager"`
 
 	Redis Redis `yaml:"redis" json:"redis"`
+
+	Observability Observability `yaml:"observability,omitempty" json:"observability"`
 }
 
 func Parse() (*Configuration, error) {
@@ -208,6 +217,14 @@ func Parse() (*Configuration, error) {
 			return nil, err
 		}
 		conf.ControlPlane.Listen.Addr = net.JoinHostPort(host, cpPort)
+	}
+	fpPort := os.Getenv("FRONTLAS_FRONTIERPLANE_PORT")
+	if fpPort != "" {
+		host, _, err := net.SplitHostPort(conf.FrontierManager.Listen.Addr)
+		if err != nil {
+			return nil, err
+		}
+		conf.FrontierManager.Listen.Addr = net.JoinHostPort(host, fpPort)
 	}
 	redisType := os.Getenv("REDIS_TYPE")
 	redisAddrs := os.Getenv("REDIS_ADDRS")

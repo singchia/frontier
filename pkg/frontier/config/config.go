@@ -247,6 +247,12 @@ type Frontlas struct {
 	} `yaml:"metrics" json:"metrics"`
 }
 
+// Observability 控制 /healthz、/readyz、/metrics HTTP 端点。
+type Observability struct {
+	Enable bool   `yaml:"enable" json:"enable"`
+	Addr   string `yaml:"addr" json:"addr"` // 默认 0.0.0.0:9091
+}
+
 type Configuration struct {
 	Log config.Log `yaml:"log,omitempty" json:"log"`
 
@@ -265,6 +271,8 @@ type Configuration struct {
 	Frontlas Frontlas `yaml:"frontlas,omitempty" json:"frontlas"`
 
 	MQM MQM `yaml:"mqm,omitempty" json:"mqm"`
+
+	Observability Observability `yaml:"observability,omitempty" json:"observability"`
 }
 
 // Configuration accepts config file and command-line, and command-line is more privileged.

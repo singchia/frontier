@@ -20,7 +20,9 @@ import (
 	"context"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -36,16 +38,18 @@ import (
 // FrontierClusterReconciler reconciles a FrontierCluster object
 type FrontierClusterReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	client kubeclient.Client
+	Scheme   *runtime.Scheme
+	client   kubeclient.Client
+	recorder record.EventRecorder
 }
 
 func NewReconciler(mgr manager.Manager) *FrontierClusterReconciler {
 	mgrClient := mgr.GetClient()
 	return &FrontierClusterReconciler{
-		Client: mgrClient,
-		Scheme: mgr.GetScheme(),
-		client: kubeclient.NewClient(mgrClient),
+		Client:   mgrClient,
+		Scheme:   mgr.GetScheme(),
+		client:   kubeclient.NewClient(mgrClient),
+		recorder: mgr.GetEventRecorderFor("frontier-operator"),
 	}
 }
 
@@ -54,6 +58,7 @@ func NewReconciler(mgr manager.Manager) *FrontierClusterReconciler {
 //+kubebuilder:rbac:groups=frontier.singchia.io,resources=frontierclusters/finalizers,verbs=update
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=services;pods;secrets,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -75,6 +80,7 @@ func (r *FrontierClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	log.Info("Ensuring the service exists")
 	if err := r.ensureService(ctx, frontiercluster); err != nil {
+		r.recorder.Eventf(&frontiercluster, corev1.EventTypeWarning, "ServiceEnsureFailed", "Error ensuring services: %s", err)
 		return status.Update(ctx, r.client.Status(), &frontiercluster, statusOptions().
 			withMessage(Error, fmt.Sprintf("Error ensuring services: %s", err)).
 			withFailedPhase())
@@ -82,26 +88,39 @@ func (r *FrontierClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	log.Info("Ensuring the tls exists")
 	if err := r.ensureTLS(ctx, frontiercluster); err != nil {
+		r.recorder.Eventf(&frontiercluster, corev1.EventTypeWarning, "TLSEnsureFailed", "Error ensuring TLS secret: %s", err)
 		return status.Update(ctx, r.client.Status(), &frontiercluster, statusOptions().
 			withMessage(Error, fmt.Sprintf("Error ensuring tls secret: %s", err)).
 			withFailedPhase())
 	}
 
 	log.Info("Ensuring the deployment exists")
-	ready, err := r.ensureDeployment(ctx, frontiercluster)
+	readiness, err := r.ensureDeployment(ctx, frontiercluster)
 	if err != nil {
+		r.recorder.Eventf(&frontiercluster, corev1.EventTypeWarning, "DeploymentEnsureFailed", "Error deploying: %s", err)
 		return status.Update(ctx, r.client.Status(), &frontiercluster, statusOptions().
+			withReadyReplicas(readiness.frontierReady, readiness.frontlasReady).
 			withMessage(Error, fmt.Sprintf("Error deploying Deployment: %s", err)).
 			withFailedPhase())
 	}
 
-	if !ready {
+	if !readiness.allReady {
 		return status.Update(ctx, r.client.Status(), &frontiercluster, statusOptions().
+			withReadyReplicas(readiness.frontierReady, readiness.frontlasReady).
 			withMessage(Info, "Deployment is not yet ready, retrying in 10 seconds").
 			withPendingPhase(10))
 	}
 
+	// 只在从非 Running 转 Running 时发事件，避免每次 reconcile 都打。
+	if frontiercluster.Status.Phase != frontierv1alpha1.Running {
+		r.recorder.Eventf(&frontiercluster, corev1.EventTypeNormal, "Available",
+			"FrontierCluster is available: frontier=%d/%d frontlas=%d/%d",
+			readiness.frontierReady, frontiercluster.Spec.Frontier.Replicas,
+			readiness.frontlasReady, frontiercluster.Spec.Frontlas.Replicas)
+	}
+
 	res, err := status.Update(ctx, r.client.Status(), &frontiercluster, statusOptions().
+		withReadyReplicas(readiness.frontierReady, readiness.frontlasReady).
 		withMessage(Info, "Good to go!").
 		withRunningPhase())
 	if err != nil {
