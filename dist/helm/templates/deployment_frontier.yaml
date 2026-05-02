@@ -1,66 +1,118 @@
+{{- if .Values.frontier.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "frontier.fullname" . }}
+  name: {{ include "frontier.frontier.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
   labels:
-    {{- include "frontier.labels" . | nindent 4 }}
+    {{- include "frontier.frontier.labels" . | nindent 4 }}
 spec:
-  {{- if not .Values.autoscaling.enabled }}
-  replicas: {{ .Values.replicaCount }}
+  {{- if not .Values.frontier.autoscaling.enabled }}
+  replicas: {{ .Values.frontier.replicaCount }}
   {{- end }}
   selector:
     matchLabels:
-      {{- include "frontier.selectorLabels" . | nindent 6 }}
+      {{- include "frontier.frontier.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- with .Values.podAnnotations }}
       annotations:
+        # Force pod restart when ConfigMap changes.
+        checksum/config: {{ include (print $.Template.BasePath "/configmap_frontier.yaml") . | sha256sum }}
+        {{- with .Values.frontier.podAnnotations }}
         {{- toYaml . | nindent 8 }}
-      {{- end }}
+        {{- end }}
       labels:
-        {{- include "frontier.selectorLabels" . | nindent 8 }}
+        {{- include "frontier.frontier.selectorLabels" . | nindent 8 }}
+        {{- with .Values.frontier.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
-      {{- with .Values.imagePullSecrets }}
+      serviceAccountName: {{ include "frontier.frontier.serviceAccountName" . }}
+      terminationGracePeriodSeconds: {{ .Values.frontier.terminationGracePeriodSeconds }}
+      {{- with .Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "frontier.serviceAccountName" . }}
       securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
-      containers:
-        - name: {{ .Chart.Name }}
-          securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.global.registry }}/{{ .Values.image.frontier.image }}:{{ .Values.image.frontier.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.frontier.pullPolicy }}
-          volumeMounts:
-            - name: config
-              mountPath: /usr/conf/
-          ports:
-            - name: controlplane
-              containerPort: 2430
-              protocol: TCP
-            - name: servicebound
-              containerPort: 30011
-              protocol: TCP
-            - name: edgebound
-              containerPort: 30012
-              protocol: TCP
-          resources:
-            {{- toYaml .Values.resources | nindent 12 }}
-      {{- with .Values.nodeSelector }}
+        {{- toYaml .Values.frontier.podSecurityContext | nindent 8 }}
+      {{- with .Values.frontier.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.affinity.frontier }}
-      affinity:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.tolerations }}
+      {{- with .Values.frontier.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- with .Values.frontier.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      affinity:
+      {{- if .Values.frontier.affinity }}
+        {{- toYaml .Values.frontier.affinity | nindent 8 }}
+      {{- else }}
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    {{- include "frontier.frontier.selectorLabels" . | nindent 20 }}
+      {{- end }}
+      containers:
+        - name: frontier
+          image: "{{ .Values.global.registry }}/{{ .Values.frontier.image.repository }}:{{ include "frontier.imageTag" (dict "comp" .Values.frontier "root" $) }}"
+          imagePullPolicy: {{ include "frontier.pullPolicy" (dict "comp" .Values.frontier "global" .Values.global) }}
+          securityContext:
+            {{- toYaml .Values.frontier.containerSecurityContext | nindent 12 }}
+          args:
+            - "--config"
+            - "/usr/conf/frontier.yaml"
+          env:
+            - name: FRONTIER_DRAIN_SECONDS
+              value: {{ .Values.frontier.drainSeconds | quote }}
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            {{- with .Values.frontier.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: controlplane
+              containerPort: {{ .Values.frontier.service.controlplane.port }}
+              protocol: TCP
+            - name: servicebound
+              containerPort: {{ .Values.frontier.service.servicebound.port }}
+              protocol: TCP
+            - name: edgebound
+              containerPort: {{ .Values.frontier.service.edgebound.port }}
+              protocol: TCP
+            {{- if .Values.observability.frontier.enabled }}
+            - name: metrics
+              containerPort: {{ .Values.observability.frontier.port }}
+              protocol: TCP
+            {{- end }}
+          {{- with .Values.frontier.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.frontier.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.frontier.lifecycle }}
+          lifecycle:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.frontier.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /usr/conf/
       volumes:
         - name: config
           configMap:
-            name: {{ include "frontier.fullname" . }}
+            name: {{ include "frontier.frontier.fullname" . }}
+{{- end }}

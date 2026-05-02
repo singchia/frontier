@@ -1,0 +1,42 @@
+{{- if .Values.frontlas.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "frontier.frontlas.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "frontier.frontlas.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.frontlas.service.controlplane.type }}
+  ports:
+    - name: controlplane
+      port: {{ .Values.frontlas.service.controlplane.port }}
+      targetPort: controlplane
+      protocol: TCP
+    - name: frontierplane
+      port: {{ .Values.frontlas.service.frontierplane.port }}
+      targetPort: frontierplane
+      protocol: TCP
+  selector:
+    {{- include "frontier.frontlas.selectorLabels" . | nindent 4 }}
+{{- if .Values.observability.frontlas.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "frontier.frontlas.fullname" . }}-metrics
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "frontier.frontlas.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: metrics
+      port: {{ .Values.observability.frontlas.port }}
+      targetPort: metrics
+      protocol: TCP
+  selector:
+    {{- include "frontier.frontlas.selectorLabels" . | nindent 4 }}
+{{- end }}
+{{- end }}

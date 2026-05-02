@@ -1,110 +1,235 @@
-# Default values for frontier.
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
+# ============================================================================
+# Frontier Helm chart — default values
+# ----------------------------------------------------------------------------
+# This chart deploys the data plane (frontier) + the control plane (frontlas)
+# in one shot, with an optional bundled Redis subchart. Defaults mirror the
+# operator's production-grade settings (see /docs/operator).
+# ============================================================================
+
 global:
   registry: singchia
-  pullPolicy: Always
+  imagePullPolicy: IfNotPresent
+  imagePullSecrets: []
 
-imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
-image:
+# ----------------------------------------------------------------------------
+# Frontier — data plane
+# ----------------------------------------------------------------------------
+frontier:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: frontier
+    tag: ""               # defaults to .Chart.AppVersion
+    pullPolicy: ""        # defaults to global.imagePullPolicy
+
+  serviceAccount:
+    create: true
+    name: ""
+    annotations: {}
+
+  podAnnotations: {}
+  podLabels: {}
+
+  # Production defaults: nonRoot uid 65532, dropped capabilities.
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    runAsGroup: 65532
+    fsGroup: 65532
+    seccompProfile:
+      type: RuntimeDefault
+
+  containerSecurityContext:
+    runAsNonRoot: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+
+  # Long-lived edge connections need at least 60s grace; drain = grace - 10.
+  terminationGracePeriodSeconds: 60
+  drainSeconds: 50
+
+  # preStop sleep gives kube-proxy time to remove the pod from Service
+  # Endpoints before SIGTERM tears connections down.
+  lifecycle:
+    preStop:
+      exec:
+        command: ["/bin/sh", "-c", "sleep 10"]
+
+  livenessProbe:
+    tcpSocket:
+      port: edgebound
+    initialDelaySeconds: 10
+    periodSeconds: 20
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+  readinessProbe:
+    tcpSocket:
+      port: servicebound
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+  resources: {}
+
+  service:
+    servicebound:
+      type: ClusterIP
+      port: 30011
+    edgebound:
+      type: NodePort
+      port: 30012
+    controlplane:
+      type: ClusterIP
+      port: 30010
+
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts:
+      - host: frontier.example.com
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls: []
+
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+
+  nodeSelector: {}
+  tolerations: []
+  topologySpreadConstraints: []
+  # Default: preferred host anti-affinity (rendered by template). Set this to
+  # a non-empty Affinity object to fully replace the default.
+  affinity: {}
+
+  extraEnv: []
+
+# ----------------------------------------------------------------------------
+# Frontlas — control plane
+# ----------------------------------------------------------------------------
+frontlas:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: frontlas
+    tag: ""               # defaults to .Chart.AppVersion
+    pullPolicy: ""        # defaults to global.imagePullPolicy
+
+  serviceAccount:
+    create: true
+    name: ""
+    annotations: {}
+
+  podAnnotations: {}
+  podLabels: {}
+
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    runAsGroup: 65532
+    fsGroup: 65532
+    seccompProfile:
+      type: RuntimeDefault
+
+  containerSecurityContext:
+    runAsNonRoot: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+
+  terminationGracePeriodSeconds: 30
+
+  livenessProbe:
+    tcpSocket:
+      port: controlplane
+    initialDelaySeconds: 10
+    periodSeconds: 20
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+  readinessProbe:
+    httpGet:
+      path: /cluster/v1/health
+      port: controlplane
+    periodSeconds: 5
+
+  resources: {}
+
+  service:
+    controlplane:
+      type: ClusterIP
+      port: 40011
+    frontierplane:
+      type: ClusterIP
+      port: 40012
+
+  nodeSelector: {}
+  tolerations: []
+  topologySpreadConstraints: []
+  affinity: {}
+
+  extraEnv: []
+
+  # When `redis.enabled: false`, point Frontlas at an existing Redis here.
+  externalRedis:
+    addrs: []                  # e.g. ["redis.svc.cluster.local:6379"]
+    user: ""
+    redisType: standalone      # standalone | sentinel | cluster
+    masterName: ""
+    db: 0
+    passwordSecret:
+      name: ""                 # leave empty for unauthenticated Redis
+      key: password
+
+# ----------------------------------------------------------------------------
+# Observability — /healthz, /readyz, /metrics endpoints (since M3)
+# ----------------------------------------------------------------------------
+observability:
   frontier:
-    image: frontier
-    pullPolicy: IfNotPresent
-    # Overrides the image tag whose default is the chart appVersion.
-    tag: 1.1.0
+    enabled: true
+    port: 9091
+  frontlas:
+    enabled: true
+    port: 9092
 
-replicaCount: 1
-
-serviceAccount:
-  # Specifies whether a service account should be created
-  create: true
-  # Annotations to add to the service account
-  annotations: {}
-  # The name of the service account to use.
-  # If not set and create is true, a name is generated using the fullname template
-  name: ""
-
-podAnnotations: {}
-
-podSecurityContext: {}
-  # fsGroup: 2000
-
-securityContext: {}
-  # capabilities:
-  #   drop:
-  #   - ALL
-  # readOnlyRootFilesystem: true
-  # runAsNonRoot: true
-  # runAsUser: 1000
-
-service:
-  frontier:
-    clusterIP:
-      - name: controlbound
-        type: ClusterIP
-        targetPort: controlbound
-        port: 30010
-      - name: frontier-edgebound-svc
-        type: ClusterIP
-        targetPort: servicebound
-        port: 30011
-    nodePort:
-      - name: edgebound
-        type: NodePort
-        targetPort: edgebound
-        port: 30012
-
-ingress:
+# Prometheus Operator ServiceMonitor (off by default; turn on if you have
+# prometheus-operator installed).
+serviceMonitor:
   enabled: false
-  className: ""
-  annotations: {}
-    # kubernetes.io/ingress.class: nginx
-    # kubernetes.io/tls-acme: "true"
-  hosts:
-    - host: chart-example.local
-      paths:
-        - path: /
-          pathType: ImplementationSpecific
-  tls: []
-  #  - secretName: chart-example-tls
-  #    hosts:
-  #      - chart-example.local
+  namespace: ""
+  interval: 30s
+  scrapeTimeout: 10s
+  labels: {}
 
-resources: {}
-  # We usually recommend not to specify default resources and to leave this as a conscious
-  # choice for the user. This also increases chances charts run on environments with little
-  # resources, such as Minikube. If you do want to specify resources, uncomment the following
-  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  # limits:
-  #   cpu: 100m
-  #   memory: 128Mi
-  # requests:
-  #   cpu: 100m
-  #   memory: 128Mi
-
-autoscaling:
-  enabled: false
-  minReplicas: 1
-  maxReplicas: 100
-  targetCPUUtilizationPercentage: 80
-  # targetMemoryUtilizationPercentage: 80
-
-nodeSelector: {}
-
-tolerations: []
-
-affinity:
-  frontier:
-    podAntiAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-      - topologyKey: kubernetes.io/hostname
-        labelSelector:
-          matchExpressions:
-            - key: app.kubernetes.io/name
-              operator: In
-              values:
-                - frontier
-    
+# ----------------------------------------------------------------------------
+# Redis — required by Frontlas for cluster metadata
+# ----------------------------------------------------------------------------
+# When enabled (default), the bitnami/redis subchart is installed and the
+# chart wires Frontlas to it automatically. For an external Redis, set
+# `redis.enabled: false` and configure `frontlas.externalRedis` above.
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: true
+    # Leave empty to let bitnami auto-generate. The chart reads it from
+    # the `<release>-redis` Secret either way.
+    password: ""
+  master:
+    persistence:
+      enabled: true
+      size: 8Gi

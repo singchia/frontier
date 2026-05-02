@@ -1,36 +1,59 @@
+{{- if .Values.frontier.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: "frontier-servicebound-svc"
+  name: {{ include "frontier.frontier.fullname" . }}-servicebound
+  namespace: {{ .Release.Namespace | quote }}
   labels:
-    {{- include "frontier.labels" . | nindent 4 }}
+    {{- include "frontier.frontier.labels" . | nindent 4 }}
 spec:
-  type: ClusterIP
+  type: {{ .Values.frontier.service.servicebound.type }}
   ports:
-    {{- range .Values.service.frontier.clusterIP }}
-    - port: {{ .port }}
-      targetPort: {{ .targetPort }}
-      name: {{ .name }}
+    - name: servicebound
+      port: {{ .Values.frontier.service.servicebound.port }}
+      targetPort: servicebound
       protocol: TCP
-    {{- end }}
   selector:
-    {{- include "frontier.selectorLabels" . | nindent 4 }}
+    {{- include "frontier.frontier.selectorLabels" . | nindent 4 }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: "frontier-edgebound-svc"
+  name: {{ include "frontier.frontier.fullname" . }}-edgebound
+  namespace: {{ .Release.Namespace | quote }}
   labels:
-    {{- include "frontier.labels" . | nindent 4 }}
+    {{- include "frontier.frontier.labels" . | nindent 4 }}
 spec:
-  type: NodePort
+  type: {{ .Values.frontier.service.edgebound.type }}
   ports:
-    {{- range .Values.service.frontier.nodePort }}
-    - port: {{ .port }}
-      targetPort: {{ .targetPort }}
-      name: {{ .name }}
-      nodePort: {{ .port }}
+    - name: edgebound
+      port: {{ .Values.frontier.service.edgebound.port }}
+      targetPort: edgebound
+      {{- if eq .Values.frontier.service.edgebound.type "NodePort" }}
+      nodePort: {{ .Values.frontier.service.edgebound.port }}
+      {{- end }}
       protocol: TCP
-    {{- end }}
   selector:
-    {{- include "frontier.selectorLabels" . | nindent 4 }}
+    {{- include "frontier.frontier.selectorLabels" . | nindent 4 }}
+{{- if .Values.observability.frontier.enabled }}
+---
+# Headless service for /metrics scraping (paired with the ServiceMonitor).
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "frontier.frontier.fullname" . }}-metrics
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "frontier.frontier.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: metrics
+      port: {{ .Values.observability.frontier.port }}
+      targetPort: metrics
+      protocol: TCP
+  selector:
+    {{- include "frontier.frontier.selectorLabels" . | nindent 4 }}
+{{- end }}
+{{- end }}

@@ -7,8 +7,6 @@ Expand the name of the chart.
 
 {{/*
 Create a default fully qualified app name.
-We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
-If release name contains chart name it will be used as a full name.
 */}}
 {{- define "frontier.fullname" -}}
 {{- if .Values.fullnameOverride }}
@@ -23,40 +21,113 @@ If release name contains chart name it will be used as a full name.
 {{- end }}
 {{- end }}
 
-{{/*
-Create chart name and version as used by the chart label.
-*/}}
+{{/* Per-component fullnames. */}}
+{{- define "frontier.frontier.fullname" -}}
+{{- printf "%s-frontier" (include "frontier.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{- define "frontier.frontlas.fullname" -}}
+{{- printf "%s-frontlas" (include "frontier.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/* Chart label. */}}
 {{- define "frontier.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
-{{/*
-Common labels
-*/}}
-{{- define "frontier.labels" -}}
+{{/* Common labels (shared by both components). */}}
+{{- define "frontier.commonLabels" -}}
 helm.sh/chart: {{ include "frontier.chart" . }}
-{{ include "frontier.selectorLabels" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
+app.kubernetes.io/part-of: {{ include "frontier.name" . }}
 {{- end }}
 
-{{/*
-Selector labels
-*/}}
-{{- define "frontier.selectorLabels" -}}
+{{/* Frontier labels + selector. */}}
+{{- define "frontier.frontier.labels" -}}
+{{ include "frontier.commonLabels" . }}
+app.kubernetes.io/name: {{ include "frontier.name" . }}
+app.kubernetes.io/component: frontier
+{{- end }}
+
+{{- define "frontier.frontier.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "frontier.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/component: frontier
+{{- end }}
+
+{{/* Frontlas labels + selector. */}}
+{{- define "frontier.frontlas.labels" -}}
+{{ include "frontier.commonLabels" . }}
+app.kubernetes.io/name: {{ include "frontier.name" . }}
+app.kubernetes.io/component: frontlas
+{{- end }}
+
+{{- define "frontier.frontlas.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "frontier.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/component: frontlas
+{{- end }}
+
+{{/* Service account names. */}}
+{{- define "frontier.frontier.serviceAccountName" -}}
+{{- if .Values.frontier.serviceAccount.create }}
+{{- default (include "frontier.frontier.fullname" .) .Values.frontier.serviceAccount.name }}
+{{- else }}
+{{- default "default" .Values.frontier.serviceAccount.name }}
+{{- end }}
+{{- end }}
+
+{{- define "frontier.frontlas.serviceAccountName" -}}
+{{- if .Values.frontlas.serviceAccount.create }}
+{{- default (include "frontier.frontlas.fullname" .) .Values.frontlas.serviceAccount.name }}
+{{- else }}
+{{- default "default" .Values.frontlas.serviceAccount.name }}
+{{- end }}
+{{- end }}
+
+{{/* Resolve image pull policy (per-component override > global default). */}}
+{{- define "frontier.pullPolicy" -}}
+{{- if .comp.image.pullPolicy }}{{ .comp.image.pullPolicy }}{{ else }}{{ .global.imagePullPolicy }}{{ end }}
+{{- end }}
+
+{{/* Resolve image tag (per-component override > Chart.AppVersion). */}}
+{{- define "frontier.imageTag" -}}
+{{- if .comp.image.tag }}{{ .comp.image.tag }}{{ else }}{{ .root.Chart.AppVersion }}{{ end }}
+{{- end }}
+
+{{/* Frontlas Service FQDN — used by frontier to dial the frontier-plane port. */}}
+{{- define "frontier.frontlas.serviceFQDN" -}}
+{{ include "frontier.frontlas.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local
 {{- end }}
 
 {{/*
-Create the name of the service account to use
+Resolve Redis connection details for Frontlas. Returns a YAML dict that
+deployment_frontlas.yaml fromYaml-decodes to build env vars.
+
+When redis.enabled is true, target the bundled `<release>-redis-master`
+service and the auto-generated `<release>-redis` Secret.
+Otherwise read from .Values.frontlas.externalRedis.
 */}}
-{{- define "frontier.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create }}
-{{- default (include "frontier.fullname" .) .Values.serviceAccount.name }}
-{{- else }}
-{{- default "default" .Values.serviceAccount.name }}
-{{- end }}
+{{- define "frontier.frontlas.redis" -}}
+{{- if .Values.redis.enabled -}}
+addrs: "{{ .Release.Name }}-redis-master.{{ .Release.Namespace }}.svc.cluster.local:6379"
+user: ""
+redisType: standalone
+masterName: ""
+db: 0
+passwordSecretName: "{{ .Release.Name }}-redis"
+passwordSecretKey: "redis-password"
+{{- else -}}
+addrs: "{{ join "," .Values.frontlas.externalRedis.addrs }}"
+user: "{{ .Values.frontlas.externalRedis.user }}"
+redisType: {{ .Values.frontlas.externalRedis.redisType }}
+masterName: "{{ .Values.frontlas.externalRedis.masterName }}"
+db: {{ .Values.frontlas.externalRedis.db }}
+passwordSecretName: "{{ .Values.frontlas.externalRedis.passwordSecret.name }}"
+passwordSecretKey: "{{ .Values.frontlas.externalRedis.passwordSecret.key }}"
+{{- end -}}
 {{- end }}
