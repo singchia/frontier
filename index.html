@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Frontier — Helm chart repository</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+           max-width: 720px; margin: 4em auto; padding: 0 1em; color: #1a1a1a; line-height: 1.6; }
+    h1 { font-size: 1.8em; }
+    code, pre { background: #f4f4f4; border-radius: 4px; padding: 0.15em 0.4em; font-family: ui-monospace, SFMono-Regular, monospace; }
+    pre { padding: 1em; overflow-x: auto; line-height: 1.4; }
+    a { color: #0366d6; }
+  </style>
+</head>
+<body>
+  <h1>Frontier — Helm chart repository</h1>
+
+  <p>
+    Helm chart distribution for
+    <a href="https://github.com/singchia/frontier">Frontier</a>, the
+    cloud-native gateway between microservices and edge nodes.
+  </p>
+
+  <h2>Add this repo</h2>
+  <pre>helm repo add frontier https://singchia.github.io/frontier
+helm repo update
+helm search repo frontier</pre>
+
+  <h2>Install</h2>
+  <pre>helm install frontier frontier/frontier \
+  --namespace frontier --create-namespace</pre>
+
+  <p>
+    The chart deploys both the data plane (<code>frontier</code>) and the
+    control plane (<code>frontlas</code>) with an optional bundled
+    <code>bitnami/redis</code> subchart.
+  </p>
+
+  <h2>Documentation</h2>
+  <ul>
+    <li><a href="https://frontier.singchia.io/docs/operator">CRD &amp; Operator guide (includes the Helm install path)</a></li>
+    <li><a href="https://github.com/singchia/frontier">Source &amp; issue tracker</a></li>
+    <li><a href="index.yaml">Helm repo index (raw)</a></li>
+  </ul>
+</body>
+</html>
