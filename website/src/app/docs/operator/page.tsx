@@ -46,17 +46,24 @@ kubectl get all -n frontier-operator-system`}</code></pre>
           Prefer Helm? The chart at <code>dist/helm/</code> deploys both <strong>frontier</strong> and <strong>frontlas</strong> in one shot, with an optional bundled <code>bitnami/redis</code> subchart. Defaults track the operator&apos;s production-grade settings (non-root UID 65532, drop-all capabilities, preferred host anti-affinity, preStop sleep, configurable drain window, observability endpoints on 9091/9092). Pick this path if your platform standardizes on Helm/ArgoCD/Flux and you don&apos;t need the operator&apos;s reconcile-driven self-healing for TLS Secrets and Status conditions.
         </p>
 
-        <p><strong>Quick install</strong> with the bundled Redis:</p>
-        <pre><code className="language-bash">{`# 1. Pull the bitnami/redis subchart
-cd frontier/dist/helm
-helm repo add bitnami https://charts.bitnami.com/bitnami
-helm dependency update
+        <p><strong>Quick install</strong> from the official chart repo (recommended):</p>
+        <pre><code className="language-bash">{`helm repo add frontier https://singchia.github.io/frontier
+helm repo update
+helm install frontier frontier/frontier \\
+  --namespace frontier --create-namespace`}</code></pre>
 
-# 2. Install
-helm install frontier . \\
-  --namespace frontier --create-namespace \\
-  --set frontier.replicaCount=2 \\
-  --set frontlas.replicaCount=1`}</code></pre>
+        <p>The repo lives on the <code>gh-pages</code> branch and is served by GitHub Pages — same chart, same digest as the source tree under <code>dist/helm/</code> in the repository.</p>
+
+        <p>Alternative install paths:</p>
+        <pre><code className="language-bash">{`# A) Single .tgz from a GitHub Release (pinned to a specific PR)
+helm install frontier \\
+  https://github.com/singchia/frontier/releases/download/helm-chart-v1.2.5-rc1/frontier-1.2.5.tgz \\
+  -n frontier --create-namespace
+
+# B) From a local checkout (for chart development)
+cd frontier/dist/helm
+helm dependency update
+helm install frontier . -n frontier --create-namespace`}</code></pre>
 
         <p><strong>Bring your own Redis</strong> (set <code>redis.enabled: false</code> and point Frontlas at it):</p>
         <pre><code className="language-yaml">{`# my-values.yaml
@@ -72,7 +79,7 @@ frontlas:
       name: redis-creds      # must already exist in the release namespace
       key:  password`}</code></pre>
 
-        <pre><code className="language-bash">{`helm install frontier . -n frontier --create-namespace -f my-values.yaml`}</code></pre>
+        <pre><code className="language-bash">{`helm install frontier frontier/frontier -n frontier -f my-values.yaml`}</code></pre>
 
         <p><strong>Common knobs</strong> in <code>values.yaml</code> (full listing: <code>helm show values dist/helm/</code>):</p>
         <table>
