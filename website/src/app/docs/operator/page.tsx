@@ -41,6 +41,78 @@ kubectl get all -n frontier-operator-system`}</code></pre>
         </ul>
         <p>If you tighten this further, keep at least <code>get;list;watch</code> on those resources or reconcile will fail.</p>
 
+        <h3 id="install-helm">2.3 Alternative: install with Helm</h3>
+        <p>
+          Prefer Helm? The chart at <code>dist/helm/</code> deploys both <strong>frontier</strong> and <strong>frontlas</strong> in one shot, with an optional bundled <code>bitnami/redis</code> subchart. Defaults track the operator&apos;s production-grade settings (non-root UID 65532, drop-all capabilities, preferred host anti-affinity, preStop sleep, configurable drain window, observability endpoints on 9091/9092). Pick this path if your platform standardizes on Helm/ArgoCD/Flux and you don&apos;t need the operator&apos;s reconcile-driven self-healing for TLS Secrets and Status conditions.
+        </p>
+
+        <p><strong>Quick install</strong> with the bundled Redis:</p>
+        <pre><code className="language-bash">{`# 1. Pull the bitnami/redis subchart
+cd frontier/dist/helm
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm dependency update
+
+# 2. Install
+helm install frontier . \\
+  --namespace frontier --create-namespace \\
+  --set frontier.replicaCount=2 \\
+  --set frontlas.replicaCount=1`}</code></pre>
+
+        <p><strong>Bring your own Redis</strong> (set <code>redis.enabled: false</code> and point Frontlas at it):</p>
+        <pre><code className="language-yaml">{`# my-values.yaml
+redis:
+  enabled: false
+
+frontlas:
+  externalRedis:
+    addrs:
+      - redis.shared:6379
+    redisType: standalone
+    passwordSecret:
+      name: redis-creds      # must already exist in the release namespace
+      key:  password`}</code></pre>
+
+        <pre><code className="language-bash">{`helm install frontier . -n frontier --create-namespace -f my-values.yaml`}</code></pre>
+
+        <p><strong>Common knobs</strong> in <code>values.yaml</code> (full listing: <code>helm show values dist/helm/</code>):</p>
+        <table>
+          <thead>
+            <tr><th>Path</th><th>Default</th><th>Notes</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>frontier.replicaCount</code> / <code>frontlas.replicaCount</code></td><td>1 / 1</td><td>Independent scaling per component</td></tr>
+            <tr><td><code>frontier.image.tag</code> / <code>frontlas.image.tag</code></td><td><code>{`""`}</code> &rarr; <code>Chart.AppVersion</code></td><td>Override to pin a specific binary version</td></tr>
+            <tr><td><code>global.registry</code></td><td><code>singchia</code></td><td>Mirror to your private registry</td></tr>
+            <tr><td><code>global.imagePullSecrets</code></td><td><code>[]</code></td><td>Private registry credentials</td></tr>
+            <tr><td><code>frontier.service.edgebound.type</code></td><td>NodePort</td><td>Switch to LoadBalancer for cloud edge ingress</td></tr>
+            <tr><td><code>frontier.podSecurityContext</code> / <code>containerSecurityContext</code></td><td>nonRoot UID 65532, drop ALL caps</td><td>Set to <code>{`{}`}</code> if your custom image needs root</td></tr>
+            <tr><td><code>frontier.terminationGracePeriodSeconds</code> / <code>frontier.drainSeconds</code></td><td>60 / 50</td><td>Long-lived edge connections; drain &lt; grace</td></tr>
+            <tr><td><code>frontier.autoscaling.enabled</code></td><td>false</td><td>HPA on the frontier Deployment</td></tr>
+            <tr><td><code>observability.frontier.enabled</code> / <code>observability.frontlas.enabled</code></td><td>true / true</td><td>Toggle the <code>/healthz</code> <code>/readyz</code> <code>/metrics</code> endpoints (ports 9091 / 9092)</td></tr>
+            <tr><td><code>serviceMonitor.enabled</code></td><td>false</td><td>Opt in if prometheus-operator is installed</td></tr>
+            <tr><td><code>redis.enabled</code></td><td>true</td><td>Set false to use external Redis (configure under <code>frontlas.externalRedis</code>)</td></tr>
+          </tbody>
+        </table>
+
+        <p><strong>Operator vs Helm — pick one:</strong></p>
+        <table>
+          <thead>
+            <tr><th>Concern</th><th>Operator</th><th>Helm</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Custom Resource (declarative)</td><td>✅ FrontierCluster CR</td><td>❌ values.yaml + Deployments directly</td></tr>
+            <tr><td>Status &amp; Conditions per cluster</td><td>✅ Available / Progressing / Degraded</td><td>❌ Inspect underlying Deployments</td></tr>
+            <tr><td>Self-healing on TLS Secret rotation</td><td>✅ Reconciler watches Secrets</td><td>❌ Manual <code>helm upgrade</code></td></tr>
+            <tr><td>Multiple clusters in one namespace</td><td>✅ Each CR is isolated</td><td>⚠️ Need separate releases</td></tr>
+            <tr><td>Bundled Redis</td><td>❌ BYO</td><td>✅ <code>bitnami/redis</code> subchart</td></tr>
+            <tr><td>ArgoCD / Flux GitOps</td><td>✅ (commit the CR)</td><td>✅ (commit values.yaml)</td></tr>
+            <tr><td>Initial install footprint</td><td>Operator pod + CRD + RBAC</td><td>No long-running operator</td></tr>
+          </tbody>
+        </table>
+        <p>
+          You can also <strong>publish the chart</strong> for downstream consumers: <code>helm package dist/helm/ -d /path/to/repo</code> produces <code>frontier-1.2.5.tgz</code>; serve the directory with any HTTP server or <code>helm push</code> to OCI.
+        </p>
+
         <h2 id="quickstart">3. Quick start</h2>
         <p>Minimum viable cluster: 2 frontier replicas, 1 frontlas replica, external Redis. Save as <code>frontiercluster.yaml</code>:</p>
         <pre><code className="language-yaml">{`apiVersion: frontier.singchia.io/v1alpha1
