@@ -165,3 +165,8 @@ func NewDao(conf *config.Configuration) (*Dao, error) {
 func (dao *Dao) Close() error {
 	return dao.rds.Close()
 }
+
+// Ping 探测 Redis 是否可达，给 /readyz 用。
+func (dao *Dao) Ping(ctx context.Context) error {
+	return dao.rds.Ping(ctx).Err()
+}
