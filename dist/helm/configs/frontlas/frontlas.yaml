@@ -1,0 +1,26 @@
+daemon:
+  rlimit:
+    enable: false
+    nofile: 102400
+  pprof:
+    enable: true
+    addr: 0.0.0.0:6061
+    cpu_profile_rate: 0
+control_plane:
+  listen:
+    network: tcp
+    addr: 0.0.0.0:{{ .Values.frontlas.service.controlplane.port }}
+frontier_plane:
+  listen:
+    network: tcp
+    addr: 0.0.0.0:{{ .Values.frontlas.service.frontierplane.port }}
+  expiration:
+    edge_meta: 30
+    service_meta: 30
+# Redis 实际地址 / 模式 / 用户名 / 密码 都通过环境变量注入
+# (FRONTLAS_REDIS_ADDRS / REDIS_TYPE / REDIS_USER / REDIS_PASSWORD ...).
+redis:
+  mode: standalone
+observability:
+  enable: {{ .Values.observability.frontlas.enabled }}
+  addr: 0.0.0.0:{{ .Values.observability.frontlas.port }}

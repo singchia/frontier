@@ -1,0 +1,4 @@
+# Subchart tarballs are pulled by `helm dependency update`; not committed.
+# Chart.lock pins the version and IS committed.
+charts/
+*.tgz

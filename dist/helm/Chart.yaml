@@ -1,24 +1,32 @@
 apiVersion: v2
 name: frontier
-description: A Helm chart for Kubernetes
-
-# A chart can be either an 'application' or a 'library' chart.
-#
-# Application charts are a collection of templates that can be packaged into versioned archives
-# to be deployed.
-#
-# Library charts provide useful utilities or functions for the chart developer. They're included as
-# a dependency of application charts to inject those utilities and functions into the rendering
-# pipeline. Library charts do not define any templates and therefore cannot be deployed.
+description: Frontier — All-in-one cloud-native gateway for microservices and edge nodes. Deploys both the data plane (frontier) and the control plane (frontlas) with an optional Redis backend.
 type: application
 
-# This is the chart version. This version number should be incremented each time you make changes
-# to the chart and its templates, including the app version.
-# Versions are expected to follow Semantic Versioning (https://semver.org/)
-version: 0.1.0
+# Chart version. Bump on every non-trivial change to templates / defaults.
+version: 1.2.5
 
-# This is the version number of the application being deployed. This version number should be
-# incremented each time you make changes to the application. Versions are not expected to
-# follow Semantic Versioning. They should reflect the version the application is using.
-# It is recommended to use it with quotes.
-appVersion: "1.0.0"
+# App version. Tracks the frontier / frontlas binary version this chart was tested against.
+appVersion: "1.2.5"
+
+home: https://github.com/singchia/frontier
+sources:
+  - https://github.com/singchia/frontier
+keywords:
+  - gateway
+  - edge
+  - iot
+  - microservices
+  - frontier
+  - frontlas
+maintainers:
+  - name: singchia
+    url: https://github.com/singchia
+
+# Bundled Redis subchart powers the Frontlas control plane.
+# Set redis.enabled=false in values.yaml to bring your own external Redis.
+dependencies:
+  - name: redis
+    version: "20.x.x"
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled

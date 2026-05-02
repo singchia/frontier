@@ -1,0 +1,127 @@
+{{- if .Values.frontlas.enabled }}
+{{- $redis := include "frontier.frontlas.redis" . | fromYaml }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "frontier.frontlas.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "frontier.frontlas.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.frontlas.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "frontier.frontlas.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap_frontlas.yaml") . | sha256sum }}
+        {{- with .Values.frontlas.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "frontier.frontlas.selectorLabels" . | nindent 8 }}
+        {{- with .Values.frontlas.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "frontier.frontlas.serviceAccountName" . }}
+      terminationGracePeriodSeconds: {{ .Values.frontlas.terminationGracePeriodSeconds }}
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.frontlas.podSecurityContext | nindent 8 }}
+      {{- with .Values.frontlas.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.frontlas.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.frontlas.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      affinity:
+      {{- if .Values.frontlas.affinity }}
+        {{- toYaml .Values.frontlas.affinity | nindent 8 }}
+      {{- else }}
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    {{- include "frontier.frontlas.selectorLabels" . | nindent 20 }}
+      {{- end }}
+      containers:
+        - name: frontlas
+          image: "{{ .Values.global.registry }}/{{ .Values.frontlas.image.repository }}:{{ include "frontier.imageTag" (dict "comp" .Values.frontlas "root" $) }}"
+          imagePullPolicy: {{ include "frontier.pullPolicy" (dict "comp" .Values.frontlas "global" .Values.global) }}
+          securityContext:
+            {{- toYaml .Values.frontlas.containerSecurityContext | nindent 12 }}
+          args:
+            - "--config"
+            - "/usr/conf/frontlas.yaml"
+          env:
+            - name: FRONTLAS_CONTROLPLANE_PORT
+              value: {{ .Values.frontlas.service.controlplane.port | quote }}
+            - name: FRONTLAS_FRONTIERPLANE_PORT
+              value: {{ .Values.frontlas.service.frontierplane.port | quote }}
+            - name: REDIS_TYPE
+              value: {{ $redis.redisType | quote }}
+            - name: REDIS_ADDRS
+              value: {{ $redis.addrs | quote }}
+            - name: REDIS_USER
+              value: {{ $redis.user | quote }}
+            - name: REDIS_DB
+              value: {{ $redis.db | quote }}
+            - name: MASTER_NAME
+              value: {{ $redis.masterName | quote }}
+            {{- if $redis.passwordSecretName }}
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $redis.passwordSecretName }}
+                  key: {{ $redis.passwordSecretKey }}
+            {{- else }}
+            - name: REDIS_PASSWORD
+              value: ""
+            {{- end }}
+            {{- with .Values.frontlas.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: controlplane
+              containerPort: {{ .Values.frontlas.service.controlplane.port }}
+              protocol: TCP
+            - name: frontierplane
+              containerPort: {{ .Values.frontlas.service.frontierplane.port }}
+              protocol: TCP
+            {{- if .Values.observability.frontlas.enabled }}
+            - name: metrics
+              containerPort: {{ .Values.observability.frontlas.port }}
+              protocol: TCP
+            {{- end }}
+          {{- with .Values.frontlas.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.frontlas.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.frontlas.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /usr/conf/
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "frontier.frontlas.fullname" . }}
+{{- end }}

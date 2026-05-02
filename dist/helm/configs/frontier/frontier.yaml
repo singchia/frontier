@@ -1,5 +1,5 @@
 daemon:
-  frontier_id: frontier01
+  frontier_id: ""
   rlimit:
     enable: false
     nofile: 102400
@@ -10,20 +10,29 @@ daemon:
 servicebound:
   listen:
     network: tcp
-    addr: 0.0.0.0:30011
+    addr: 0.0.0.0:{{ .Values.frontier.service.servicebound.port }}
 edgebound:
   listen:
     network: tcp
-    addr: 0.0.0.0:30012
+    addr: 0.0.0.0:{{ .Values.frontier.service.edgebound.port }}
   edgeid_alloc_when_no_idservice_on: true
 dao:
   debug: false
+{{- if .Values.frontlas.enabled }}
 frontlas:
-  enable: false
+  enable: true
   dial:
     network: tcp
-    addr: 127.0.0.1:40012
+    addrs:
+      - {{ include "frontier.frontlas.serviceFQDN" . }}:{{ .Values.frontlas.service.frontierplane.port }}
   metrics:
     enable: false
     interval: 0
+{{- else }}
+frontlas:
+  enable: false
+{{- end }}
+observability:
+  enable: {{ .Values.observability.frontier.enabled }}
+  addr: 0.0.0.0:{{ .Values.observability.frontier.port }}
 mqm: {}
