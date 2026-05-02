@@ -161,17 +161,45 @@ const (
 
 // FrontierClusterStatus defines the observed state of FrontierCluster
 type FrontierClusterStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-	// TODO scale 1 a time
-	// CurrentFrontierReplicas  int `json:"currentFrontierReplicas"`
-	// CurrentFrontlasReplicass int `json:"currentFrontlasReplicas"`
-	Phase   Phase  `json:"phase"`
-	Message string `json:"message,omitemtpy"`
+	// Phase 是粗粒度状态，便于 printcolumn 一眼可见。
+	// Deprecated: 优先使用 Conditions 做精细化判断；Phase 暂保留兼容。
+	Phase Phase `json:"phase,omitempty"`
+	// Message 是最近一次状态变更的简短描述。
+	Message string `json:"message,omitempty"`
+	// Conditions 反映 reconcile 流程的细粒度状态，遵循 K8s 现代约定。
+	// 类型包括 Available / Progressing / Degraded。
+	// +optional
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	// +listType=map
+	// +listMapKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+	// ObservedGeneration 是 status 对应的 spec generation，用于检测 status 是否陈旧。
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	// FrontierReadyReplicas / FrontlasReadyReplicas 暴露当前 ready 副本数，
+	// 给 printcolumn 与 kubectl get 用。
+	// +optional
+	FrontierReadyReplicas int32 `json:"frontierReadyReplicas,omitempty"`
+	// +optional
+	FrontlasReadyReplicas int32 `json:"frontlasReadyReplicas,omitempty"`
 }
 
+// Condition 类型常量
+const (
+	ConditionAvailable   = "Available"
+	ConditionProgressing = "Progressing"
+	ConditionDegraded    = "Degraded"
+)
+
 //+kubebuilder:object:root=true
+//+kubebuilder:resource:shortName=fc;fcs,categories={frontier}
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
+//+kubebuilder:printcolumn:name="Frontier",type=integer,JSONPath=`.status.frontierReadyReplicas`
+//+kubebuilder:printcolumn:name="Frontlas",type=integer,JSONPath=`.status.frontlasReadyReplicas`
+//+kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
+//+kubebuilder:printcolumn:name="Message",type=string,priority=1,JSONPath=`.status.message`
 
 // FrontierCluster is the Schema for the frontierclusters API
 type FrontierCluster struct {
