@@ -3,7 +3,7 @@ entries:
   frontier:
   - apiVersion: v2
     appVersion: 1.2.5
-    created: "2026-05-02T17:31:46.279064+08:00"
+    created: "2026-05-02T21:58:12.994523+08:00"
     dependencies:
     - condition: redis.enabled
       name: redis
@@ -12,7 +12,7 @@ entries:
     description: Frontier — All-in-one cloud-native gateway for microservices and
       edge nodes. Deploys both the data plane (frontier) and the control plane (frontlas)
       with an optional Redis backend.
-    digest: 884dcc5c2cb0b03e3065ecf9ea5d8f8e56feabbcb9f99975d93f6f9f6dd402c4
+    digest: d40febeaa4530f162726f371ec520a998f92b7ba9bf48610acc8264609f96e41
     home: https://github.com/singchia/frontier
     keywords:
     - gateway
@@ -31,4 +31,4 @@ entries:
     urls:
     - https://singchia.github.io/frontier/frontier-1.2.5.tgz
     version: 1.2.5
-generated: "2026-05-02T17:31:46.268356+08:00"
+generated: "2026-05-02T21:58:12.9853+08:00"
