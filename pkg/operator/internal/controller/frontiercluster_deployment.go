@@ -48,38 +48,48 @@ const (
 	FrontlasAddrEnv = "FRONTLAS_ADDR" // service + frontierport
 )
 
-func (r *FrontierClusterReconciler) ensureDeployment(ctx context.Context, fc v1alpha1.FrontierCluster) (bool, error) {
+// deploymentReadiness 是 ensureDeployment 的回包，方便上层把数字回填到 status。
+type deploymentReadiness struct {
+	frontierReady int32
+	frontlasReady int32
+	allReady      bool
+}
+
+func (r *FrontierClusterReconciler) ensureDeployment(ctx context.Context, fc v1alpha1.FrontierCluster) (deploymentReadiness, error) {
 	log := log.FromContext(ctx)
+	out := deploymentReadiness{}
 
 	log.Info("Create/Updating Frontlas Deployment")
 	if err := r.ensureFrontlasDeployment(ctx, fc); err != nil {
-		return false, fmt.Errorf("error creating/updating frontlas Deployment: %s", err)
+		return out, fmt.Errorf("error creating/updating frontlas Deployment: %s", err)
 	}
 
 	currentFrontlasDeployment, err := r.client.GetDeployment(ctx, fc.FrontlasDeploymentNamespacedName())
 	if err != nil {
-		return false, fmt.Errorf("error getting Deployment: %s", err)
+		return out, fmt.Errorf("error getting Deployment: %s", err)
 	}
+	out.frontlasReady = currentFrontlasDeployment.Status.ReadyReplicas
 	frontlasIsReady := deployment.IsReady(currentFrontlasDeployment, fc.FrontlasReplicas())
 	if !frontlasIsReady {
 		log.Info("frontlas deployment is not ready",
-			"expectedReplicas", fc.FrontierReplicas(),
+			"expectedReplicas", fc.FrontlasReplicas(),
 			"updatedReplicas", currentFrontlasDeployment.Status.UpdatedReplicas,
 			"readyReplicas", currentFrontlasDeployment.Status.ReadyReplicas,
 			"generation", currentFrontlasDeployment.Generation,
 			"observedGeneration", currentFrontlasDeployment.Status.ObservedGeneration)
-		return false, nil
+		return out, nil
 	}
 
 	log.Info("Creating/Updating Frontier Deployment")
 	if err := r.ensureFrontierDeployment(ctx, fc); err != nil {
-		return false, fmt.Errorf("error creating/updating frontier Deployment: %s", err)
+		return out, fmt.Errorf("error creating/updating frontier Deployment: %s", err)
 	}
 
 	currentFrontierDeployment, err := r.client.GetDeployment(ctx, fc.FrontierDeploymentNamespacedName())
 	if err != nil {
-		return false, fmt.Errorf("error getting Deployment: %s", err)
+		return out, fmt.Errorf("error getting Deployment: %s", err)
 	}
+	out.frontierReady = currentFrontierDeployment.Status.ReadyReplicas
 	frontierIsReady := deployment.IsReady(currentFrontierDeployment, fc.FrontierReplicas())
 	if !frontierIsReady {
 		log.Info("frontier deployment is not ready",
@@ -88,10 +98,11 @@ func (r *FrontierClusterReconciler) ensureDeployment(ctx context.Context, fc v1a
 			"readyReplicas", currentFrontierDeployment.Status.ReadyReplicas,
 			"generation", currentFrontierDeployment.Generation,
 			"observedGeneration", currentFrontierDeployment.Status.ObservedGeneration)
-		return false, nil
+		return out, nil
 	}
 
-	return frontierIsReady && frontlasIsReady, nil
+	out.allReady = true
+	return out, nil
 }
 
 func (r *FrontierClusterReconciler) ensureFrontierDeployment(ctx context.Context, fc v1alpha1.FrontierCluster) error {
