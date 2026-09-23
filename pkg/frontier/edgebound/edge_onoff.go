@@ -28,6 +28,9 @@ func (em *edgeManager) online(end geminio.End) error {
 		return err
 	}
 	old := em.edges[end.ClientID()]
+	if em.streams != nil {
+		em.streams.MDelAll(end.ClientID())
+	}
 	em.edges[end.ClientID()] = end
 	count := len(em.edges)
 	em.mtx.Unlock()

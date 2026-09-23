@@ -195,9 +195,8 @@ func (em *edgeManager) ListStreams(edgeID uint64) []geminio.Stream {
 
 func (em *edgeManager) DelEdgeByID(edgeID uint64) error {
 	em.mtx.RLock()
-	defer em.mtx.RUnlock()
-
 	edge, ok := em.edges[edgeID]
+	em.mtx.RUnlock()
 	if !ok {
 		return apis.ErrEdgeNotOnline
 	}
