@@ -38,6 +38,11 @@ func (em *edgeManager) online(end geminio.End) error {
 	if old != nil && old != end {
 		klog.Warningf("edge online, replacing old end, edgeID: %d", end.ClientID())
 		go func() {
+			defer func() {
+				if recovered := recover(); recovered != nil {
+					klog.Errorf("edge online, kick off old end panicked: %v, edgeID: %d", recovered, end.ClientID())
+				}
+			}()
 			// Close may wait for old streams; forwarding the new session must not wait.
 			if err := old.Close(); err != nil {
 				klog.Warningf("edge online, kick off old end err: %s, edgeID: %d", err, end.ClientID())
