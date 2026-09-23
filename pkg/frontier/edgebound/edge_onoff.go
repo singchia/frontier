@@ -28,8 +28,8 @@ func (em *edgeManager) online(end geminio.End) error {
 		return err
 	}
 	old := em.edges[end.ClientID()]
-	if em.streams != nil {
-		em.streams.MDelAll(end.ClientID())
+	if old != nil && em.streams != nil {
+		em.streams.MDelAll(edgeSessionKey{end.ClientID(), old.RemoteAddr().String()})
 	}
 	em.edges[end.ClientID()] = end
 	count := len(em.edges)
@@ -74,6 +74,9 @@ func (em *edgeManager) offline(edgeID uint64, meta []byte, addr net.Addr) error 
 		return err
 	}
 	delete(em.edges, edgeID)
+	if em.streams != nil {
+		em.streams.MDelAll(edgeSessionKey{edgeID, addr.String()})
+	}
 	count := len(em.edges)
 	em.mtx.Unlock()
 	klog.V(2).Infof("edge offline, edgeID: %d, remote addr: %s", edgeID, addr)

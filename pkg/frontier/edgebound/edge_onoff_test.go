@@ -141,21 +141,24 @@ func TestEdgeReOnline_LateOldStreamsDoNotReplaceNewStreams(t *testing.T) {
 	}
 	oldStream := &reconnectStream{id: 72, stream: 3, addr: old.addr}
 	em.acceptStream(oldStream)
+	newStream := &reconnectStream{id: 72, stream: 3, addr: newEnd.addr}
+	em.acceptStream(newStream) // The new stream can arrive before online installs its end.
+	if streams := em.ListStreams(72); len(streams) != 1 || streams[0] != oldStream {
+		t.Fatal("early new stream appeared in the old session")
+	}
 	if err := em.online(newEnd); err != nil {
 		t.Fatal(err)
 	}
-	newStream := &reconnectStream{id: 72, stream: 3, addr: newEnd.addr}
-	em.acceptStream(newStream)
-	if got := em.streams.MGet(uint64(72), uint64(3)); got != newStream {
-		t.Fatalf("new stream was not cached: got=%v", got)
+	if streams := em.ListStreams(72); len(streams) != 1 || streams[0] != newStream {
+		t.Fatal("early new stream was not visible after reconnect")
 	}
 	em.closedStream(oldStream)
-	if got := em.streams.MGet(uint64(72), uint64(3)); got != newStream {
-		t.Fatalf("old close removed replacement stream: %v", got)
+	if streams := em.ListStreams(72); len(streams) != 1 || streams[0] != newStream {
+		t.Fatal("old close removed replacement stream")
 	}
 	lateOldStream := &reconnectStream{id: 72, stream: 3, addr: old.addr}
 	em.acceptStream(lateOldStream)
-	if em.streams.MGet(uint64(72), uint64(3)) != newStream {
+	if streams := em.ListStreams(72); len(streams) != 1 || streams[0] != newStream {
 		t.Fatal("late old stream replaced the active stream")
 	}
 }

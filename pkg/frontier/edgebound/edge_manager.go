@@ -57,6 +57,11 @@ type edgeManager struct {
 	tmr timer.Timer
 }
 
+type edgeSessionKey struct {
+	edgeID uint64
+	addr   string
+}
+
 // support for tls, mtls and tcp listening
 func newEdgeManager(conf *config.Configuration, repo apis.Repo, informer apis.EdgeInformer,
 	exchange apis.Exchange, tmr timer.Timer) (*edgeManager, error) {
@@ -189,7 +194,14 @@ func (em *edgeManager) CountEdges() int {
 }
 
 func (em *edgeManager) ListStreams(edgeID uint64) []geminio.Stream {
-	all := em.streams.MGetAll(edgeID)
+	em.mtx.RLock()
+	end := em.edges[edgeID]
+	if end == nil {
+		em.mtx.RUnlock()
+		return nil
+	}
+	all := em.streams.MGetAll(edgeSessionKey{edgeID, end.RemoteAddr().String()})
+	em.mtx.RUnlock()
 	return utils.Slice2streams(all)
 }
 
