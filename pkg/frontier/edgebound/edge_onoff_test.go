@@ -77,15 +77,22 @@ func TestEdgeReOnline_WhenOldSessionDoesNotGoOffline(t *testing.T) {
 	if em.GetEdgeByID(old.id) != newEnd {
 		t.Fatal("new session did not replace the old session")
 	}
+	newest := &reconnectEnd{id: 72, addr: &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 10003}}
+	if err := em.online(newest); err != nil {
+		t.Fatalf("second reconnect was rejected: %v", err)
+	}
 	if err := em.offline(old.id, old.Meta(), old.addr); err != nil {
 		t.Fatal(err)
 	}
-	if em.GetEdgeByID(old.id) != newEnd {
-		t.Fatal("late old-session callback removed the new session")
+	if err := em.offline(newEnd.id, newEnd.Meta(), newEnd.addr); err != nil {
+		t.Fatal(err)
+	}
+	if em.GetEdgeByID(old.id) != newest {
+		t.Fatal("late old-session callback removed the latest session")
 	}
 	edge, err := r.GetEdge(old.id)
-	if err != nil || edge.Addr != newEnd.addr.String() {
-		t.Fatalf("repository lost the new session: edge=%+v err=%v", edge, err)
+	if err != nil || edge.Addr != newest.addr.String() {
+		t.Fatalf("repository lost the latest session: edge=%+v err=%v", edge, err)
 	}
 }
 
