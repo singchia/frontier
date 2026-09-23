@@ -59,7 +59,10 @@ func (em *edgeManager) online(session *edgeSession, end geminio.End) error {
 			klog.Errorf("edge online, repo create rpc err: %s, edgeID: %d, rpc: %s", err, end.ClientID(), rpc.RPC)
 		}
 	}
-	count := len(em.edges)
+	// Publish the count in cache-update order; a delayed snapshot can go stale.
+	if em.informer != nil {
+		em.informer.SetEdgeCount(len(em.edges))
+	}
 	em.mtx.Unlock()
 
 	if old != nil && old != session {
@@ -77,10 +80,6 @@ func (em *edgeManager) online(session *edgeSession, end geminio.End) error {
 		}()
 	}
 
-	if em.informer != nil {
-		em.informer.SetEdgeCount(count)
-	}
-
 	return nil
 }
 
@@ -95,6 +94,9 @@ func (em *edgeManager) offline(session *edgeSession, edgeID uint64, meta []byte,
 	}
 	// A failed repository cleanup must not leave a closed connection routable.
 	delete(em.edges, edgeID)
+	if em.informer != nil {
+		em.informer.SetEdgeCount(len(em.edges))
+	}
 
 	if err := em.repo.DeleteEdge(&query.EdgeDelete{
 		EdgeID: edgeID,
@@ -109,12 +111,10 @@ func (em *edgeManager) offline(session *edgeSession, edgeID uint64, meta []byte,
 		klog.Errorf("edge offline, repo delete edge rpcs err: %s, edgeID: %d", err, edgeID)
 		return err
 	}
-	count := len(em.edges)
 	em.mtx.Unlock()
 	klog.V(2).Infof("edge offline, edgeID: %d, remote addr: %s", edgeID, addr)
 
 	if em.informer != nil {
-		em.informer.SetEdgeCount(count)
 		em.informer.EdgeOffline(edgeID, meta, addr)
 	}
 	// exchange to service

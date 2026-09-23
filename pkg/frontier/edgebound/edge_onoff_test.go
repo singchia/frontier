@@ -3,9 +3,11 @@ package edgebound
 import (
 	"net"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/singchia/frontier/pkg/frontier/apis"
 	"github.com/singchia/frontier/pkg/frontier/config"
 	"github.com/singchia/frontier/pkg/frontier/repo"
 	"github.com/singchia/frontier/pkg/frontier/repo/query"
@@ -39,6 +41,61 @@ type reconnectStream struct {
 	id     uint64
 	stream uint64
 	addr   net.Addr
+}
+
+type delayedCountInformer struct {
+	apis.EdgeInformer
+	count   atomic.Int32
+	entered chan struct{}
+	release chan struct{}
+}
+
+func (informer *delayedCountInformer) SetEdgeCount(count int) {
+	if count == 1 {
+		close(informer.entered)
+		<-informer.release
+	}
+	informer.count.Store(int32(count))
+}
+
+func TestEdgeReOnline_ConcurrentCountUpdatesStayOrdered(t *testing.T) {
+	r, err := repo.NewRepo(&config.Configuration{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Close()
+	informer := &delayedCountInformer{entered: make(chan struct{}), release: make(chan struct{})}
+	em := &edgeManager{edges: make(map[uint64]*edgeSession), repo: r, informer: informer}
+	online := func(id uint64, done chan<- error) {
+		end := &reconnectEnd{id: id, addr: &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: int(id)}}
+		done <- em.online(&edgeSession{edgeManager: em}, end)
+	}
+	first, second := make(chan error, 1), make(chan error, 1)
+	go online(71, first)
+	<-informer.entered
+	go online(72, second)
+	// Allow a later update to overtake the delayed first update if publication
+	// is not ordered with the cache mutation. Correct serialization blocks it.
+	var secondErr error
+	secondDone := false
+	select {
+	case secondErr = <-second:
+		secondDone = true
+	case <-time.After(20 * time.Millisecond):
+	}
+	close(informer.release)
+	if err := <-first; err != nil {
+		t.Fatal(err)
+	}
+	if !secondDone {
+		secondErr = <-second
+	}
+	if secondErr != nil {
+		t.Fatal(secondErr)
+	}
+	if got, want := int(informer.count.Load()), em.CountEdges(); got != want {
+		t.Fatalf("reported edge count is stale: got %d, want %d", got, want)
+	}
 }
 
 func (stream *reconnectStream) ClientID() uint64     { return stream.id }

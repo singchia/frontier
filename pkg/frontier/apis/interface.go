@@ -62,6 +62,7 @@ type EdgeInformer interface {
 	EdgeOnline(edgeID uint64, meta []byte, addr net.Addr)
 	EdgeOffline(edgeID uint64, meta []byte, addr net.Addr)
 	EdgeHeartbeat(edgeID uint64, meta []byte, addr net.Addr)
+	// SetEdgeCount runs under the edge cache lock; it must not block or call back into Edgebound.
 	SetEdgeCount(count int)
 }
 type ServiceInformer interface {
