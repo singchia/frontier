@@ -12,7 +12,17 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func (em *edgeManager) online(end geminio.End) error {
+// A separate delegate binds callbacks to a connection even if its address is reused.
+// All session fields are protected by edgeManager.mtx.
+type edgeSession struct {
+	*edgeManager
+	end     geminio.End
+	retired bool
+	streams map[uint64]geminio.Stream
+	rpcs    map[string]*model.EdgeRPC
+}
+
+func (em *edgeManager) online(session *edgeSession, end geminio.End) error {
 	edge := &model.Edge{
 		EdgeID:     end.ClientID(),
 		Meta:       string(end.Meta()),
@@ -22,20 +32,37 @@ func (em *edgeManager) online(end geminio.End) error {
 	// Keep the in-memory repository and active session in the same critical section.
 	// A late offline callback must never delete a replacement session's data.
 	em.mtx.Lock()
+	if session.retired {
+		em.mtx.Unlock()
+		return net.ErrClosed
+	}
 	if err := em.repo.CreateEdge(edge); err != nil {
 		em.mtx.Unlock()
 		klog.Errorf("edge online, repo create err: %s, edgeID: %d", err, end.ClientID())
 		return err
 	}
 	old := em.edges[end.ClientID()]
-	if old != nil && em.streams != nil {
-		em.streams.MDelAll(edgeSessionKey{end.ClientID(), old.RemoteAddr().String()})
+	if old != nil && old != session {
+		old.retired = true
+		old.streams = nil
+		old.rpcs = nil
 	}
-	em.edges[end.ClientID()] = end
+	session.end = end
+	em.edges[end.ClientID()] = session
+	// Registrations can arrive before online installs the connection. Replace the
+	// old session's RPC inventory with only this session's pending registrations.
+	if err := em.repo.DeleteEdgeRPCs(end.ClientID()); err != nil {
+		klog.Errorf("edge online, repo delete edge rpcs err: %s, edgeID: %d", err, end.ClientID())
+	}
+	for _, rpc := range session.rpcs {
+		if err := em.repo.CreateEdgeRPC(rpc); err != nil {
+			klog.Errorf("edge online, repo create rpc err: %s, edgeID: %d, rpc: %s", err, end.ClientID(), rpc.RPC)
+		}
+	}
 	count := len(em.edges)
 	em.mtx.Unlock()
 
-	if old != nil && old != end {
+	if old != nil && old != session {
 		klog.Warningf("edge online, replacing old end, edgeID: %d", end.ClientID())
 		go func() {
 			defer func() {
@@ -44,7 +71,7 @@ func (em *edgeManager) online(end geminio.End) error {
 				}
 			}()
 			// Close may wait for old streams; forwarding the new session must not wait.
-			if err := old.Close(); err != nil {
+			if err := old.end.Close(); err != nil {
 				klog.Warningf("edge online, kick off old end err: %s, edgeID: %d", err, end.ClientID())
 			}
 		}()
@@ -57,13 +84,17 @@ func (em *edgeManager) online(end geminio.End) error {
 	return nil
 }
 
-func (em *edgeManager) offline(edgeID uint64, meta []byte, addr net.Addr) error {
+func (em *edgeManager) offline(session *edgeSession, edgeID uint64, meta []byte, addr net.Addr) error {
 	em.mtx.Lock()
-	end, ok := em.edges[edgeID]
-	if !ok || end.RemoteAddr().String() != addr.String() {
+	session.retired = true
+	session.streams = nil
+	session.rpcs = nil
+	if em.edges[edgeID] != session {
 		em.mtx.Unlock()
 		return nil
 	}
+	// A failed repository cleanup must not leave a closed connection routable.
+	delete(em.edges, edgeID)
 
 	if err := em.repo.DeleteEdge(&query.EdgeDelete{
 		EdgeID: edgeID,
@@ -77,10 +108,6 @@ func (em *edgeManager) offline(edgeID uint64, meta []byte, addr net.Addr) error 
 		em.mtx.Unlock()
 		klog.Errorf("edge offline, repo delete edge rpcs err: %s, edgeID: %d", err, edgeID)
 		return err
-	}
-	delete(em.edges, edgeID)
-	if em.streams != nil {
-		em.streams.MDelAll(edgeSessionKey{edgeID, addr.String()})
 	}
 	count := len(em.edges)
 	em.mtx.Unlock()
@@ -114,14 +141,14 @@ func (em *edgeManager) ConnOnline(d delegate.ConnDescriber) error {
 	return nil
 }
 
-func (em *edgeManager) ConnOffline(d delegate.ConnDescriber) error {
+func (session *edgeSession) ConnOffline(d delegate.ConnDescriber) error {
 	edgeID := d.ClientID()
 	meta := d.Meta()
 	addr := d.RemoteAddr()
 
 	klog.V(2).Infof("edge offline, edgeID: %d, meta: %s, addr: %s", edgeID, string(meta), addr)
 	// offline the cache
-	err := em.offline(edgeID, meta, addr)
+	err := session.edgeManager.offline(session, edgeID, meta, addr)
 	if err != nil {
 		klog.Errorf("edge offline, cache or db offline err: %s, edgeID: %d, meta: %s, addr: %s",
 			err, edgeID, string(meta), addr)
@@ -141,14 +168,29 @@ func (em *edgeManager) Heartbeat(d delegate.ConnDescriber) error {
 	return nil
 }
 
-func (em *edgeManager) RemoteRegistration(rpc string, edgeID, streamID uint64) {
+func (session *edgeSession) RemoteRegistration(rpc string, edgeID, streamID uint64) {
+	em := session.edgeManager
 	klog.V(3).Infof("edge remote rpc registration, rpc: %s, edgeID: %d, streamID: %d", rpc, edgeID, streamID)
 
-	// memdb
+	em.mtx.Lock()
+	defer em.mtx.Unlock()
+	if session.retired {
+		return
+	}
+	if session.rpcs == nil {
+		session.rpcs = make(map[string]*model.EdgeRPC)
+	}
+	if _, ok := session.rpcs[rpc]; ok {
+		return
+	}
 	er := &model.EdgeRPC{
 		RPC:        rpc,
 		EdgeID:     edgeID,
 		CreateTime: time.Now().Unix(),
+	}
+	session.rpcs[rpc] = er
+	if session.end == nil {
+		return
 	}
 	err := em.repo.CreateEdgeRPC(er)
 	if err != nil {
