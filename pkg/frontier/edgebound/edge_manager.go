@@ -9,7 +9,6 @@ import (
 	"sync"
 
 	"github.com/jumboframes/armorigo/rproxy"
-	"github.com/jumboframes/armorigo/synchub"
 	"github.com/singchia/frontier/pkg/frontier/apis"
 	"github.com/singchia/frontier/pkg/frontier/config"
 	"github.com/singchia/frontier/pkg/frontier/misc"
@@ -38,7 +37,6 @@ type edgeManager struct {
 
 	// edgeID allocator
 	idFactory id.IDFactory
-	shub      *synchub.SyncHub
 	// cache
 	// key: edgeID; value: geminio.End
 	// edges sync.Map
@@ -69,7 +67,6 @@ func newEdgeManager(conf *config.Configuration, repo apis.Repo, informer apis.Ed
 		tmr:                   tmr,
 		streams:               mapmap.NewMapMap(),
 		repo:                  repo,
-		shub:                  synchub.NewSyncHub(synchub.OptionTimer(tmr)),
 		edges:                 make(map[uint64]geminio.End),
 		UnimplementedDelegate: &delegate.UnimplementedDelegate{},
 		// a simple unix timestamp incemental id factory
@@ -160,6 +157,9 @@ func (em *edgeManager) handleConn(conn net.Conn) error {
 	}
 	// forward and stream up to service
 	em.forward(end)
+	if em.informer != nil {
+		em.informer.EdgeOnline(end.ClientID(), end.Meta(), end.RemoteAddr())
+	}
 	return nil
 }
 
