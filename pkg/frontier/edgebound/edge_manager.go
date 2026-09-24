@@ -9,11 +9,9 @@ import (
 	"sync"
 
 	"github.com/jumboframes/armorigo/rproxy"
-	"github.com/jumboframes/armorigo/synchub"
 	"github.com/singchia/frontier/pkg/frontier/apis"
 	"github.com/singchia/frontier/pkg/frontier/config"
 	"github.com/singchia/frontier/pkg/frontier/misc"
-	"github.com/singchia/frontier/pkg/mapmap"
 	"github.com/singchia/frontier/pkg/utils"
 	"github.com/singchia/geminio"
 	"github.com/singchia/geminio/delegate"
@@ -38,15 +36,10 @@ type edgeManager struct {
 
 	// edgeID allocator
 	idFactory id.IDFactory
-	shub      *synchub.SyncHub
 	// cache
-	// key: edgeID; value: geminio.End
-	// edges sync.Map
-	edges map[uint64]geminio.End
+	// key: edgeID; value: the current connection instance
+	edges map[uint64]*edgeSession
 	mtx   sync.RWMutex
-	// key: edgeID; subkey: streamID; value: geminio.Stream
-	// we don't store stream info to repo, because they may will be too much.
-	streams *mapmap.MapMap
 
 	// repo and repo for edges
 	repo apis.Repo
@@ -67,10 +60,8 @@ func newEdgeManager(conf *config.Configuration, repo apis.Repo, informer apis.Ed
 	em := &edgeManager{
 		conf:                  conf,
 		tmr:                   tmr,
-		streams:               mapmap.NewMapMap(),
 		repo:                  repo,
-		shub:                  synchub.NewSyncHub(synchub.OptionTimer(tmr)),
-		edges:                 make(map[uint64]geminio.End),
+		edges:                 make(map[uint64]*edgeSession),
 		UnimplementedDelegate: &delegate.UnimplementedDelegate{},
 		// a simple unix timestamp incemental id factory
 		idFactory: id.DefaultIncIDCounter,
@@ -139,13 +130,14 @@ func (em *edgeManager) Serve() error {
 }
 
 func (em *edgeManager) handleConn(conn net.Conn) error {
+	session := &edgeSession{edgeManager: em}
 	// options for geminio End
 	opt := server.NewEndOptions()
 	opt.SetTimer(em.tmr)
-	opt.SetDelegate(em)
+	opt.SetDelegate(session)
 	// stream handler
-	opt.SetAcceptStreamFunc(em.acceptStream)
-	opt.SetClosedStreamFunc(em.closedStream)
+	opt.SetAcceptStreamFunc(session.acceptStream)
+	opt.SetClosedStreamFunc(session.closedStream)
 	opt.SetBufferSize(512, 512)
 	end, err := server.NewEndWithConn(conn, opt)
 	if err != nil {
@@ -154,12 +146,15 @@ func (em *edgeManager) handleConn(conn net.Conn) error {
 	}
 
 	// handle online event for end
-	if err = em.online(end); err != nil {
+	if err = em.online(session, end); err != nil {
 		end.Close()
 		return err
 	}
 	// forward and stream up to service
 	em.forward(end)
+	if em.informer != nil {
+		em.informer.EdgeOnline(end.ClientID(), end.Meta(), end.RemoteAddr())
+	}
 	return nil
 }
 
@@ -168,7 +163,10 @@ func (em *edgeManager) GetEdgeByID(edgeID uint64) geminio.End {
 	em.mtx.RLock()
 	defer em.mtx.RUnlock()
 
-	return em.edges[edgeID]
+	if session := em.edges[edgeID]; session != nil {
+		return session.end
+	}
+	return nil
 }
 
 func (em *edgeManager) ListEdges() []geminio.End {
@@ -177,7 +175,7 @@ func (em *edgeManager) ListEdges() []geminio.End {
 	defer em.mtx.RUnlock()
 
 	for _, value := range em.edges {
-		ends = append(ends, value)
+		ends = append(ends, value.end)
 	}
 	return ends
 }
@@ -189,19 +187,27 @@ func (em *edgeManager) CountEdges() int {
 }
 
 func (em *edgeManager) ListStreams(edgeID uint64) []geminio.Stream {
-	all := em.streams.MGetAll(edgeID)
-	return utils.Slice2streams(all)
+	em.mtx.RLock()
+	defer em.mtx.RUnlock()
+	session := em.edges[edgeID]
+	if session == nil {
+		return nil
+	}
+	streams := make([]geminio.Stream, 0, len(session.streams))
+	for _, stream := range session.streams {
+		streams = append(streams, stream)
+	}
+	return streams
 }
 
 func (em *edgeManager) DelEdgeByID(edgeID uint64) error {
 	em.mtx.RLock()
-	defer em.mtx.RUnlock()
-
 	edge, ok := em.edges[edgeID]
+	em.mtx.RUnlock()
 	if !ok {
 		return apis.ErrEdgeNotOnline
 	}
-	return edge.Close()
+	return edge.end.Close()
 }
 
 // Close all edges and manager

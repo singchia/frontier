@@ -5,27 +5,37 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func (em *edgeManager) acceptStream(stream geminio.Stream) {
+func (session *edgeSession) acceptStream(stream geminio.Stream) {
+	em := session.edgeManager
 	edgeID := stream.ClientID()
 	streamID := stream.StreamID()
 	meta := stream.Meta()
 	klog.V(2).Infof("edge accept stream, edgeID: %d, streamID: %d, meta: %s", edgeID, streamID, meta)
 
-	// cache
-	em.streams.MSet(edgeID, streamID, stream)
+	em.mtx.Lock()
+	if session.retired {
+		em.mtx.Unlock()
+		return
+	}
+	if session.streams == nil {
+		session.streams = make(map[uint64]geminio.Stream)
+	}
+	session.streams[streamID] = stream
+	em.mtx.Unlock()
 	// exchange to service
 	if em.exchange != nil {
 		em.exchange.StreamToService(stream)
 	}
 }
 
-func (em *edgeManager) closedStream(stream geminio.Stream) {
+func (session *edgeSession) closedStream(stream geminio.Stream) {
 	edgeID := stream.ClientID()
 	streamID := stream.StreamID()
 	meta := stream.Meta()
 	klog.V(2).Infof("edge closed stream, edgeID: %d, streamID: %d, meta: %s", edgeID, streamID, meta)
-	// cache
-	em.streams.MDel(edgeID, streamID)
+	session.edgeManager.mtx.Lock()
+	delete(session.streams, streamID)
+	session.edgeManager.mtx.Unlock()
 	// when the stream ends, the exchange can be noticed by functional error, so we don't update exchange
 }
 

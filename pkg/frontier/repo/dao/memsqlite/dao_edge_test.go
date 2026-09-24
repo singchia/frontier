@@ -32,6 +32,24 @@ func TestCreateEdge(t *testing.T) {
 	}
 }
 
+func TestCreateEdge_ReplacesExistingSession(t *testing.T) {
+	config := &config.Configuration{}
+	dao, err := NewDao(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer dao.Close()
+	for _, addr := range []string{"127.0.0.1:10001", "127.0.0.1:10002"} {
+		if err := dao.CreateEdge(&model.Edge{EdgeID: 72, Addr: addr}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	edge, err := dao.GetEdge(72)
+	if err != nil || edge.Addr != "127.0.0.1:10002" {
+		t.Fatalf("reconnected edge was not stored: edge=%+v err=%v", edge, err)
+	}
+}
+
 func TestCountEdges(t *testing.T) {
 	config := &config.Configuration{}
 	config.Dao.Backend = "sqlite3"
