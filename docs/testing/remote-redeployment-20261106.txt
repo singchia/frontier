@@ -1,0 +1,25 @@
+SSL_CERT_FILE=/opt/trustio-test/certs/management.crt python3 ../trustio-service-recovery-e2e.py
+PASS https://localhost:24433 10.242.0.10 TCP UDP
+PASS denied 10.242.0.10:19002
+PASS https://localhost:24434 10.242.0.10 TCP UDP
+PASS denied 10.242.0.10:19002
+PASS downloaded native Edge enrollment + two installed Entries + TCP/UDP + unauthorized port rejection
+Before outage: service mappings=4, Edge keys=2
+After 35s outage: service mappings=0, Edge keys=0
+Recovery poll 1: service mappings=0, Edge keys=0
+Recovery poll 2: service mappings=0, Edge keys=0
+Recovery poll 3: service mappings=0, Edge keys=0
+Recovery poll 4: service mappings=0, Edge keys=0
+Recovery poll 5: service mappings=0, Edge keys=0
+Recovery poll 6: service mappings=0, Edge keys=0
+Recovery poll 7: service mappings=0, Edge keys=0
+Recovery poll 8: service mappings=4, Edge keys=0
+Recovery poll 9: service mappings=4, Edge keys=0
+Recovery poll 10: service mappings=4, Edge keys=0
+Recovery poll 11: service mappings=4, Edge keys=2
+PASS https://localhost:24433 10.242.0.10 TCP UDP
+PASS denied 10.242.0.10:19002
+PASS https://localhost:24434 10.242.0.10 TCP UDP
+PASS denied 10.242.0.10:19002
+PASS real server restart recovery and post-recovery two-entry probes
+Cleaned temporary Edge and echo servers; restored empty catalog
