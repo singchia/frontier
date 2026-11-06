@@ -19,3 +19,13 @@
 已知基线问题：完整 edgebound 单测的 TestEdgeManagerStream 传入 nil exchange，newEdgeManager 中 exchange.AddEdgebound(em) 在创建 Geminio 连接之前即 panic。本分支没有修改此项，也不将完整包测试标记通过。
 
 本分支不包含 Frontlas 断线后的注册状态对账修复，也不包含 Geminio 跨连接旧请求 ClientID 修复。
+
+## 隔离数据面实测
+
+使用本分支 Frontier/Frontlas，以及 Trustio `195d09c`，在独立 Docker Compose 项目中启动 Redis、双 Frontier、双 Entry、双 Edge 和两个应用。通过根 Makefile 构建；Geminio replace 指向从 Go module 下载的上述 tag 目录。没有修改现有部署。
+
+- Linux 容器真实 TUN → gVisor → MASQUE → Entry → Frontier → Edge → 应用：双入口 × 双边缘均通过 TCP echo/half-close、UDP 0/64/1200 字节和 ICMP Echo；未授权 ICMP 目标被拒绝。这里不代表 macOS 桌面 TUN 测试。
+- 原生 macOS MASQUE 客户端经 Docker 发布端口进行 120 秒负载：同一 QUIC 连接上 4 条长流、120 次负载流取消、86 次新探测流全部通过。此项未经过 TUN，也不是独占环境性能基准。
+- 将 Frontlas 停机 35 秒（元数据 TTL 30 秒）再启动，等待 12 秒后：Redis 的两个 Frontier alive key 均存在，而两个 Edge metadata key 均不存在。随后既有拓扑上的新客户端 TCP/UDP 探测仍成功。因此只能确认已有路径可用，不能认定发现注册恢复正常；缓存路径可能掩盖缺失注册。本分支尚未修复重连后的元数据对账。
+
+测试输出保存于本目录的 `geminio-test-tag-20261106/`。

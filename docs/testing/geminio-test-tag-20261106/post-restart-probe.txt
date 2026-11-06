@@ -1,0 +1,2 @@
+docker compose -p trustio-geminio-tag -f deploy/tag-test/compose.json run --rm client /bin/sh /config/client-once.sh
+PASS TCP half-close, UDP empty/64/1200 bytes
