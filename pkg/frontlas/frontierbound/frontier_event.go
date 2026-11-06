@@ -131,7 +131,11 @@ func (fm *FrontierManager) EdgeHeartbeat(ctx context.Context, req geminio.Reques
 		rsp.SetError(err)
 		return
 	}
-	err = fm.repo.ExpireEdge(edgeHB.EdgeID, edgeHeartbeatInterval)
+	err = fm.repo.HeartbeatEdge(ctx, edgeHB.EdgeID, &repo.Edge{
+		FrontierID: edgeHB.FrontierID,
+		Addr:       edgeHB.Addr,
+		UpdateTime: time.Now().Unix(),
+	}, edgeHeartbeatInterval)
 	if err != nil {
 		klog.Errorf("frontier manager edge heartbeat, expire edge err: %s, edgeID: %d", err, edgeHB.EdgeID)
 		rsp.SetError(err)

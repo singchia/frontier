@@ -508,3 +508,8 @@ test-geminio-tag:
 	go test -race ./test/e2e -run '^(TestServiceboundHeadOfLineWedge|TestResetCrossesFrontierPair)$$' -count=3 -timeout=150s
 	go test -race ./pkg/frontier/edgebound -run '^(TestEdgeReOnline_|TestEdgeOffline_CleanupError|TestDelEdgeByID_)' -count=5 -timeout=120s
 	go vet ./api/dataplane/v1/service ./pkg/frontier/exchange ./pkg/frontlas/...
+
+.PHONY: test-edge-heartbeat
+test-edge-heartbeat:
+	go test -race ./pkg/frontlas/repo ./pkg/frontlas/frontierbound ./pkg/frontier/frontlas -count=3 -timeout=120s
+	go vet ./pkg/frontlas/... ./pkg/frontier/frontlas ./pkg/apis

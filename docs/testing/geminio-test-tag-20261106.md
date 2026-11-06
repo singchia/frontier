@@ -29,3 +29,5 @@
 - 将 Frontlas 停机 35 秒（元数据 TTL 30 秒）再启动，等待 12 秒后：Redis 的两个 Frontier alive key 均存在，而两个 Edge metadata key 均不存在。随后既有拓扑上的新客户端 TCP/UDP 探测仍成功。因此只能确认已有路径可用，不能认定发现注册恢复正常；缓存路径可能掩盖缺失注册。本分支尚未修复重连后的元数据对账。
 
 测试输出保存于本目录的 `geminio-test-tag-20261106/`。
+
+后续 Edge 心跳补建修复和复测结果见 [Edge 心跳恢复注册](edge-heartbeat-recovery.md)。上面的故障记录为修复前基线。

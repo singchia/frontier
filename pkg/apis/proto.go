@@ -44,6 +44,7 @@ type EdgeOffline struct {
 type EdgeHeartbeat struct {
 	FrontierID string `json:"frontier_id"`
 	EdgeID     uint64 `json:"edge_id"`
+	Addr       string `json:"addr,omitempty"`
 }
 
 // service protocols

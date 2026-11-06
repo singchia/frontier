@@ -195,6 +195,7 @@ func (informer *Informer) EdgeHeartbeat(edgeID uint64, meta []byte, addr net.Add
 	msg := apis.EdgeHeartbeat{
 		FrontierID: informer.conf.Daemon.FrontierID, // TODO emtpy then takes k8s env
 		EdgeID:     edgeID,
+		Addr:       addr.String(),
 	}
 	data, err := json.Marshal(msg)
 	if err != nil {
