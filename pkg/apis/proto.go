@@ -58,9 +58,12 @@ type ServiceOnline struct {
 type ServiceOffline struct {
 	FrontierID string `json:"frontier_id"`
 	ServiceID  uint64 `json:"service_id"`
+	Addr       string `json:"addr,omitempty"`
 }
 
 type ServiceHeartbeat struct {
 	FrontierID string `json:"frontier_id"`
 	ServiceID  uint64 `json:"service_id"`
+	Addr       string `json:"addr,omitempty"`
+	Service    string `json:"service,omitempty"`
 }

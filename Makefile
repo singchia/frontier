@@ -513,3 +513,13 @@ test-geminio-tag:
 test-edge-heartbeat:
 	go test -race ./pkg/frontlas/repo ./pkg/frontlas/frontierbound ./pkg/frontier/frontlas -count=3 -timeout=120s
 	go vet ./pkg/frontlas/... ./pkg/frontier/frontlas ./pkg/apis
+
+.PHONY: test-service-heartbeat
+test-service-heartbeat:
+	go test -race ./pkg/frontlas/... ./pkg/frontier/frontlas -count=3 -timeout=120s
+	go vet ./pkg/frontlas/... ./pkg/frontier/frontlas ./pkg/apis
+
+.PHONY: test-service-heartbeat-integration
+test-service-heartbeat-integration:
+	@test -n "$(FRONTLAS_TEST_REDIS_ADDR)" || (echo "FRONTLAS_TEST_REDIS_ADDR must name an isolated Redis"; exit 1)
+	go test -race -tags=integration ./pkg/frontlas/repo -run TestServiceLeaseRealRedis -count=3 -timeout=120s

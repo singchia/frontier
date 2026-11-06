@@ -10,7 +10,7 @@ Frontlas 的 EdgeHeartbeat 原先只执行 EXPIRE；元数据或 alive key 过�
 - Edge 元数据 TTL 改用 EdgeMeta（此前误用 ServiceMeta）。
 - 新增 JSON 字段 addr 为可选字段，旧 Frontlas 忽略该字段。旧 Frontier 对已有同 Frontier 记录仍可续期；记录缺失时明确报错，不能补建。完整恢复能力需要两端升级。
 
-本次只修复 Edge 注册；ServiceHeartbeat 的同类恢复问题仍需单独处理。没有修改 Frontier 的 30 秒注册租约机制，也没有修改 Geminio 的跨连接旧请求问题。
+本记录对应 Edge 修复；ServiceHeartbeat 的后续修复见 [Service 心跳恢复与独立租约](service-heartbeat-recovery.md)。没有修改 Frontier 的 30 秒注册租约机制，也没有修改 Geminio 的跨连接旧请求问题。
 
 ## 并发边界
 
