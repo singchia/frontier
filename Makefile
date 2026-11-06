@@ -501,3 +501,10 @@ swagger:
 output: build
 
 
+
+.PHONY: test-geminio-tag
+test-geminio-tag:
+	go test -race ./api/dataplane/v1/service ./pkg/frontier/exchange -count=1 -timeout=120s
+	go test -race ./test/e2e -run '^(TestServiceboundHeadOfLineWedge|TestResetCrossesFrontierPair)$$' -count=3 -timeout=150s
+	go test -race ./pkg/frontier/edgebound -run '^(TestEdgeReOnline_|TestEdgeOffline_CleanupError|TestDelEdgeByID_)' -count=5 -timeout=120s
+	go vet ./api/dataplane/v1/service ./pkg/frontier/exchange ./pkg/frontlas/...
