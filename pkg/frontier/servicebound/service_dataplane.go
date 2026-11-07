@@ -34,10 +34,9 @@ func (sm *serviceManager) closedStream(stream geminio.Stream) {
 // forward to exchange
 func (sm *serviceManager) forward(meta *apis.Meta, end geminio.End) {
 	serviceID := end.ClientID()
-	// meta.Service is a plain routing name parsed from a validated JSON
-	// object, not a credential carrier; log it as is.
+	// The routing name is peer-controlled too; keep it out of logs.
 	service := meta.Service
-	klog.V(2).Infof("service forward raw message and rpc, serviceID: %d, service: %s", serviceID, service)
+	klog.V(2).Infof("service forward raw message and rpc, serviceID: %d, service: %s", serviceID, misc.Redact(service))
 	if sm.exchange != nil {
 		sm.exchange.ForwardToEdge(meta, end)
 	}

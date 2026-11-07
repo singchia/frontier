@@ -11,6 +11,7 @@ import (
 	"github.com/singchia/frontier/pkg/frontlas/config"
 	"github.com/singchia/frontier/pkg/frontlas/repo"
 	"github.com/singchia/frontier/pkg/utils"
+	"github.com/singchia/frontier/pkg/utils/logsafe"
 	"github.com/singchia/geminio"
 	"github.com/singchia/geminio/delegate"
 	"github.com/singchia/geminio/pkg/id"
@@ -72,7 +73,7 @@ func (fm *FrontierManager) handleConn(conn net.Conn) error {
 	opt := server.NewEndOptions()
 	opt.SetTimer(fm.tmr)
 	opt.SetDelegate(fm)
-	opt.SetLog(log.NewKLog())
+	opt.SetLog(logsafe.New(log.NewKLog()))
 	end, err := server.NewEndWithConn(conn, opt)
 	if err != nil {
 		klog.Errorf("frontier manager handle conn, geminio server new err: %s", err)
