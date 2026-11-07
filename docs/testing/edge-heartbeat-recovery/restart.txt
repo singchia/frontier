@@ -1,0 +1,16 @@
+ Container trustio-geminio-tag-frontlas-1  Stopping
+ Container trustio-geminio-tag-frontlas-1  Stopped
+0
+ Container trustio-geminio-tag-redis-1  Waiting
+ Container trustio-geminio-tag-redis-1  Healthy
+ Container trustio-geminio-tag-frontlas-1  Starting
+ Container trustio-geminio-tag-frontlas-1  Started
+poll=1 recovered_keys=0
+poll=2 recovered_keys=0
+poll=3 recovered_keys=0
+poll=4 recovered_keys=0
+poll=5 recovered_keys=4
+ Container trustio-geminio-tag-entry-b-1  Restarting
+ Container trustio-geminio-tag-entry-a-1  Restarting
+ Container trustio-geminio-tag-entry-a-1  Started
+ Container trustio-geminio-tag-entry-b-1  Started

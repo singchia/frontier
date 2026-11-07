@@ -1,0 +1,50 @@
+docker compose -p trustio-geminio-tag -f deploy/tag-test/compose.json run --rm client
+Testing entry-a -> Frontier -> Edge -> 172.30.249.10
+PASS TCP half-close, UDP empty/64/1200 bytes
+PING 172.30.249.10 (172.30.249.10): 56 data bytes
+64 bytes from 172.30.249.10: seq=0 ttl=64 time=3.053 ms
+64 bytes from 172.30.249.10: seq=1 ttl=64 time=1.612 ms
+64 bytes from 172.30.249.10: seq=2 ttl=64 time=2.871 ms
+
+--- 172.30.249.10 ping statistics ---
+3 packets transmitted, 3 packets received, 0% packet loss
+round-trip min/avg/max = 1.612/2.512/3.053 ms
+Testing entry-a -> Frontier -> Edge -> 172.30.249.11
+PASS TCP half-close, UDP empty/64/1200 bytes
+PING 172.30.249.11 (172.30.249.11): 56 data bytes
+64 bytes from 172.30.249.11: seq=0 ttl=64 time=3.425 ms
+64 bytes from 172.30.249.11: seq=1 ttl=64 time=2.702 ms
+64 bytes from 172.30.249.11: seq=2 ttl=64 time=4.078 ms
+
+--- 172.30.249.11 ping statistics ---
+3 packets transmitted, 3 packets received, 0% packet loss
+round-trip min/avg/max = 2.702/3.401/4.078 ms
+PING 172.30.249.12 (172.30.249.12): 56 data bytes
+
+--- 172.30.249.12 ping statistics ---
+1 packets transmitted, 0 packets received, 100% packet loss
+Testing entry-b -> Frontier -> Edge -> 172.30.249.10
+PASS TCP half-close, UDP empty/64/1200 bytes
+PING 172.30.249.10 (172.30.249.10): 56 data bytes
+64 bytes from 172.30.249.10: seq=0 ttl=64 time=1.144 ms
+64 bytes from 172.30.249.10: seq=1 ttl=64 time=3.982 ms
+64 bytes from 172.30.249.10: seq=2 ttl=64 time=3.929 ms
+
+--- 172.30.249.10 ping statistics ---
+3 packets transmitted, 3 packets received, 0% packet loss
+round-trip min/avg/max = 1.144/3.018/3.982 ms
+Testing entry-b -> Frontier -> Edge -> 172.30.249.11
+PASS TCP half-close, UDP empty/64/1200 bytes
+PING 172.30.249.11 (172.30.249.11): 56 data bytes
+64 bytes from 172.30.249.11: seq=0 ttl=64 time=4.876 ms
+64 bytes from 172.30.249.11: seq=1 ttl=64 time=3.073 ms
+64 bytes from 172.30.249.11: seq=2 ttl=64 time=2.867 ms
+
+--- 172.30.249.11 ping statistics ---
+3 packets transmitted, 3 packets received, 0% packet loss
+round-trip min/avg/max = 2.867/3.605/4.876 ms
+PING 172.30.249.12 (172.30.249.12): 56 data bytes
+
+--- 172.30.249.12 ping statistics ---
+1 packets transmitted, 0 packets received, 100% packet loss
+PASS: both Entries reached both Edges via real TUN; TCP/UDP/ICMP Echo verified

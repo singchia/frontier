@@ -1,0 +1,3 @@
+ok  	github.com/singchia/frontier/pkg/frontlas/repo	1.935s
+?   	github.com/singchia/frontier/pkg/frontlas/frontierbound	[no test files]
+?   	github.com/singchia/frontier/pkg/frontier/frontlas	[no test files]

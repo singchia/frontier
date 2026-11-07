@@ -1,0 +1,2 @@
+EXISTS frontier-a/frontier-b alive keys: 2
+EXISTS edge 1001/1002 metadata keys: 0

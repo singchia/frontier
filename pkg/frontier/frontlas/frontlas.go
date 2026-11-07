@@ -195,6 +195,7 @@ func (informer *Informer) EdgeHeartbeat(edgeID uint64, meta []byte, addr net.Add
 	msg := apis.EdgeHeartbeat{
 		FrontierID: informer.conf.Daemon.FrontierID, // TODO emtpy then takes k8s env
 		EdgeID:     edgeID,
+		Addr:       addr.String(),
 	}
 	data, err := json.Marshal(msg)
 	if err != nil {
@@ -230,6 +231,7 @@ func (informer *Informer) ServiceOffline(serviceID uint64, meta string, addr net
 	msg := apis.ServiceOffline{
 		FrontierID: informer.conf.Daemon.FrontierID, // emtpy then takes k8s env
 		ServiceID:  serviceID,
+		Addr:       addr.String(),
 	}
 	data, err := json.Marshal(msg)
 	if err != nil {
@@ -246,6 +248,8 @@ func (informer *Informer) ServiceHeartbeat(serviceID uint64, meta string, addr n
 	msg := apis.ServiceHeartbeat{
 		FrontierID: informer.conf.Daemon.FrontierID, // emtpy then takes k8s env
 		ServiceID:  serviceID,
+		Addr:       addr.String(),
+		Service:    meta,
 	}
 	data, err := json.Marshal(msg)
 	if err != nil {

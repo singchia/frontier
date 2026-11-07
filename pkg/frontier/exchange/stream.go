@@ -90,6 +90,13 @@ func (ex *exchange) streamForwardRaw(left, right geminio.Stream) {
 			klog.V(4).Infof("stream forward raw done, fromID: %d, toID: %d, written: %d", fromID, toID, n)
 		}
 
+		if err != nil {
+			// Reset each hop using its own dialogue ID. A peer reset is an
+			// error, not an orderly EOF: do not wait for an impossible drain.
+			_ = geminio.AbortStream(from)
+			_ = geminio.AbortStream(to)
+			return
+		}
 		from.Close()
 		to.Close()
 	}

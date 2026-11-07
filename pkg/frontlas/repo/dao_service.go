@@ -4,43 +4,159 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
-	"k8s.io/klog/v2"
+	"github.com/redis/go-redis/v9"
 )
 
 const (
-	servicesKeyPrefix    = "frontlas:services:" // example: frontlas:services:a "{}"
-	servicesKeyPrefixAll = "frontlas:services:*"
-
-	servicesAliveKeyPrefix = "frontlas:alive:services:" // example: frontlas:alive:services:a 1 ex 30
+	servicesKeyPrefix      = "frontlas:services:"
+	servicesKeyPrefixAll   = "frontlas:services:*"
+	servicesAliveKeyPrefix = "frontlas:alive:services:"
+	serviceLeasesKeyPrefix = "frontlas:service-leases:"
 )
 
-//go:embed lua/service_delete.lua
-var deleteServiceScript string
+//go:embed lua/service_lease.lua
+var serviceLeaseScript string
 
-//go:embed lua/service_create.lua
-var createServiceScript string
+var (
+	ErrServiceOwnerChanged        = errors.New("service heartbeat owner changed")
+	ErrServiceRegistrationMissing = errors.New("service registration missing: heartbeat requires address")
+)
 
-func (dao *Dao) GetAllServiceIDs() ([]uint64, error) {
-	results, err := dao.rds.Keys(context.TODO(), frontiersKeyPrefixAll).Result()
+// serviceCommand 将每个映射的修改、过期清理和聚合在线标记作为一个原子操作。
+func (dao *Dao) serviceCommand(ctx context.Context, op string, serviceID uint64, service *Service, expiration time.Duration) *redis.Cmd {
+	ttl := expiration.Milliseconds()
+	if meta := int64(dao.conf.FrontierManager.Expiration.ServiceMeta) * 1000; meta > 0 && meta < ttl {
+		ttl = meta
+	}
+	data, err := json.Marshal(service)
 	if err != nil {
-		klog.Errorf("dao get all serviceIDs, keys err: %s", err)
+		return redis.NewCmdResult(nil, err)
+	}
+	return dao.rds.Eval(ctx, serviceLeaseScript,
+		[]string{getServiceKey(serviceID), getServiceLeasesKey(serviceID), getAliveServiceKey(serviceID), getFrontierKey(service.FrontierID)},
+		op, service.FrontierID, service.Addr, string(data), ttl)
+}
+
+func (dao *Dao) writeService(ctx context.Context, op string, serviceID uint64, service *Service, expiration time.Duration) error {
+	if service == nil || service.FrontierID == "" || (op != "offline" && expiration.Milliseconds() <= 0) {
+		return errors.New("invalid service lease")
+	}
+	result, err := dao.serviceCommand(ctx, op, serviceID, service, expiration).Int()
+	if err != nil {
+		return fmt.Errorf("%s service %d: %w", op, serviceID, err)
+	}
+	switch result {
+	case -1:
+		return ErrServiceOwnerChanged
+	case -2:
+		return ErrServiceRegistrationMissing
+	case 1:
+		return nil
+	default:
+		return fmt.Errorf("unexpected service lease result: %d", result)
+	}
+}
+
+// HeartbeatService 补建当前 Frontier 的注册，并只续期自己的租约。
+func (dao *Dao) HeartbeatService(ctx context.Context, serviceID uint64, service *Service, expiration time.Duration) error {
+	return dao.writeService(ctx, "heartbeat", serviceID, service, expiration)
+}
+
+func (dao *Dao) SetServiceAndAlive(serviceID uint64, service *Service, expiration time.Duration) error {
+	if service == nil || service.Addr == "" {
+		return errors.New("service registration requires address")
+	}
+	return dao.writeService(context.Background(), "online", serviceID, service, expiration)
+}
+
+// DeleteServiceInstance 防止旧连接的 Offline 删除同一 Frontier 上的新连接。
+func (dao *Dao) DeleteServiceInstance(ctx context.Context, serviceID uint64, frontierID, addr string) error {
+	return dao.writeService(ctx, "offline", serviceID, &Service{FrontierID: frontierID, Addr: addr}, 0)
+}
+
+func (dao *Dao) DeleteService(serviceID uint64, frontierID string) error {
+	return dao.DeleteServiceInstance(context.Background(), serviceID, frontierID, "")
+}
+
+// Deprecated: 必须提供 Frontier 归属，不能替同一服务的所有实例续期。
+func (dao *Dao) ExpireService(serviceID uint64, expiration time.Duration) error {
+	return errors.New("service heartbeat requires frontier identity; use HeartbeatService")
+}
+
+// Deprecated: 使用有租约的 SetServiceAndAlive。
+func (dao *Dao) SetService(serviceID uint64, service *Service) error {
+	return dao.SetServiceAndAlive(serviceID, service, 30*time.Second)
+}
+
+func (dao *Dao) liveServices(ctx context.Context, serviceID uint64) ([]*Service, error) {
+	values, err := dao.serviceCommand(ctx, "read", serviceID, &Service{}, 0).StringSlice()
+	if err != nil {
+		return nil, fmt.Errorf("read service %d: %w", serviceID, err)
+	}
+	return decodeServices(serviceID, values)
+}
+
+func decodeServices(serviceID uint64, values []string) ([]*Service, error) {
+	services := make([]*Service, 0, len(values))
+	for _, value := range values {
+		service := &Service{}
+		if err := json.Unmarshal([]byte(value), service); err != nil {
+			return nil, fmt.Errorf("decode service %d: %w", serviceID, err)
+		}
+		services = append(services, service)
+	}
+	sort.Slice(services, func(i, j int) bool { return services[i].FrontierID < services[j].FrontierID })
+	return services, nil
+}
+
+// GetService 为单实例 API 选择按 FrontierID 排序的第一个在线映射。
+func (dao *Dao) GetService(serviceID uint64) (*Service, error) {
+	services, err := dao.liveServices(context.Background(), serviceID)
+	if err != nil {
 		return nil, err
 	}
-	serviceIDs := []uint64{}
-	for _, v := range results {
-		serviceID, err := getServiceID(v)
+	if len(services) == 0 {
+		return nil, redis.Nil
+	}
+	return services[0], nil
+}
+
+// GetServices 返回指定服务的所有在线 Frontier 映射，缺失服务不产生 nil 项。
+func (dao *Dao) GetServices(serviceIDs []uint64) ([]*Service, error) {
+	services := []*Service{}
+	if len(serviceIDs) == 0 {
+		return services, nil
+	}
+	ctx := context.Background()
+	pipe := dao.rds.TxPipeline()
+	cmds := make([]*redis.Cmd, 0, len(serviceIDs))
+	for _, id := range serviceIDs {
+		cmds = append(cmds, pipe.Eval(ctx, serviceLeaseScript,
+			[]string{getServiceKey(id), getServiceLeasesKey(id), getAliveServiceKey(id), getFrontierKey("")},
+			"read", "", "", "", 0))
+	}
+	if _, err := pipe.Exec(ctx); err != nil {
+		return nil, fmt.Errorf("read service leases: %w", err)
+	}
+	for i, cmd := range cmds {
+		values, err := cmd.StringSlice()
 		if err != nil {
-			klog.Errorf("dao get all serviceIDs, get serviceID err; %s", err)
 			return nil, err
 		}
-		serviceIDs = append(serviceIDs, serviceID)
+		instances, err := decodeServices(serviceIDs[i], values)
+		if err != nil {
+			return nil, err
+		}
+		services = append(services, instances...)
 	}
-	return serviceIDs, nil
+	return services, nil
 }
 
 type ServiceQuery struct {
@@ -49,139 +165,49 @@ type ServiceQuery struct {
 }
 
 func (dao *Dao) GetServicesByCursor(query *ServiceQuery) ([]*Service, uint64, error) {
-	services := []*Service{}
-	keys, cursor, err := dao.rds.Scan(context.TODO(), query.Cursor, frontiersKeyPrefixAll, query.Count).Result()
+	keys, cursor, err := dao.rds.Scan(context.Background(), query.Cursor, servicesKeyPrefixAll, query.Count).Result()
 	if err != nil {
-		klog.Errorf("dao get services, scan err: %s", err)
 		return nil, 0, err
 	}
-	if keys == nil || len(keys) == 0 {
-		return services, cursor, nil
-	}
-	results, err := dao.rds.MGet(context.TODO(), keys...).Result()
-	if err != nil {
-		klog.Errorf("dao get services, mget err: %s, keys: %v", err, keys)
-		return nil, 0, err
-	}
-	for _, elem := range results {
-		service := &Service{}
-		err = json.Unmarshal([]byte(elem.(string)), service)
+	ids := make([]uint64, 0, len(keys))
+	for _, key := range keys {
+		id, err := getServiceID(key)
 		if err != nil {
-			klog.Errorf("dao get services, json unmarshal err: %s", err)
 			return nil, 0, err
 		}
-		services = append(services, service)
+		ids = append(ids, id)
 	}
-	return services, cursor, nil
+	services, err := dao.GetServices(ids)
+	return services, cursor, err
 }
 
-func (dao *Dao) GetServices(serviceIDs []uint64) ([]*Service, error) {
-	keys := make([]string, len(serviceIDs))
-	for i, serviceID := range serviceIDs {
-		keys[i] = getServiceKey(serviceID)
-	}
-
-	results, err := dao.rds.MGet(context.TODO(), keys...).Result()
-	if err != nil {
-		klog.Errorf("dao get services, mget err: %s", err)
-		return nil, err
-	}
-	services := []*Service{}
-	for i, result := range results {
-		if result == nil {
-			services[i] = nil
-		}
-		service := &Service{}
-		err = json.Unmarshal([]byte(result.(string)), service)
+func (dao *Dao) GetAllServiceIDs() ([]uint64, error) {
+	ids := []uint64{}
+	var cursor uint64
+	for {
+		keys, next, err := dao.rds.Scan(context.Background(), cursor, servicesKeyPrefixAll, 100).Result()
 		if err != nil {
-			klog.Errorf("dao get services, json unmarshal err: %s", err)
 			return nil, err
 		}
-	}
-	return services, nil
-}
-
-func (dao *Dao) GetService(serviceID uint64) (*Service, error) {
-	result, err := dao.rds.Get(context.TODO(), getServiceKey(serviceID)).Result()
-	if err != nil {
-		klog.Errorf("dao get service, get err: %s", err)
-		return nil, err
-	}
-	service := &Service{}
-	err = json.Unmarshal([]byte(result), service)
-	if err != nil {
-		klog.Errorf("dao get service, json unmarshal err: %s", err)
-		return nil, err
-	}
-	return service, nil
-}
-
-// obsoleted
-func (dao *Dao) SetService(serviceID uint64, service *Service) error {
-	data, err := json.Marshal(service)
-	if err != nil {
-		klog.Errorf("dao set service, json marshal err: %s", err)
-		return err
-	}
-	_, err = dao.rds.Set(context.TODO(), getServiceKey(serviceID), string(data), -1).Result()
-	if err != nil {
-		klog.Errorf("dao set service, set err: %s", err)
-		return err
-	}
-	return nil
-}
-
-func (dao *Dao) SetServiceAndAlive(serviceID uint64, service *Service, expiration time.Duration) error {
-	serviceData := fmt.Sprintf("service: %s, frontier_id: %s, addr: %s, update_time: %d", service.Service, service.FrontierID, service.Addr, service.UpdateTime)
-	_, err := dao.rds.Eval(context.TODO(), createServiceScript,
-		[]string{
-			getServiceKey(serviceID),
-			service.FrontierID,
-			getAliveServiceKey(serviceID),
-			getFrontierKey(service.FrontierID)},
-		serviceData,
-		time.Duration(dao.conf.FrontierManager.Expiration.ServiceMeta),
-		int(expiration.Seconds())).Result()
-	if err != nil {
-		klog.Errorf("dao set service and alive, pipeliner exec err: %s", err)
-		return err
-	}
-	return nil
-}
-
-func (dao *Dao) ExpireService(serviceID uint64, expiration time.Duration) error {
-	pipeliner := dao.rds.TxPipeline()
-	// service meta TODO expiration to custom
-	pipeliner.Expire(context.TODO(), getServiceKey(serviceID),
-		time.Duration(dao.conf.FrontierManager.Expiration.ServiceMeta)*time.Second)
-	// service alive
-	pipeliner.Expire(context.TODO(), getAliveServiceKey(serviceID), expiration)
-
-	cmds, err := pipeliner.Exec(context.TODO())
-	if err != nil {
-		klog.Errorf("dao expire service, pipeliner err: %s", err)
-		return err
-	}
-	for _, cmd := range cmds {
-		if cmd.Err() != nil {
-			return cmd.Err()
+		for _, key := range keys {
+			id, err := getServiceID(key)
+			if err != nil {
+				return nil, err
+			}
+			live, err := dao.liveServices(context.Background(), id)
+			if err != nil {
+				return nil, err
+			}
+			if len(live) > 0 {
+				ids = append(ids, id)
+			}
+		}
+		cursor = next
+		if cursor == 0 {
+			break
 		}
 	}
-	return nil
-}
-
-func (dao *Dao) DeleteService(serviceID uint64, frontierID string) error {
-	_, err := dao.rds.Eval(context.TODO(), deleteServiceScript,
-		[]string{
-			getServiceKey(serviceID),
-			frontierID,
-			getAliveServiceKey(serviceID),
-			frontiersKeyPrefix}).Result()
-	if err != nil {
-		klog.Errorf("dao delete service, eval err: %s", err)
-		return err
-	}
-	return nil
+	return ids, nil
 }
 
 func (dao *Dao) CountServices() (int, error) {
@@ -199,12 +225,12 @@ func (dao *Dao) CountServices() (int, error) {
 func getServiceKey(serviceID uint64) string {
 	return servicesKeyPrefix + strconv.FormatUint(serviceID, 10)
 }
-
 func getServiceID(serviceKey string) (uint64, error) {
-	key := strings.TrimPrefix(serviceKey, edgesKeyPrefix)
-	return strconv.ParseUint(key, 10, 64)
+	return strconv.ParseUint(strings.TrimPrefix(serviceKey, servicesKeyPrefix), 10, 64)
 }
-
 func getAliveServiceKey(serviceID uint64) string {
 	return servicesAliveKeyPrefix + strconv.FormatUint(serviceID, 10)
+}
+func getServiceLeasesKey(serviceID uint64) string {
+	return serviceLeasesKeyPrefix + strconv.FormatUint(serviceID, 10)
 }
