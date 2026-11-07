@@ -14,6 +14,7 @@ import (
 	"github.com/singchia/frontier/pkg/frontier/config"
 	"github.com/singchia/frontier/pkg/frontier/misc"
 	"github.com/singchia/frontier/pkg/utils"
+	"github.com/singchia/frontier/pkg/utils/logsafe"
 	"github.com/singchia/geminio"
 	"github.com/singchia/geminio/delegate"
 	"github.com/singchia/geminio/pkg/id"
@@ -134,9 +135,8 @@ func (em *edgeManager) handleConn(conn net.Conn) error {
 	session := &edgeSession{edgeManager: em}
 	// options for geminio End
 	opt := server.NewEndOptions()
-	// route SDK logs through klog: the SDK default logger prints raw
-	// connection meta to stdout on error paths, bypassing redaction.
-	opt.SetLog(log.NewKLog())
+	// Filter opaque SDK arguments before they reach klog, including error paths.
+	opt.SetLog(logsafe.New(log.NewKLog()))
 	opt.SetTimer(em.tmr)
 	opt.SetDelegate(session)
 	// stream handler
