@@ -16,7 +16,7 @@ require (
 	github.com/pion/transport/v2 v2.2.10
 	github.com/prometheus/client_golang v1.23.2
 	github.com/rabbitmq/amqp091-go v1.9.0
-	github.com/singchia/geminio v1.3.0-test.20261106.1.0.20261107010346-51de974e85c1
+	github.com/singchia/geminio v1.3.0-test.20261106.1.0.20261107010704-fc1b480a172e
 	github.com/singchia/go-timer/v2 v2.2.2
 	github.com/singchia/joy4 v0.0.0-20240621074108-53a2b0132ec6
 	github.com/soheilhy/cmux v0.1.5
