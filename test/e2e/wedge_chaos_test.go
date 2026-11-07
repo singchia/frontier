@@ -131,7 +131,7 @@ func TestServiceboundHeadOfLineWedge(t *testing.T) {
 	// behaviour that triggered INC-20260605.
 	stuckStream, err := svc.OpenStream(context.TODO(), edgeA.EdgeID())
 	require.NoError(t, err, "initial OpenStream to edgeA")
-	t.Cleanup(func() { _ = stuckStream.Close() })
+	t.Cleanup(func() { _ = geminio.AbortStream(stuckStream) })
 
 	var edgeAStream geminio.Stream
 	select {
@@ -141,7 +141,7 @@ func TestServiceboundHeadOfLineWedge(t *testing.T) {
 	case <-time.After(acceptTimeout):
 		t.Fatal("edgeA.AcceptStream did not return within acceptTimeout")
 	}
-	t.Cleanup(func() { _ = edgeAStream.Close() })
+	t.Cleanup(func() { _ = geminio.AbortStream(edgeAStream) })
 
 	// Edge A floods the stream from its side until writes back-pressure.
 	// Bytes travel:
@@ -211,8 +211,8 @@ func TestServiceboundHeadOfLineWedge(t *testing.T) {
 	// unblocks the dispatch's select escape, which unblocks conn.readPkt.
 	// The flood goroutine inside floodUntilBackpressured exits on its
 	// next Write error once the dialogue closes.
-	_ = stuckStream.Close()
-	_ = edgeAStream.Close()
+	_ = geminio.AbortStream(stuckStream)
+	_ = geminio.AbortStream(edgeAStream)
 }
 
 // TestServiceboundClientSendOnlyLiveness: continuation of the same
@@ -257,7 +257,7 @@ func TestServiceboundClientSendOnlyLiveness(t *testing.T) {
 
 	stuckStream, err := svc.OpenStream(context.TODO(), edgeA.EdgeID())
 	require.NoError(t, err)
-	t.Cleanup(func() { _ = stuckStream.Close() })
+	t.Cleanup(func() { _ = geminio.AbortStream(stuckStream) })
 
 	var edgeAStream geminio.Stream
 	select {
@@ -265,7 +265,7 @@ func TestServiceboundClientSendOnlyLiveness(t *testing.T) {
 	case <-time.After(acceptTimeout):
 		t.Fatal("edgeA.AcceptStream timeout")
 	}
-	t.Cleanup(func() { _ = edgeAStream.Close() })
+	t.Cleanup(func() { _ = geminio.AbortStream(edgeAStream) })
 
 	payload := make([]byte, floodPayloadSize)
 	written, stalled := floodUntilBackpressured(edgeAStream, payload, 20*time.Second)

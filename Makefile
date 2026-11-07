@@ -523,3 +523,9 @@ test-service-heartbeat:
 test-service-heartbeat-integration:
 	@test -n "$(FRONTLAS_TEST_REDIS_ADDR)" || (echo "FRONTLAS_TEST_REDIS_ADDR must name an isolated Redis"; exit 1)
 	go test -race -tags=integration ./pkg/frontlas/repo -run TestServiceLeaseRealRedis -count=3 -timeout=120s
+
+.PHONY: verify-pr
+verify-pr:
+	go build ./...
+	go test -race ./api/dataplane/v1/service ./pkg/frontier/... ./pkg/frontlas/... ./test/e2e -count=1 -timeout=180s
+	go vet ./api/dataplane/v1/service ./pkg/frontier/... ./pkg/frontlas/...
