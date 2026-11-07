@@ -1,0 +1,12 @@
+go test -race ./pkg/frontlas/... ./pkg/frontier/frontlas -count=3 -timeout=120s
+?   	github.com/singchia/frontier/pkg/frontlas	[no test files]
+?   	github.com/singchia/frontier/pkg/frontlas/apis	[no test files]
+?   	github.com/singchia/frontier/pkg/frontlas/cluster	[no test files]
+?   	github.com/singchia/frontier/pkg/frontlas/cluster/server	[no test files]
+?   	github.com/singchia/frontier/pkg/frontlas/cluster/service	[no test files]
+ok  	github.com/singchia/frontier/pkg/frontlas/config	1.322s
+?   	github.com/singchia/frontier/pkg/frontlas/frontierbound	[no test files]
+ok  	github.com/singchia/frontier/pkg/frontlas/repo	1.462s
+?   	github.com/singchia/frontier/pkg/frontlas/server	[no test files]
+?   	github.com/singchia/frontier/pkg/frontier/frontlas	[no test files]
+go vet ./pkg/frontlas/... ./pkg/frontier/frontlas ./pkg/apis

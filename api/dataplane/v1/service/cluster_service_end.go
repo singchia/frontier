@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"io"
 	"net"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	armlog "github.com/jumboframes/armorigo/log"
@@ -181,6 +183,13 @@ FOUND:
 }
 
 func (end *clusterServiceEnd) lookup(edgeID uint64) (string, *serviceEnd, error) {
+	return end.lookupContext(context.Background(), edgeID)
+}
+
+func (end *clusterServiceEnd) lookupContext(ctx context.Context, edgeID uint64) (string, *serviceEnd, error) {
+	if err := ctx.Err(); err != nil {
+		return "", nil, err
+	}
 	var (
 		frontier   *clusterv1.Frontier
 		serviceEnd *serviceEnd
@@ -189,7 +198,7 @@ func (end *clusterServiceEnd) lookup(edgeID uint64) (string, *serviceEnd, error)
 	frontierID, ok := end.edgefrontiers.GetValue(edgeID)
 	// get or set edgeID to frontierID map
 	if !ok {
-		rsp, err := end.cc.GetFrontierByEdge(context.TODO(), &clusterv1.GetFrontierByEdgeIDRequest{
+		rsp, err := end.cc.GetFrontierByEdge(ctx, &clusterv1.GetFrontierByEdgeIDRequest{
 			EdgeId: edgeID,
 		})
 		if err != nil {
@@ -203,7 +212,17 @@ func (end *clusterServiceEnd) lookup(edgeID uint64) (string, *serviceEnd, error)
 
 	fe, ok := end.frontiers.Load(frontierID)
 	if !ok {
-		serviceEnd, err = end.newServiceEnd(frontier.AdvertisedSbAddr)
+		// A cached edge mapping may outlive the frontier connection cache.
+		if frontier == nil {
+			rsp, lookupErr := end.cc.GetFrontierByEdge(ctx, &clusterv1.GetFrontierByEdgeIDRequest{EdgeId: edgeID})
+			if lookupErr != nil {
+				return "", nil, lookupErr
+			}
+			frontier = rsp.Fontier
+			frontierID = frontier.FrontierId
+			end.edgefrontiers.Set(edgeID, frontierID)
+		}
+		serviceEnd, err = end.newServiceEndContext(ctx, frontier.AdvertisedSbAddr)
 		if err != nil {
 			end.logger.Errorf("new service end err: %s while lookup", err)
 			return "", nil, err
@@ -238,8 +257,25 @@ func frontierEqual(a, b *clusterv1.Frontier) bool {
 }
 
 func (end *clusterServiceEnd) newServiceEnd(addr string) (*serviceEnd, error) {
+	return end.newServiceEndContext(context.Background(), addr)
+}
+
+func (end *clusterServiceEnd) newServiceEndContext(ctx context.Context, addr string) (*serviceEnd, error) {
+	// The opening request owns initial dialing/handshake only. Later reconnects
+	// belong to the cached service endpoint and must not retain a canceled ctx.
+	var initialized atomic.Bool
+	stop := func() bool { return false }
+	defer func() { stop() }()
 	dialer := func() (net.Conn, error) {
-		return net.Dial("tcp", addr)
+		if !initialized.CompareAndSwap(false, true) {
+			return net.Dial("tcp", addr)
+		}
+		cn, err := (&net.Dialer{}).DialContext(ctx, "tcp", addr)
+		if err != nil {
+			return nil, err
+		}
+		stop = context.AfterFunc(ctx, func() { cn.Close() })
+		return cn, nil
 	}
 	serviceEnd, err := newServiceEnd(dialer,
 		OptionServiceLog(end.serviceOption.logger),
@@ -250,6 +286,9 @@ func (end *clusterServiceEnd) newServiceEnd(addr string) (*serviceEnd, error) {
 		OptionServiceID(end.serviceOption.serviceID),
 		OptionServiceBufferSize(end.serviceOption.readBufferSize, end.serviceOption.writeBufferSize))
 	if err != nil {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		return nil, err
 	}
 	if end.serviceOption.serviceID == 0 {
@@ -280,14 +319,25 @@ func (end *clusterServiceEnd) newServiceEnd(addr string) (*serviceEnd, error) {
 
 	// rpcs
 	for method, rpc := range end.rpcs {
-		err = serviceEnd.Register(context.TODO(), method, rpc)
+		err = serviceEnd.Register(ctx, method, rpc)
 		if err != nil {
 			goto ERR
 		}
 	}
+	// Detach before the final check so a completed setup does not retain
+	// the request cancellation hook on its shared connection.
+	stop()
+	if err := ctx.Err(); err != nil {
+		serviceEnd.ForceClose()
+		return nil, err
+	}
 	return serviceEnd, nil
 
 ERR:
+	if ctx.Err() != nil {
+		serviceEnd.ForceClose()
+		return nil, ctx.Err()
+	}
 	serviceEnd.Close()
 	return nil, err
 }
@@ -302,13 +352,16 @@ func (end *clusterServiceEnd) AcceptStream() (geminio.Stream, error) {
 }
 
 func (end *clusterServiceEnd) OpenStream(ctx context.Context, edgeID uint64) (geminio.Stream, error) {
-	frontierID, serviceEnd, err := end.lookup(edgeID)
+	frontierID, serviceEnd, err := end.lookupContext(ctx, edgeID)
 	if err != nil {
 		return nil, err
 	}
 	stream, err := serviceEnd.OpenStream(ctx, edgeID)
 	if err != nil {
-		end.clear(frontierID)
+		// A canceled stream is not a failed shared transport.
+		if !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
+			end.clear(frontierID)
+		}
 		return stream, err
 	}
 	return stream, nil

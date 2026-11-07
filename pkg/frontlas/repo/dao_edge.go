@@ -139,7 +139,7 @@ func (dao *Dao) SetEdgeAndAlive(edgeID uint64, edge *Edge, expiration time.Durat
 	pipeliner := dao.rds.TxPipeline()
 	// edge meta TODO expiration to custom
 	pipeliner.Set(context.TODO(), getEdgeKey(edgeID), edgeData,
-		time.Duration(dao.conf.FrontierManager.Expiration.ServiceMeta)*time.Second)
+		time.Duration(dao.conf.FrontierManager.Expiration.EdgeMeta)*time.Second)
 	// alive
 	pipeliner.Set(context.TODO(), getAliveEdgeKey(edgeID), 1, expiration)
 	// frontier edge_count
@@ -157,7 +157,7 @@ func (dao *Dao) ExpireEdge(edgeID uint64, expiration time.Duration) error {
 	pipeliner := dao.rds.TxPipeline()
 	// edge meta TODO expiration to custom
 	pipeliner.Expire(context.TODO(), getEdgeKey(edgeID),
-		time.Duration(dao.conf.FrontierManager.Expiration.ServiceMeta)*time.Second)
+		time.Duration(dao.conf.FrontierManager.Expiration.EdgeMeta)*time.Second)
 	// edge alive
 	pipeliner.Expire(context.TODO(), getAliveEdgeKey(edgeID), expiration)
 

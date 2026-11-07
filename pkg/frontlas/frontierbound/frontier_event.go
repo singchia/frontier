@@ -131,7 +131,11 @@ func (fm *FrontierManager) EdgeHeartbeat(ctx context.Context, req geminio.Reques
 		rsp.SetError(err)
 		return
 	}
-	err = fm.repo.ExpireEdge(edgeHB.EdgeID, edgeHeartbeatInterval)
+	err = fm.repo.HeartbeatEdge(ctx, edgeHB.EdgeID, &repo.Edge{
+		FrontierID: edgeHB.FrontierID,
+		Addr:       edgeHB.Addr,
+		UpdateTime: time.Now().Unix(),
+	}, edgeHeartbeatInterval)
 	if err != nil {
 		klog.Errorf("frontier manager edge heartbeat, expire edge err: %s, edgeID: %d", err, edgeHB.EdgeID)
 		rsp.SetError(err)
@@ -170,7 +174,7 @@ func (fm *FrontierManager) ServiceOffline(ctx context.Context, req geminio.Reque
 		rsp.SetError(err)
 		return
 	}
-	err = fm.repo.DeleteService(serviceOffline.ServiceID, serviceOffline.FrontierID)
+	err = fm.repo.DeleteServiceInstance(ctx, serviceOffline.ServiceID, serviceOffline.FrontierID, serviceOffline.Addr)
 	if err != nil {
 		klog.Errorf("frontier manager service offline, delete service err: %s, serviceID: %d", err, serviceOffline.ServiceID)
 		rsp.SetError(err)
@@ -186,7 +190,9 @@ func (fm *FrontierManager) ServiceHeartbeat(ctx context.Context, req geminio.Req
 		rsp.SetError(err)
 		return
 	}
-	err = fm.repo.ExpireService(serviceHB.ServiceID, serviceHeartbeatInterval)
+	err = fm.repo.HeartbeatService(ctx, serviceHB.ServiceID, &repo.Service{
+		FrontierID: serviceHB.FrontierID, Service: serviceHB.Service, Addr: serviceHB.Addr, UpdateTime: time.Now().Unix(),
+	}, serviceHeartbeatInterval)
 	if err != nil {
 		klog.Errorf("frontier manager service heartbeat, expire service err: %s, serviceID: %d", err, serviceHB.ServiceID)
 		rsp.SetError(err)

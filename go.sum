@@ -168,6 +168,14 @@ github.com/rogpeppe/go-internal v1.10.0 h1:TMyTOH3F/DB16zRVcYyreMH6GnZZrwQVAoYjR
 github.com/rogpeppe/go-internal v1.10.0/go.mod h1:UQnix2H7Ngw/k4C5ijL5+65zddjncjaFoBhdsK/akog=
 github.com/singchia/geminio v1.3.0-rc.2 h1:pkkRE7oQ6R255dgJji+30p8EvgwYV0VzmhhQj2reEcc=
 github.com/singchia/geminio v1.3.0-rc.2/go.mod h1:CFbCOY5tjr3Y7V2ceV6k98/pAqFeQwov4mshqn6gfVA=
+github.com/singchia/geminio v1.3.0-test.20261106.1 h1:ILdjHk3Hb21gFg3BuYcRGu5lUxmKVS/yVTWbfsIJQBU=
+github.com/singchia/geminio v1.3.0-test.20261106.1/go.mod h1:CFbCOY5tjr3Y7V2ceV6k98/pAqFeQwov4mshqn6gfVA=
+github.com/singchia/geminio v1.3.0-test.20261106.1.0.20261107005718-36c473d750c6 h1:eG8tl/3V+d7UwSFRFibRa0QwgmtjqxhXy1y4f9CFzQQ=
+github.com/singchia/geminio v1.3.0-test.20261106.1.0.20261107005718-36c473d750c6/go.mod h1:CFbCOY5tjr3Y7V2ceV6k98/pAqFeQwov4mshqn6gfVA=
+github.com/singchia/geminio v1.3.0-test.20261106.1.0.20261107010346-51de974e85c1 h1:DXVODI/zqAS5iBW8c3Nx88cyNnUKDK4A1FYRvcWAkUo=
+github.com/singchia/geminio v1.3.0-test.20261106.1.0.20261107010346-51de974e85c1/go.mod h1:CFbCOY5tjr3Y7V2ceV6k98/pAqFeQwov4mshqn6gfVA=
+github.com/singchia/geminio v1.3.0-test.20261106.1.0.20261107010704-fc1b480a172e h1:7hbDhq7lTZL+/RRIqRrFpqY1gAqSdgsXkyhPJy2a1RA=
+github.com/singchia/geminio v1.3.0-test.20261106.1.0.20261107010704-fc1b480a172e/go.mod h1:CFbCOY5tjr3Y7V2ceV6k98/pAqFeQwov4mshqn6gfVA=
 github.com/singchia/go-timer/v2 v2.0.3/go.mod h1:PgkEQc6io8slCUiT5rHzWKU4/P2HXHWk3WWfijZXAf4=
 github.com/singchia/go-timer/v2 v2.2.2 h1:r0VPTHfKMPv2MZfKDSG/aXsHYfmR0+GVyXZLhf53vds=
 github.com/singchia/go-timer/v2 v2.2.2/go.mod h1:PgkEQc6io8slCUiT5rHzWKU4/P2HXHWk3WWfijZXAf4=

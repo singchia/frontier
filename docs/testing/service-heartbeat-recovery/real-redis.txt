@@ -1,0 +1,2 @@
+go test -race -tags=integration ./pkg/frontlas/repo -run TestServiceLeaseRealRedis -count=3 -timeout=120s
+ok  	github.com/singchia/frontier/pkg/frontlas/repo	2.583s

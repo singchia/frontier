@@ -1,0 +1,7 @@
+ Container trustio-geminio-tag-frontlas-1  Stopping
+ Container trustio-geminio-tag-frontlas-1  Stopped
+ Container trustio-geminio-tag-redis-1  Waiting
+ Container trustio-geminio-tag-redis-1  Healthy
+ Container trustio-geminio-tag-frontlas-1  Starting
+ Container trustio-geminio-tag-frontlas-1  Started
+post-restart probe exit=0

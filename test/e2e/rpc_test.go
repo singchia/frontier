@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"bytes"
 	"context"
 	"sync"
 	"testing"
@@ -12,6 +13,40 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestEdgeReconnectSameIDRestoresBidirectionalRPC(t *testing.T) {
+	svc := newService(t, service.OptionServiceName("reconnect-service"))
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	err := svc.Register(ctx, "reconnect_register_edge", func(_ context.Context, req geminio.Request, resp geminio.Response) {
+		resp.SetData(req.Data())
+	})
+	require.NoError(t, err)
+
+	for i := 0; i < 5; i++ {
+		// Keep the preceding connection open so Frontier must replace it.
+		e, err := edge.NewNoRetryEdge(edgeDialer(), edge.OptionEdgeID(720126))
+		require.NoError(t, err)
+		t.Cleanup(func() { e.Close() })
+		payload := []byte{byte(i)}
+		err = e.Register(ctx, "reconnect_ping", func(_ context.Context, _ geminio.Request, resp geminio.Response) {
+			resp.SetData(payload)
+		})
+		require.NoError(t, err)
+		require.Eventually(t, func() bool {
+			callCtx, callCancel := context.WithTimeout(ctx, 200*time.Millisecond)
+			defer callCancel()
+			resp, err := e.Call(callCtx, "reconnect_register_edge", e.NewRequest(payload))
+			return err == nil && bytes.Equal(resp.Data(), payload)
+		}, time.Second, 5*time.Millisecond, "edge-to-service RPC did not recover")
+		require.Eventually(t, func() bool {
+			callCtx, callCancel := context.WithTimeout(ctx, 200*time.Millisecond)
+			defer callCancel()
+			resp, err := svc.Call(callCtx, e.EdgeID(), "reconnect_ping", svc.NewRequest(nil))
+			return err == nil && bytes.Equal(resp.Data(), payload)
+		}, time.Second, 5*time.Millisecond, "service RPC did not reach the replacement edge")
+	}
+}
 
 // E2E-RPC-001: Edge calls a method registered by Service via frontier
 func TestEdgeCallService(t *testing.T) {

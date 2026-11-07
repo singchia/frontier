@@ -76,7 +76,7 @@ func (dao *dao) CreateEdge(edge *model.Edge) error {
 	if dao.config.Dao.Debug {
 		tx = tx.Debug()
 	}
-	return tx.Create(edge).Error
+	return tx.Clauses(clause.OnConflict{UpdateAll: true}).Create(edge).Error
 }
 
 func buildEdgeQuery(tx *gorm.DB, query *query.EdgeQuery) *gorm.DB {

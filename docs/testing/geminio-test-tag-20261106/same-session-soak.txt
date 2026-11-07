@@ -1,0 +1,46 @@
+go run -modfile=.build/dev.mod ./scripts/flow-tag-soak.go -proxy https://localhost:50248 -ca deploy/certs/server.crt
+phase=steady flows=4 seconds=120
+steady second=10 mbps=273.24 bytes=[73559946 73445383 72696377 72845614]
+steady second=20 mbps=310.94 bytes=[161049646 160801668 159884656 159806483]
+steady second=30 mbps=351.24 bytes=[262938554 262240263 262659464 263367723]
+steady second=40 mbps=90.31 bytes=[334696217 333468254 334039435 335461561]
+steady second=50 mbps=220.38 bytes=[375668962 374791151 375426884 376413075]
+steady second=60 mbps=231.19 bytes=[448080577 447027071 449013912 449477186]
+steady second=70 mbps=290.15 bytes=[553382542 552125620 553966984 554511403]
+steady second=80 mbps=303.19 bytes=[659240410 658840876 660878600 660997275]
+steady second=90 mbps=309.65 bytes=[754741428 753570310 754952233 757402363]
+steady second=100 mbps=322.58 bytes=[859009714 856659864 859057636 860966235]
+steady second=110 mbps=210.96 bytes=[948681570 947478611 950040871 952042875]
+steady second=120 mbps=282.60 bytes=[1051434929 1050330283 1052160096 1054500646]
+phase=cancel rounds=30 concurrent=4 duration=1s
+cancel round=1 ok
+cancel round=2 ok
+cancel round=3 ok
+cancel round=4 ok
+cancel round=5 ok
+cancel round=6 ok
+cancel round=7 ok
+cancel round=8 ok
+cancel round=9 ok
+cancel round=10 ok
+cancel round=11 ok
+cancel round=12 ok
+cancel round=13 ok
+cancel round=14 ok
+cancel round=15 ok
+cancel round=16 ok
+cancel round=17 ok
+cancel round=18 ok
+cancel round=19 ok
+cancel round=20 ok
+cancel round=21 ok
+cancel round=22 ok
+cancel round=23 ok
+cancel round=24 ok
+cancel round=25 ok
+cancel round=26 ok
+cancel round=27 ok
+cancel round=28 ok
+cancel round=29 ok
+cancel round=30 ok
+PASS same QUIC connection: 4 long streams, 120 cancelled load streams, 86 probe streams

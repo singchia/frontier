@@ -501,3 +501,32 @@ swagger:
 output: build
 
 
+
+.PHONY: test-geminio-tag
+test-geminio-tag:
+	go test -race ./api/dataplane/v1/service ./pkg/frontier/exchange -count=1 -timeout=120s
+	go test -race ./test/e2e -run '^(TestServiceboundHeadOfLineWedge|TestResetCrossesFrontierPair)$$' -count=3 -timeout=150s
+	go test -race ./pkg/frontier/edgebound -run '^(TestEdgeReOnline_|TestEdgeOffline_CleanupError|TestDelEdgeByID_)' -count=5 -timeout=120s
+	go vet ./api/dataplane/v1/service ./pkg/frontier/exchange ./pkg/frontlas/...
+
+.PHONY: test-edge-heartbeat
+test-edge-heartbeat:
+	go test -race ./pkg/frontlas/repo ./pkg/frontlas/frontierbound ./pkg/frontier/frontlas -count=3 -timeout=120s
+	go vet ./pkg/frontlas/... ./pkg/frontier/frontlas ./pkg/apis
+
+.PHONY: test-service-heartbeat
+test-service-heartbeat:
+	go test -race ./pkg/frontlas/... ./pkg/frontier/frontlas -count=3 -timeout=120s
+	go vet ./pkg/frontlas/... ./pkg/frontier/frontlas ./pkg/apis
+
+.PHONY: test-service-heartbeat-integration
+test-service-heartbeat-integration:
+	@test -n "$(FRONTLAS_TEST_REDIS_ADDR)" || (echo "FRONTLAS_TEST_REDIS_ADDR must name an isolated Redis"; exit 1)
+	go test -race -tags=integration ./pkg/frontlas/repo -run TestServiceLeaseRealRedis -count=3 -timeout=120s
+
+.PHONY: verify-pr
+# Focused recovery gate; legacy full-suite fixture failures tracked separately.
+verify-pr:
+	go build ./...
+	$(MAKE) test-geminio-tag test-edge-heartbeat test-service-heartbeat
+	go test -race ./test/e2e -run '^TestMultiEdgeConnect$$' -count=3 -timeout=120s
