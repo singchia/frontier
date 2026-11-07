@@ -2,6 +2,7 @@ package servicebound
 
 import (
 	"github.com/singchia/frontier/pkg/frontier/apis"
+	"github.com/singchia/frontier/pkg/frontier/misc"
 	"github.com/singchia/geminio"
 	"k8s.io/klog/v2"
 )
@@ -10,7 +11,7 @@ func (sm *serviceManager) acceptStream(stream geminio.Stream) {
 	serviceID := stream.ClientID()
 	streamID := stream.StreamID()
 	service := stream.Meta()
-	klog.V(2).Infof("service accept stream, serviceID: %d, streamID: %d, service: %s", serviceID, streamID, service)
+	klog.V(2).Infof("service accept stream, serviceID: %d, streamID: %d, service: %s", serviceID, streamID, misc.Redact(string(service)))
 
 	// cache
 	sm.streams.MSet(serviceID, streamID, stream)
@@ -24,7 +25,7 @@ func (sm *serviceManager) closedStream(stream geminio.Stream) {
 	serviceID := stream.ClientID()
 	streamID := stream.StreamID()
 	service := stream.Meta()
-	klog.V(2).Infof("service closed stream, serviceID: %d, streamID: %d, service: %s", serviceID, streamID, service)
+	klog.V(2).Infof("service closed stream, serviceID: %d, streamID: %d, service: %s", serviceID, streamID, misc.Redact(string(service)))
 	// cache
 	sm.streams.MDel(serviceID, streamID)
 	// when the stream ends, the exchange can be noticed by functional error, so we don't update exchange
@@ -33,6 +34,8 @@ func (sm *serviceManager) closedStream(stream geminio.Stream) {
 // forward to exchange
 func (sm *serviceManager) forward(meta *apis.Meta, end geminio.End) {
 	serviceID := end.ClientID()
+	// meta.Service is a plain routing name parsed from a validated JSON
+	// object, not a credential carrier; log it as is.
 	service := meta.Service
 	klog.V(2).Infof("service forward raw message and rpc, serviceID: %d, service: %s", serviceID, service)
 	if sm.exchange != nil {

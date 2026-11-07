@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jumboframes/armorigo/log"
 	"github.com/jumboframes/armorigo/synchub"
 	"github.com/singchia/frontier/pkg/frontier/apis"
 	"github.com/singchia/frontier/pkg/frontier/config"
@@ -110,6 +111,9 @@ func (sm *serviceManager) Serve() error {
 func (sm *serviceManager) handleConn(conn net.Conn) error {
 	// options for geminio End
 	opt := server.NewEndOptions()
+	// route SDK logs through klog: the SDK default logger prints raw
+	// connection meta to stdout on error paths, bypassing redaction.
+	opt.SetLog(log.NewKLog())
 	opt.SetTimer(sm.tmr)
 	opt.SetDelegate(sm)
 	// stream handler

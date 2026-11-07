@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/jumboframes/armorigo/log"
 	"github.com/jumboframes/armorigo/rproxy"
 	"github.com/singchia/frontier/pkg/frontier/apis"
 	"github.com/singchia/frontier/pkg/frontier/config"
@@ -133,6 +134,9 @@ func (em *edgeManager) handleConn(conn net.Conn) error {
 	session := &edgeSession{edgeManager: em}
 	// options for geminio End
 	opt := server.NewEndOptions()
+	// route SDK logs through klog: the SDK default logger prints raw
+	// connection meta to stdout on error paths, bypassing redaction.
+	opt.SetLog(log.NewKLog())
 	opt.SetTimer(em.tmr)
 	opt.SetDelegate(session)
 	// stream handler

@@ -7,6 +7,7 @@ import (
 
 	"github.com/jumboframes/armorigo/synchub"
 	"github.com/singchia/frontier/pkg/frontier/apis"
+	"github.com/singchia/frontier/pkg/frontier/misc"
 	"github.com/singchia/frontier/pkg/frontier/repo/model"
 	"github.com/singchia/frontier/pkg/frontier/repo/query"
 	"github.com/singchia/geminio"
@@ -118,7 +119,7 @@ func (sm *serviceManager) ConnOnline(d delegate.ConnDescriber) error {
 	serviceID := d.ClientID()
 	meta := string(d.Meta())
 	addr := d.RemoteAddr()
-	klog.V(1).Infof("service online, serviceID: %d, service: %s, addr: %s", serviceID, meta, addr)
+	klog.V(1).Infof("service online, serviceID: %d, service: %s, addr: %s", serviceID, misc.Redact(meta), addr)
 	// notification for others
 	if sm.informer != nil {
 		sm.informer.ServiceOnline(serviceID, meta, addr)
@@ -130,12 +131,12 @@ func (sm *serviceManager) ConnOffline(d delegate.ConnDescriber) error {
 	serviceID := d.ClientID()
 	meta := string(d.Meta())
 	addr := d.RemoteAddr()
-	klog.V(1).Infof("service offline, serviceID: %d, service: %s, remote addr: %s", serviceID, meta, addr)
+	klog.V(1).Infof("service offline, serviceID: %d, service: %s, remote addr: %s", serviceID, misc.Redact(meta), addr)
 	// offline the cache
 	err := sm.offline(serviceID, addr)
 	if err != nil {
 		klog.Errorf("service offline, cache or db offline err: %s, serviceID: %d, meta: %s, addr: %s",
-			err, serviceID, meta, addr)
+			err, serviceID, misc.Redact(meta), addr)
 		return err
 	}
 	if sm.informer != nil {
@@ -149,7 +150,7 @@ func (sm *serviceManager) Heartbeat(d delegate.ConnDescriber) error {
 	serviceID := d.ClientID()
 	meta := string(d.Meta())
 	addr := d.RemoteAddr()
-	klog.V(3).Infof("service heartbeat, serviceID: %d, meta: %s, addr: %s", serviceID, string(meta), addr)
+	klog.V(3).Infof("service heartbeat, serviceID: %d, meta: %s, addr: %s", serviceID, misc.Redact(meta), addr)
 	if sm.informer != nil {
 		sm.informer.ServiceHeartbeat(serviceID, meta, addr)
 	}

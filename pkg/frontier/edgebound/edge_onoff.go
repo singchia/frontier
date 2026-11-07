@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/singchia/frontier/pkg/frontier/apis"
+	"github.com/singchia/frontier/pkg/frontier/misc"
 	"github.com/singchia/frontier/pkg/frontier/repo/model"
 	"github.com/singchia/frontier/pkg/frontier/repo/query"
 	"github.com/singchia/geminio"
@@ -137,7 +138,7 @@ func (em *edgeManager) ConnOnline(d delegate.ConnDescriber) error {
 			return err
 		}
 	}
-	klog.V(2).Infof("edge online, edgeID: %d, meta: %s, addr: %s", edgeID, string(meta), addr)
+	klog.V(2).Infof("edge online, edgeID: %d, meta: %s, addr: %s", edgeID, misc.Redact(string(meta)), addr)
 	return nil
 }
 
@@ -146,12 +147,12 @@ func (session *edgeSession) ConnOffline(d delegate.ConnDescriber) error {
 	meta := d.Meta()
 	addr := d.RemoteAddr()
 
-	klog.V(2).Infof("edge offline, edgeID: %d, meta: %s, addr: %s", edgeID, string(meta), addr)
+	klog.V(2).Infof("edge offline, edgeID: %d, meta: %s, addr: %s", edgeID, misc.Redact(string(meta)), addr)
 	// offline the cache
 	err := session.edgeManager.offline(session, edgeID, meta, addr)
 	if err != nil {
 		klog.Errorf("edge offline, cache or db offline err: %s, edgeID: %d, meta: %s, addr: %s",
-			err, edgeID, string(meta), addr)
+			err, edgeID, misc.Redact(string(meta)), addr)
 		return err
 	}
 	return nil
@@ -161,7 +162,7 @@ func (em *edgeManager) Heartbeat(d delegate.ConnDescriber) error {
 	edgeID := d.ClientID()
 	meta := string(d.Meta())
 	addr := d.RemoteAddr()
-	klog.V(3).Infof("edge heartbeat, edgeID: %d, meta: %s, addr: %s", edgeID, string(meta), addr)
+	klog.V(3).Infof("edge heartbeat, edgeID: %d, meta: %s, addr: %s", edgeID, misc.Redact(string(meta)), addr)
 	if em.informer != nil {
 		em.informer.EdgeHeartbeat(edgeID, d.Meta(), addr)
 	}
@@ -206,14 +207,14 @@ func (em *edgeManager) GetClientID(_ uint64, meta []byte) (uint64, error) {
 	if em.exchange != nil {
 		edgeID, err = em.exchange.GetEdgeID(meta)
 		if err == nil {
-			klog.V(2).Infof("edge get edgeID: %d from exchange, meta: %s", edgeID, string(meta))
+			klog.V(2).Infof("edge get edgeID: %d from exchange, meta: %s", edgeID, misc.Redact(string(meta)))
 			return edgeID, nil
 		}
 	}
 
 	if (err == apis.ErrServiceNotOnline || err == apis.ErrRPCNotOnline) && em.conf.Edgebound.EdgeIDAllocWhenNoIDServiceOn {
 		edgeID = em.idFactory.GetID()
-		klog.V(2).Infof("edge get edgeID: %d, meta: %s, after no ID acquired from exchange", edgeID, string(meta))
+		klog.V(2).Infof("edge get edgeID: %d, meta: %s, after no ID acquired from exchange", edgeID, misc.Redact(string(meta)))
 		return em.idFactory.GetID(), nil
 	}
 	return 0, err

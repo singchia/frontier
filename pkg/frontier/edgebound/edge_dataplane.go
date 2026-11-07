@@ -1,6 +1,7 @@
 package edgebound
 
 import (
+	"github.com/singchia/frontier/pkg/frontier/misc"
 	"github.com/singchia/geminio"
 	"k8s.io/klog/v2"
 )
@@ -10,7 +11,7 @@ func (session *edgeSession) acceptStream(stream geminio.Stream) {
 	edgeID := stream.ClientID()
 	streamID := stream.StreamID()
 	meta := stream.Meta()
-	klog.V(2).Infof("edge accept stream, edgeID: %d, streamID: %d, meta: %s", edgeID, streamID, meta)
+	klog.V(2).Infof("edge accept stream, edgeID: %d, streamID: %d, meta: %s", edgeID, streamID, misc.Redact(string(meta)))
 
 	em.mtx.Lock()
 	if session.retired {
@@ -32,7 +33,7 @@ func (session *edgeSession) closedStream(stream geminio.Stream) {
 	edgeID := stream.ClientID()
 	streamID := stream.StreamID()
 	meta := stream.Meta()
-	klog.V(2).Infof("edge closed stream, edgeID: %d, streamID: %d, meta: %s", edgeID, streamID, meta)
+	klog.V(2).Infof("edge closed stream, edgeID: %d, streamID: %d, meta: %s", edgeID, streamID, misc.Redact(string(meta)))
 	session.edgeManager.mtx.Lock()
 	delete(session.streams, streamID)
 	session.edgeManager.mtx.Unlock()
@@ -43,7 +44,7 @@ func (session *edgeSession) closedStream(stream geminio.Stream) {
 func (em *edgeManager) forward(end geminio.End) {
 	edgeID := end.ClientID()
 	meta := end.Meta()
-	klog.V(2).Infof("edge forward raw message and rpc, edgeID: %d, meta: %s", edgeID, meta)
+	klog.V(2).Infof("edge forward raw message and rpc, edgeID: %d, meta: %s", edgeID, misc.Redact(string(meta)))
 	if em.exchange != nil {
 		em.exchange.ForwardToService(end)
 	}
