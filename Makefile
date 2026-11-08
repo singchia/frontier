@@ -1,6 +1,8 @@
 include ./Makefile.defs
 
 REGISTRY?=singchia
+RELEASE_BASE_IMAGE ?= alpine:3.22
+RELEASE_ARCH ?= amd64
 CC?=cc
 
 # Cross-compilation platforms
@@ -460,6 +462,13 @@ push-frontier:
 .PHONY: push-frontlas
 push-frontlas:
 	docker push ${REGISTRY}/frontlas:${VERSION}
+
+# Package the same static binaries supplied in the release archives.
+.PHONY: release-linux release-images
+release-linux: frontier-linux-all frontlas-linux-all
+	python3 dist/scripts/package-release.py --version $(VERSION)
+release-images: frontier-linux-$(RELEASE_ARCH) frontlas-linux-$(RELEASE_ARCH)
+	@set -e; for service in frontier frontlas; do docker build --platform linux/$(RELEASE_ARCH) --build-arg BASE_IMAGE=$(RELEASE_BASE_IMAGE) --build-arg SERVICE=$$service --build-arg TARGETARCH=$(RELEASE_ARCH) --label org.opencontainers.image.version=$(VERSION) --label org.opencontainers.image.revision=$$(git rev-parse HEAD) -t $(REGISTRY)/$$service:$(VERSION) -f images/Dockerfile.release .; done
 
 .PHONY: push-example-iclm
 push-example-iclm:
