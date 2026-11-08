@@ -3,9 +3,10 @@ package apis
 // frontier -> service
 // global rpcs
 var (
-	RPCGetEdgeID   = "get_edge_id"
-	RPCEdgeOnline  = "edge_online"
-	RPCEdgeOffline = "edge_offline"
+	RPCRegistrationStatus = "frontier_registration_status_v1"
+	RPCGetEdgeID          = "get_edge_id"
+	RPCEdgeOnline         = "edge_online"
+	RPCEdgeOffline        = "edge_offline"
 )
 
 type OnEdgeOnline struct {

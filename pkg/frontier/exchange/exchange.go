@@ -6,7 +6,8 @@ import (
 )
 
 type exchange struct {
-	conf *config.Configuration
+	conf    *config.Configuration
+	tlsWake chan struct{}
 
 	Edgebound    apis.Edgebound
 	Servicebound apis.Servicebound
@@ -19,8 +20,9 @@ func NewExchange(conf *config.Configuration, mqm apis.MQM) apis.Exchange {
 
 func newExchange(conf *config.Configuration, mqm apis.MQM) *exchange {
 	exchange := &exchange{
-		conf: conf,
-		MQM:  mqm,
+		conf:    conf,
+		tlsWake: make(chan struct{}, 1),
+		MQM:     mqm,
 	}
 	return exchange
 }

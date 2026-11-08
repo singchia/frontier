@@ -5,6 +5,7 @@ import (
 
 	"github.com/singchia/frontier/pkg/frontier/config"
 	"github.com/tidwall/buntdb"
+	"github.com/tidwall/gjson"
 	"k8s.io/klog/v2"
 )
 
@@ -62,7 +63,7 @@ func NewDao(config *config.Configuration) (*dao, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = db.CreateIndex(IdxEdgeRPC_EdgeID, "edge_rpcs*", buntdb.IndexJSON("edge_id"))
+	err = db.CreateIndex(IdxEdgeRPC_EdgeID, "edge_rpcs*", indexUint64("edge_id"))
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +89,7 @@ func NewDao(config *config.Configuration) (*dao, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = db.CreateIndex(IdxServiceRPC_ServiceID, "service_rpcs*", buntdb.IndexJSON("service_id"))
+	err = db.CreateIndex(IdxServiceRPC_ServiceID, "service_rpcs*", indexUint64("service_id"))
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +102,7 @@ func NewDao(config *config.Configuration) (*dao, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = db.CreateIndex(IdxServiceTopic_ServiceID, "service_topics*", buntdb.IndexJSON("service_id"))
+	err = db.CreateIndex(IdxServiceTopic_ServiceID, "service_topics*", indexUint64("service_id"))
 	if err != nil {
 		return nil, err
 	}
@@ -117,4 +118,10 @@ func NewDao(config *config.Configuration) (*dao, error) {
 
 func (dao *dao) Close() error {
 	return dao.db.Close()
+}
+
+// indexUint64 preserves all 64 ID bits. IndexJSON compares numeric values as
+// float64, collapsing adjacent Geminio IDs above 2^53 and cross-deleting records.
+func indexUint64(path string) func(a, b string) bool {
+	return func(a, b string) bool { return gjson.Get(a, path).Uint() < gjson.Get(b, path).Uint() }
 }

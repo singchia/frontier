@@ -1,7 +1,9 @@
 package servicebound
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net"
 	"strings"
 	"sync"
@@ -9,6 +11,7 @@ import (
 
 	"github.com/jumboframes/armorigo/log"
 	"github.com/jumboframes/armorigo/synchub"
+	securityv1 "github.com/singchia/frontier/api/dataplane/v1/security"
 	"github.com/singchia/frontier/pkg/frontier/apis"
 	"github.com/singchia/frontier/pkg/frontier/config"
 	"github.com/singchia/frontier/pkg/frontier/misc"
@@ -116,6 +119,7 @@ func (sm *serviceManager) handleConn(conn net.Conn) error {
 	opt.SetLog(logsafe.New(log.NewKLog()))
 	opt.SetTimer(sm.tmr)
 	opt.SetDelegate(sm)
+
 	// stream handler
 	opt.SetAcceptStreamFunc(sm.acceptStream)
 	opt.SetClosedStreamFunc(sm.closedStream)
@@ -169,6 +173,13 @@ func (sm *serviceManager) remoteReceiveClaim(serviceID uint64, topics []string) 
 
 // rpc, RemoteRegistration is called from underlayer
 func (sm *serviceManager) RemoteRegistration(rpc string, serviceID, streamID uint64) {
+	if rpc == securityv1.RPCGetTLSConfig {
+		defer func() {
+			if notifier, ok := sm.exchange.(interface{ TLSConfigChanged() }); ok {
+				notifier.TLSConfigChanged()
+			}
+		}()
+	}
 	// TODO return error
 	klog.V(2).Infof("service remote rpc registration, rpc: %s, serviceID: %d, streamID: %d", rpc, serviceID, streamID)
 
@@ -335,4 +346,26 @@ func (sm *serviceManager) Close() error {
 		return err
 	}
 	return nil
+}
+
+// registrationStatus confirms repository visibility, not only receipt of the wire packet.
+func (sm *serviceManager) RegistrationStatus(ctx context.Context, req geminio.Request, rsp geminio.Response) {
+	if err := ctx.Err(); err != nil {
+		rsp.SetError(err)
+		return
+	}
+	if len(req.Data()) == 0 || len(req.Data()) > 1024 {
+		rsp.SetError(errors.New("invalid registration query"))
+		return
+	}
+	records, err := sm.repo.GetServiceRPCs(string(req.Data()))
+	if err == nil {
+		for _, record := range records {
+			if record.ServiceID == req.ClientID() {
+				rsp.SetData([]byte("registered"))
+				return
+			}
+		}
+	}
+	rsp.SetError(errors.New("RPC registration not visible"))
 }

@@ -558,3 +558,33 @@ BENCH_CONCURRENT_COUNT ?= 3
 .PHONY: bench-concurrent
 bench-concurrent:
 	go test ./test/bench -run '^$$' -bench '$(BENCH_CONCURRENT_PATTERN)' -benchtime=$(BENCH_CONCURRENT_TIME) -count=$(BENCH_CONCURRENT_COUNT) -benchmem -timeout=15m
+
+.PHONY: test-dynamic-tls
+test-dynamic-tls:
+	go test -race ./api/dataplane/v1/security ./api/dataplane/v1/service ./pkg/security/dynamictls ./pkg/frontier/exchange -timeout 180s
+	go test -race ./pkg/frontier/edgebound ./pkg/frontier/servicebound ./pkg/frontier/repo/dao/memsqlite ./pkg/utils -run "TestDynamicTLS|TestRegistration" -timeout 120s
+	go vet ./api/dataplane/v1/security ./api/dataplane/v1/service ./pkg/security/dynamictls ./pkg/frontier/edgebound ./pkg/frontier/exchange
+
+.PHONY: test-dynamic-tls-lifecycle
+test-dynamic-tls-lifecycle:
+	go test -race -v ./pkg/frontier/exchange -run 'TestDynamicTLSFullLifecycle|TestDynamicTLSNewFrontierDiscoveredAndRegistered' -count=3 -timeout 180s
+
+.PHONY: test-dynamic-tls-lifecycle-once
+test-dynamic-tls-lifecycle-once:
+	go test -race -v ./pkg/frontier/exchange -run '^TestDynamicTLSFullLifecycle$$' -count=1 -timeout 60s
+
+.PHONY: test-registration-id-precision
+test-registration-id-precision:
+	go test -race -v ./pkg/frontier/repo/dao/membuntdb -run "TestLargeIDsKeepIndependentRegistrations|TestUint64IndexBoundaries" -count=1
+
+.PHONY: test-registration-storage
+test-registration-storage:
+	go test -race ./pkg/frontier/repo/dao/membuntdb -timeout 120s
+
+.PHONY: test-provisioned-tls-key
+test-provisioned-tls-key:
+	go test -race ./pkg/security/dynamictls ./pkg/frontier/edgebound -run 'TestProvisionedKey|TestDynamicTLS' -count=1 -timeout=90s
+
+.PHONY: test-client-certificate-binding
+test-client-certificate-binding:
+	go test -race ./pkg/frontier/edgebound ./pkg/security/dynamictls -run 'TestPeerCertificate|TestProvisionedKey|TestDynamicTLS' -count=1 -timeout=90s

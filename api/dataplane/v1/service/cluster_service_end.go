@@ -38,9 +38,11 @@ type clusterServiceEnd struct {
 
 	// options
 	*serviceOption
-	rpcs   map[string]geminio.RPC
-	topics mapset.Set[string]
-	appMtx sync.RWMutex
+	rpcs            map[string]geminio.RPC
+	topics          mapset.Set[string]
+	appMtx          sync.RWMutex
+	registrationMtx sync.Mutex
+	pending         map[*serviceEnd]map[string]*registrationTask
 
 	// update
 	updating sync.RWMutex
@@ -49,7 +51,10 @@ type clusterServiceEnd struct {
 	acceptStreamCh chan geminio.Stream
 	acceptMsgCh    chan geminio.Message
 
-	closed chan struct{}
+	closed       chan struct{}
+	workerCtx    context.Context
+	workerCancel context.CancelFunc
+	workerDone   chan struct{}
 }
 
 func newclusterServiceEnd(addr string, opts ...ServiceOption) (*clusterServiceEnd, error) {
@@ -80,8 +85,12 @@ func newclusterServiceEnd(addr string, opts ...ServiceOption) (*clusterServiceEn
 	if end.serviceOption.logger == nil {
 		end.serviceOption.logger = armlog.DefaultLog
 	}
+	end.workerCtx, end.workerCancel = context.WithCancel(context.Background())
+	end.workerDone = make(chan struct{})
 	err = end.update()
 	if err != nil {
+		end.workerCancel()
+		conn.Close()
 		return nil, err
 	}
 	go end.start()
@@ -89,10 +98,20 @@ func newclusterServiceEnd(addr string, opts ...ServiceOption) (*clusterServiceEn
 }
 
 func (end *clusterServiceEnd) start() {
+	defer close(end.workerDone)
+	defer func() {
+		if recover() != nil {
+			end.logger.Errorf("cluster maintenance worker stopped unexpectedly")
+		}
+	}()
 	ticker := time.NewTicker(10 * time.Second)
+	retry := time.NewTicker(time.Second)
+	defer retry.Stop()
 	defer ticker.Stop()
 	for {
 		select {
+		case <-retry.C:
+			end.retryRegistrations()
 		case <-ticker.C:
 			err := end.update()
 			if err != nil {
@@ -118,7 +137,13 @@ func (end *clusterServiceEnd) clear(frontierID string) {
 }
 
 func (end *clusterServiceEnd) update() error {
-	rsp, err := end.cc.ListFrontiers(context.TODO(), &clusterv1.ListFrontiersRequest{})
+	parent := end.workerCtx
+	if parent == nil {
+		parent = context.Background()
+	}
+	ctx, cancel := context.WithTimeout(parent, 5*time.Second)
+	defer cancel()
+	rsp, err := end.cc.ListFrontiers(ctx, &clusterv1.ListFrontiersRequest{})
 	if err != nil {
 		end.logger.Errorf("list frontiers err: %s", err)
 		return err
@@ -170,7 +195,7 @@ FOUND:
 			}
 			end.logger.Debugf("new service end succeed, frontierID: %s, addr: %s", new.FrontierId, new.AdvertisedSbAddr)
 			// new frontier
-			prev, ok := end.frontiers.Swap(new.FrontierId, &frontierNend{
+			prev, ok := end.publishFrontier(new.FrontierId, &frontierNend{
 				frontier: new,
 				end:      serviceEnd,
 			})
@@ -227,7 +252,7 @@ func (end *clusterServiceEnd) lookupContext(ctx context.Context, edgeID uint64) 
 			end.logger.Errorf("new service end err: %s while lookup", err)
 			return "", nil, err
 		}
-		found, ok := end.frontiers.Swap(frontierID, &frontierNend{
+		found, ok := end.publishFrontier(frontierID, &frontierNend{
 			frontier: frontier,
 			end:      serviceEnd,
 		})
@@ -281,6 +306,7 @@ func (end *clusterServiceEnd) newServiceEndContext(ctx context.Context, addr str
 		OptionServiceLog(end.serviceOption.logger),
 		OptionServiceDelegate(end.serviceOption.delegate),
 		OptionServiceName(end.serviceOption.service),
+		OptionServiceRegistrationConfirmation(end.serviceOption.confirmRegistration),
 		OptionServiceReceiveTopics(end.serviceOption.topics),
 		OptionServiceTimer(end.serviceOption.tmr),
 		OptionServiceID(end.serviceOption.serviceID),
@@ -315,11 +341,16 @@ func (end *clusterServiceEnd) newServiceEndContext(ctx context.Context, addr str
 	}()
 
 	end.appMtx.RLock()
-	defer end.appMtx.RUnlock()
-
-	// rpcs
+	rpcs := make(map[string]geminio.RPC, len(end.rpcs))
 	for method, rpc := range end.rpcs {
-		err = serviceEnd.Register(ctx, method, rpc)
+		rpcs[method] = rpc
+	}
+	end.appMtx.RUnlock()
+	// No application lock is held across registration IO.
+	for method, rpc := range rpcs {
+		callCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		err = serviceEnd.Register(callCtx, method, rpc)
+		cancel()
 		if err != nil {
 			goto ERR
 		}
@@ -479,25 +510,6 @@ func (end *clusterServiceEnd) CallAsync(ctx context.Context, edgeID uint64, meth
 	return call, nil
 }
 
-func (end *clusterServiceEnd) Register(ctx context.Context, method string, rpc geminio.RPC) error {
-	end.appMtx.Lock()
-	end.rpcs[method] = rpc
-	end.appMtx.Unlock()
-
-	var (
-		err error
-	)
-	// TODO optimize it
-	end.frontiers.Range(func(key, value interface{}) bool {
-		err = value.(*frontierNend).end.Register(ctx, method, rpc)
-		if err != nil {
-			return false
-		}
-		return true
-	})
-	return err
-}
-
 // net.Listener
 func (end *clusterServiceEnd) Accept() (net.Conn, error) {
 	st, ok := <-end.acceptStreamCh
@@ -528,6 +540,10 @@ func (end *clusterServiceEnd) Addr() net.Addr {
 // close
 func (end *clusterServiceEnd) Close() error {
 	close(end.closed)
+	if end.workerCancel != nil {
+		end.workerCancel()
+		<-end.workerDone
+	}
 	close(end.acceptMsgCh)
 	close(end.acceptStreamCh)
 

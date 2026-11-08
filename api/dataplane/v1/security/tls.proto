@@ -1,0 +1,20 @@
+syntax = "proto3";
+package frontier.security.v1;
+// Contract for the versioned get_tls_config_v1 Geminio callback.
+// JSON wire encoding is used, consistent with existing Frontier control callbacks.
+message TLSConfigRequest {
+ string frontier_id = 1;
+ string nonce = 2;
+ bytes csr = 3;
+ uint64 revision = 4;
+}
+message TLSConfig {
+ uint64 revision = 1;
+ bytes certificate_chain = 2;
+ repeated bytes trusted_cas = 3;
+ int64 valid_until = 4;
+}
+message SignedTLSConfig {
+ bytes payload = 1;
+ bytes signature = 2;
+}

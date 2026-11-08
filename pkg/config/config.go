@@ -6,12 +6,23 @@ type CertKey struct {
 	Key  string `yaml:"key" json:"key"`
 }
 
+type TLSCallback struct {
+	PrivateKeyFile  string   `yaml:"private_key_file" json:"private_key_file"`
+	Service         string   `yaml:"service" json:"service"`
+	ProviderKeys    []string `yaml:"provider_keys" json:"provider_keys"` // Base64 Ed25519 public keys, provisioned out of band.
+	RefreshInterval string   `yaml:"refresh_interval" json:"refresh_interval"`
+	Timeout         string   `yaml:"timeout" json:"timeout"`
+}
+
 type TLS struct {
-	Enable             bool      `yaml:"enable" json:"enable"`
-	MTLS               bool      `yaml:"mtls" json:"mtls"`
-	CACerts            []string  `yaml:"ca_certs" json:"ca_certs"`                         // ca certs paths
-	Certs              []CertKey `yaml:"certs" json:"certs"`                               // certs paths
-	InsecureSkipVerify bool      `yaml:"insecure_skip_verify" json:"insecure_skip_verify"` // for client use
+	ClientIdentityURIPrefix string      `yaml:"client_identity_uri_prefix,omitempty" json:"client_identity_uri_prefix,omitempty"`
+	Source                  string      `yaml:"source,omitempty" json:"source,omitempty"`
+	Callback                TLSCallback `yaml:"callback,omitempty" json:"callback,omitempty"`
+	Enable                  bool        `yaml:"enable" json:"enable"`
+	MTLS                    bool        `yaml:"mtls" json:"mtls"`
+	CACerts                 []string    `yaml:"ca_certs" json:"ca_certs"`                         // ca certs paths
+	Certs                   []CertKey   `yaml:"certs" json:"certs"`                               // certs paths
+	InsecureSkipVerify      bool        `yaml:"insecure_skip_verify" json:"insecure_skip_verify"` // for client use
 }
 
 type Listen struct {

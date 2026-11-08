@@ -240,7 +240,7 @@ func (dao *dao) CreateServiceRPC(rpc *model.ServiceRPC) error {
 	if dao.config.Dao.Debug {
 		tx = tx.Debug()
 	}
-	return tx.Create(rpc).Error
+	return tx.Where("service_id = ? AND rpc = ?", rpc.ServiceID, rpc.RPC).Assign(rpc).FirstOrCreate(&model.ServiceRPC{}).Error
 }
 
 func buildServiceRPCQuery(tx *gorm.DB, query *query.ServiceRPCQuery) *gorm.DB {

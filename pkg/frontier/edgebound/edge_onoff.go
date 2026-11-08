@@ -17,10 +17,11 @@ import (
 // All session fields are protected by edgeManager.mtx.
 type edgeSession struct {
 	*edgeManager
-	end     geminio.End
-	retired bool
-	streams map[uint64]geminio.Stream
-	rpcs    map[string]*model.EdgeRPC
+	peerURIs []string // Immutable after TLS handshake, before Geminio starts.
+	end      geminio.End
+	retired  bool
+	streams  map[uint64]geminio.Stream
+	rpcs     map[string]*model.EdgeRPC
 }
 
 func (em *edgeManager) online(session *edgeSession, end geminio.End) error {

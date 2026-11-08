@@ -14,6 +14,9 @@ import (
 )
 
 func Listen(listen *config.Listen) (net.Listener, error) {
+	if listen.TLS.Source != "" && listen.TLS.Source != "file" {
+		return nil, fmt.Errorf("TLS source %q is only supported by dynamic edgebound", listen.TLS.Source)
+	}
 	switch listen.Network {
 	case "tcp":
 		return listenTCP(listen)

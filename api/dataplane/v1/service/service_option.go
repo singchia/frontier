@@ -18,7 +18,8 @@ type serviceOption struct {
 	// to tell frontier which topics to receive, default no receiving
 	topics []string
 	// to tell frontier what service we are
-	service string
+	service             string
+	confirmRegistration bool
 	// delegate to know online offline stuff
 	delegate                        Delegate
 	serviceID                       uint64
@@ -70,4 +71,10 @@ func OptionServiceBufferSize(read, write int) ServiceOption {
 		opt.readBufferSize = read
 		opt.writeBufferSize = write
 	}
+}
+
+// OptionServiceRegistrationConfirmation requires a Frontier supporting registration status RPC.
+// Leave disabled when connecting to older Frontier versions.
+func OptionServiceRegistrationConfirmation(enabled bool) ServiceOption {
+	return func(opt *serviceOption) { opt.confirmRegistration = enabled }
 }

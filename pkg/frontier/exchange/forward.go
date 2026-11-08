@@ -32,11 +32,25 @@ func (ex *exchange) forwardRawToEdge(end geminio.End) {
 }
 
 func (ex *exchange) forwardRPCToEdge(end geminio.End) {
-	// we hijack all rpcs and forward them to edge
+	// Local registration confirmation must not be forwarded as an Edge RPC.
 	end.Hijack(func(ctx context.Context, method string, r1 geminio.Request, r2 geminio.Response) {
+		if method == apis.RPCRegistrationStatus {
+			if checker, ok := ex.Servicebound.(interface {
+				RegistrationStatus(context.Context, geminio.Request, geminio.Response)
+			}); ok {
+				checker.RegistrationStatus(ctx, r1, r2)
+			} else {
+				r2.SetError(apis.ErrRPCNotOnline)
+			}
+			return
+		}
 		serviceID := end.ClientID()
 		// get target edgeID
 		custom := r1.Custom()
+		if len(custom) < 8 {
+			r2.SetError(apis.ErrIllegalEdgeID)
+			return
+		}
 		edgeID := binary.BigEndian.Uint64(custom[len(custom)-8:])
 		r1.SetCustom(custom[:len(custom)-8])
 

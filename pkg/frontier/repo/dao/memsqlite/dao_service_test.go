@@ -81,3 +81,23 @@ func TestListServices(t *testing.T) {
 		return
 	}
 }
+
+func TestRegistrationIdempotent(t *testing.T) {
+	dao, err := NewDao(&config.Configuration{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer dao.Close()
+	for i := 0; i < 3; i++ {
+		if err = dao.CreateServiceRPC(&model.ServiceRPC{ServiceID: 7, RPC: "callback", CreateTime: time.Now().Unix()}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	rows, err := dao.GetServiceRPCs("callback")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("duplicate registrations: %d", len(rows))
+	}
+}

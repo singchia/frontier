@@ -14,6 +14,7 @@ import (
 
 type serviceEnd struct {
 	geminio.End
+	confirmRegistration bool
 }
 
 func newServiceEnd(dialer client.Dialer, opts ...ServiceOption) (*serviceEnd, error) {
@@ -61,7 +62,7 @@ func newServiceEnd(dialer client.Dialer, opts ...ServiceOption) (*serviceEnd, er
 	if err != nil {
 		return nil, err
 	}
-	return &serviceEnd{end}, nil
+	return &serviceEnd{End: end, confirmRegistration: sopt.confirmRegistration}, nil
 }
 
 func newRetryServiceEnd(dialer client.Dialer, opts ...ServiceOption) (*serviceEnd, error) {
@@ -108,7 +109,7 @@ func newRetryServiceEnd(dialer client.Dialer, opts ...ServiceOption) (*serviceEn
 	if err != nil {
 		return nil, err
 	}
-	return &serviceEnd{end}, nil
+	return &serviceEnd{End: end, confirmRegistration: sopt.confirmRegistration}, nil
 }
 
 // Control Register
@@ -213,19 +214,29 @@ func (end *serviceEnd) CallAsync(ctx context.Context, edgeID uint64, method stri
 }
 
 func (end *serviceEnd) Register(ctx context.Context, method string, rpc geminio.RPC) error {
-	wrap := func(_ context.Context, req geminio.Request, rsp geminio.Response) {
+	wrap := func(callCtx context.Context, req geminio.Request, rsp geminio.Response) {
 		custom := req.Custom()
 		if len(custom) < 8 {
-			rpc(ctx, req, rsp)
+			rpc(callCtx, req, rsp)
 			return
 		}
 		edgeID := binary.BigEndian.Uint64(custom[len(custom)-8:])
 		req.SetClientID(edgeID)
 		rsp.SetClientID(edgeID)
-		rpc(ctx, req, rsp)
+		rpc(callCtx, req, rsp)
 		return
 	}
-	return end.End.Register(ctx, method, wrap)
+	if err := end.End.Register(ctx, method, wrap); err != nil {
+		return err
+	}
+	if !end.confirmRegistration {
+		return nil
+	}
+	response, err := end.End.Call(ctx, apis.RPCRegistrationStatus, end.End.NewRequest([]byte(method)))
+	if err != nil {
+		return err
+	}
+	return response.Error()
 }
 
 // Messager

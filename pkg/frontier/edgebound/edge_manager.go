@@ -57,7 +57,6 @@ type edgeManager struct {
 // support for tls, mtls and tcp listening
 func newEdgeManager(conf *config.Configuration, repo apis.Repo, informer apis.EdgeInformer,
 	exchange apis.Exchange, tmr timer.Timer) (*edgeManager, error) {
-	listen := &conf.Edgebound.Listen
 
 	em := &edgeManager{
 		conf:                  conf,
@@ -75,7 +74,7 @@ func newEdgeManager(conf *config.Configuration, repo apis.Repo, informer apis.Ed
 	}
 	exchange.AddEdgebound(em)
 
-	ln, err := utils.Listen(listen)
+	ln, err := listenEdge(conf, exchange)
 	if err != nil {
 		klog.Errorf("edge manager listen err: %s", err)
 		return nil, err
@@ -133,6 +132,14 @@ func (em *edgeManager) Serve() error {
 
 func (em *edgeManager) handleConn(conn net.Conn) error {
 	session := &edgeSession{edgeManager: em}
+	if em.conf.Edgebound.Listen.TLS.ClientIdentityURIPrefix != "" {
+		uris, err := verifiedPeerURIs(conn)
+		if err != nil {
+			conn.Close()
+			return err
+		}
+		session.peerURIs = uris
+	}
 	// options for geminio End
 	opt := server.NewEndOptions()
 	// Filter opaque SDK arguments before they reach klog, including error paths.
