@@ -4,14 +4,20 @@ import (
 	"context"
 	"io"
 	"strconv"
+	"sync/atomic"
 	"time"
 
+	"github.com/singchia/frontier/pkg/frontier/apis"
 	"github.com/singchia/geminio"
 	"github.com/singchia/geminio/options"
 	"k8s.io/klog/v2"
 )
 
 func (ex *exchange) StreamToEdge(serviceStream geminio.Stream) {
+	if string(serviceStream.Meta()) == apis.StreamSetupV1 {
+		ex.prepareEdgeStream(serviceStream)
+		return
+	}
 	serviceID := serviceStream.ClientID()
 	streamID := serviceStream.StreamID()
 	// get edgeID
@@ -42,6 +48,45 @@ func (ex *exchange) StreamToEdge(serviceStream geminio.Stream) {
 
 	// do stream forward
 	ex.streamForward(serviceStream, edgeStream)
+}
+
+// prepareEdgeStream confirms the next hop before the SDK exposes the stream
+// to its caller. The RPC context also bounds opening that next hop.
+func (ex *exchange) prepareEdgeStream(stream geminio.Stream) {
+	var started atomic.Bool
+	err := stream.Hijack(func(ctx context.Context, method string, req geminio.Request, rsp geminio.Response) {
+		if method != apis.RPCStreamSetup || !started.CompareAndSwap(false, true) {
+			rsp.SetError(apis.ErrIllegalEdgeID)
+			return
+		}
+		edgeID, err := strconv.ParseUint(stream.Peer(), 10, 64)
+		if err != nil {
+			rsp.SetError(apis.ErrIllegalEdgeID)
+			return
+		}
+		edge := ex.Edgebound.GetEdgeByID(edgeID)
+		if edge == nil {
+			rsp.SetData([]byte(apis.StreamEdgeOffline))
+			return // SDK aborts this unconnected stream after reading the response.
+		}
+		next, err := geminio.OpenStreamContext(ctx, edge)
+		if err != nil {
+			rsp.SetData([]byte(apis.StreamEdgeOpenFailed))
+			return // An open failure is not proof of stale ownership.
+		}
+		if ctx.Err() != nil {
+			// Best-effort cleanup: neither stream has been handed to application code.
+			_ = geminio.AbortStream(next)
+			rsp.SetError(ctx.Err())
+			return
+		}
+		ex.streamForward(stream, next)
+		rsp.SetData([]byte(apis.StreamReady))
+	})
+	if err != nil {
+		// No caller can complete setup after the stream has been closed.
+		_ = geminio.AbortStream(stream)
+	}
 }
 
 func (ex *exchange) StreamToService(edgeStream geminio.Stream) {
