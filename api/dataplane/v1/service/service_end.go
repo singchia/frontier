@@ -290,7 +290,12 @@ func (end *serviceEnd) OpenStream(ctx context.Context, edgeID uint64) (geminio.S
 	id := strconv.FormatUint(edgeID, 10)
 	opt := options.OpenStream()
 	opt.SetPeer(id)
-	return geminio.OpenStreamContext(ctx, end.End, opt)
+	opt.SetMeta([]byte(apis.StreamSetupV1))
+	st, err := geminio.OpenStreamContext(ctx, end.End, opt)
+	if err != nil {
+		return nil, err
+	}
+	return confirmEdgeStream(ctx, st)
 }
 
 func (end *serviceEnd) AcceptStream() (geminio.Stream, error) {

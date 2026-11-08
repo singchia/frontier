@@ -528,5 +528,17 @@ test-service-heartbeat-integration:
 # Focused recovery gate; legacy full-suite fixture failures tracked separately.
 verify-pr:
 	go build ./...
-	$(MAKE) test-geminio-tag test-edge-heartbeat test-service-heartbeat
+	$(MAKE) test-geminio-tag test-edge-heartbeat test-service-heartbeat test-edge-route-recovery
 	go test -race ./test/e2e -run '^TestMultiEdgeConnect$$' -count=3 -timeout=120s
+
+.PHONY: test-edge-route-recovery
+test-edge-route-recovery:
+	go test -race ./api/dataplane/v1/service ./pkg/frontier/exchange ./pkg/mapmap -count=5 -timeout=120s
+	go vet ./api/dataplane/v1/service ./pkg/frontier/exchange ./pkg/mapmap
+
+BENCH_CONCURRENT_PATTERN ?= ^BenchmarkFrontierConcurrent$$
+BENCH_CONCURRENT_TIME ?= 3s
+BENCH_CONCURRENT_COUNT ?= 3
+.PHONY: bench-concurrent
+bench-concurrent:
+	go test ./test/bench -run '^$$' -bench '$(BENCH_CONCURRENT_PATTERN)' -benchtime=$(BENCH_CONCURRENT_TIME) -count=$(BENCH_CONCURRENT_COUNT) -benchmem -timeout=15m

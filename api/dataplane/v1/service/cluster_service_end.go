@@ -357,7 +357,29 @@ func (end *clusterServiceEnd) OpenStream(ctx context.Context, edgeID uint64) (ge
 		return nil, err
 	}
 	stream, err := serviceEnd.OpenStream(ctx, edgeID)
+	if errors.Is(err, ErrEdgeNotOnline) {
+		// A delayed failure on A must not invalidate a concurrently learned B.
+		end.edgefrontiers.CompareAndDelete(edgeID, frontierID)
+		nextID, next, lookupErr := end.lookupContext(ctx, edgeID)
+		if lookupErr != nil {
+			return nil, lookupErr
+		}
+		if nextID == frontierID {
+			return nil, err
+		}
+		// One safe retry, before any business bytes have been exposed to the caller.
+		// A failed retry must not leave another known-bad Edge mapping behind.
+		stream, err = next.OpenStream(ctx, edgeID)
+		if errors.Is(err, ErrEdgeNotOnline) {
+			end.edgefrontiers.CompareAndDelete(edgeID, nextID)
+		}
+		return stream, err
+	}
 	if err != nil {
+		var setupErr *streamSetupError
+		if errors.As(err, &setupErr) {
+			return nil, err
+		}
 		// A canceled stream is not a failed shared transport.
 		if !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
 			end.clear(frontierID)

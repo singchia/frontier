@@ -21,6 +21,13 @@ func (bm *BiMap) Set(key, value any) {
 	bm.mtx.Lock()
 	defer bm.mtx.Unlock()
 
+	// Remove the previous reverse entry when a key changes ownership.
+	if old, ok := bm.kv[key]; ok && old != value {
+		delete(bm.vk[old], key)
+		if len(bm.vk[old]) == 0 {
+			delete(bm.vk, old)
+		}
+	}
 	bm.kv[key] = value
 	ks, ok := bm.vk[value]
 	if !ok {
@@ -68,7 +75,7 @@ func (bm *BiMap) GetKeys(value any) ([]any, bool) {
 		return nil, false
 	}
 	slice := []any{}
-	for _, k := range ks {
+	for k := range ks {
 		slice = append(slice, k)
 	}
 	return slice, true
@@ -83,8 +90,24 @@ func (bm *BiMap) DelValue(value any) bool {
 		return false
 	}
 	delete(bm.vk, value)
-	for _, k := range ks {
+	for k := range ks {
 		delete(bm.kv, k)
+	}
+	return true
+}
+
+// CompareAndDelete removes a mapping only while it still points at value.
+func (bm *BiMap) CompareAndDelete(key, value any) bool {
+	bm.mtx.Lock()
+	defer bm.mtx.Unlock()
+	current, ok := bm.kv[key]
+	if !ok || current != value {
+		return false
+	}
+	delete(bm.kv, key)
+	delete(bm.vk[value], key)
+	if len(bm.vk[value]) == 0 {
+		delete(bm.vk, value)
 	}
 	return true
 }
