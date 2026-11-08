@@ -318,3 +318,136 @@ func TestConcurrentMigrationRecovery(t *testing.T) {
 	_, ok = cluster.frontiers.Load("a")
 	require.True(t, ok)
 }
+
+// ownershipDirectory models Frontlas queries; data-plane hops remain real TCP.
+type ownershipDirectory struct {
+	clusterapi.ClusterServiceClient
+	mu     sync.RWMutex
+	owners map[uint64]string
+	calls  atomic.Int32
+}
+
+func (d *ownershipDirectory) set(id uint64, owner string) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.owners[id] = owner
+}
+func (d *ownershipDirectory) GetFrontierByEdge(ctx context.Context, req *clusterapi.GetFrontierByEdgeIDRequest, _ ...grpc.CallOption) (*clusterapi.GetFrontierByEdgeIDResponse, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	d.calls.Add(1)
+	d.mu.RLock()
+	owner := d.owners[req.EdgeId]
+	d.mu.RUnlock()
+	if owner == "" {
+		return nil, errors.New("edge absent from directory")
+	}
+	return &clusterapi.GetFrontierByEdgeIDResponse{Fontier: &clusterapi.Frontier{FrontierId: owner}}, nil
+}
+
+func TestServiceKeepsThreeFrontiersDuringRepeatedMigration(t *testing.T) {
+	const movingID uint64 = 9000
+	names := []string{"a", "b", "c"}
+	directory := &ownershipDirectory{owners: make(map[uint64]string)}
+	cluster := &clusterServiceEnd{cc: directory, edgefrontiers: mapmap.NewBiMap(), serviceOption: &serviceOption{logger: armlog.DefaultLog}}
+	locals := make([]*localEdges, len(names))
+	connections := make([]*frontierNend, len(names))
+	for i, name := range names {
+		id := uint64(1001 + i)
+		locals[i] = &localEdges{ends: map[uint64]geminio.End{id: echoEdge(t)}}
+		connections[i] = &frontierNend{end: routedFrontier(t, locals[i], false)}
+		cluster.frontiers.Store(name, connections[i])
+		directory.set(id, name)
+	}
+	moving := echoEdge(t)
+	locals[0].set(movingID, moving)
+	directory.set(movingID, names[0])
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	workers, cancelWorkers := context.WithCancel(ctx)
+	defer cancelWorkers()
+	results := make(chan error, len(names))
+	var counts [3]atomic.Int64
+	// Keep a different Edge's stream busy on each Frontier while the fourth moves.
+	for i := range names {
+		st, err := cluster.OpenStream(ctx, uint64(1001+i))
+		require.NoError(t, err)
+		go func(i int, st geminio.Stream) {
+			defer geminio.AbortStream(st)
+			for {
+				if workers.Err() != nil {
+					results <- nil
+					return
+				}
+				err := roundTrip(st)
+				if err != nil {
+					results <- err
+					return
+				}
+				counts[i].Add(1)
+			}
+		}(i, st)
+	}
+	st, err := cluster.OpenStream(ctx, movingID)
+	require.NoError(t, err)
+	assertEcho(t, st)
+	old := 0
+	const migrations = 18
+	for n := 0; n < migrations; n++ {
+		next := (old + 1) % len(names)
+		locals[next].set(movingID, moving)
+		locals[old].set(movingID, nil)
+		directory.set(movingID, names[next])
+		st, err := cluster.OpenStream(ctx, movingID)
+		require.NoError(t, err)
+		assertEcho(t, st)
+		owner, ok := cluster.edgefrontiers.GetValue(movingID)
+		require.True(t, ok)
+		require.Equal(t, names[next], owner)
+		// Existing shared connections must not be removed or replaced. Fresh streams
+		// to all three unmoved Edges must keep using their independent ownership.
+		for i, name := range names {
+			current, ok := cluster.frontiers.Load(name)
+			require.True(t, ok)
+			require.Same(t, connections[i], current)
+			st, err := cluster.OpenStream(ctx, uint64(1001+i))
+			require.NoError(t, err)
+			assertEcho(t, st)
+		}
+		old = next
+	}
+	cancelWorkers()
+	for range names {
+		select {
+		case err := <-results:
+			require.NoError(t, err)
+		case <-time.After(3 * time.Second):
+			t.Fatal("background stream did not exit")
+		}
+	}
+	for i := range names {
+		require.Positive(t, counts[i].Load())
+	}
+	// Four initial cache misses plus exactly one re-query for each migration;
+	// the 54 fresh opens to unmoved Edges must not query Frontlas.
+	require.Equal(t, int32(4+migrations), directory.calls.Load())
+	t.Logf("18 migrations, 54 fresh unmoved-edge streams, background echoes A/B/C=%d/%d/%d; 3 shared connections preserved", counts[0].Load(), counts[1].Load(), counts[2].Load())
+}
+func roundTrip(st geminio.Stream) error {
+	if err := st.SetDeadline(time.Now().Add(2 * time.Second)); err != nil {
+		return err
+	}
+	payload := []byte("continuous-traffic")
+	if _, err := st.Write(payload); err != nil {
+		return err
+	}
+	got := make([]byte, len(payload))
+	if _, err := io.ReadFull(st, got); err != nil {
+		return err
+	}
+	if string(got) != string(payload) {
+		return errors.New("echo mismatch")
+	}
+	return nil
+}

@@ -26,3 +26,5 @@ Service SDK 的 `OpenStream(ctx, edgeID)` 现在会在交出流之前确认 Fron
 滚动更新可先部署 Frontier 再升级 SDK；回滚 SDK 或 Frontier 后保留原有转发能力，但不再保证迁移自动恢复。本变更未解决高并发压测中的其他连接拒绝或 Frontlas 的事件时序问题。
 
 本次 `make verify-pr` 已通过（构建、流阻塞/重置、心跳与多 Edge 回归）。验证入口：`make test-edge-route-recovery`（包含 `-race -count=5` 与 `go vet`），并已接入 `make verify-pr`。另外尝试完整运行 servicebound/edgebound 包时，旧 `TestServiceManager` / `TestEdgeManagerStream` 会因 fixture 传入 nil exchange 而 panic；在未修改的 1a591c4 基线同样复现，不将其报告为本次回归通过。
+
+追加多 Frontier 回归：同一 Service 同时保持 A/B/C 三条共享连接，三个固定 Edge 的既有流持续回显，第四个 Edge 循环迁移 18 次，并额外打开 54 条固定 Edge 的新流。每轮校验三条共享连接的对象未被替换，归属查询恰好为 4 次冷缓存查询加 18 次迁移重查。`-race -count=20` 全部通过，共 360 次迁移、1,080 条固定 Edge 新流。这里 Frontlas 查询由线程安全的测试替身提供，数据面使用真实 TCP/Geminio；不代表 Docker 部署级或百万 Edge 容量测试。
