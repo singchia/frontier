@@ -1,0 +1,10 @@
+ARG BASE_IMAGE=alpine:3.22
+FROM ${BASE_IMAGE}
+ARG SERVICE
+ARG TARGETARCH
+COPY dist/bin/${SERVICE}-linux-${TARGETARCH} /usr/bin/${SERVICE}
+COPY etc/${SERVICE}.yaml /usr/conf/server.yaml
+RUN ln -s /usr/bin/${SERVICE} /usr/bin/server
+USER 65532:65532
+ENTRYPOINT ["/usr/bin/server"]
+CMD ["--config", "/usr/conf/server.yaml"]

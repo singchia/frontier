@@ -43,8 +43,10 @@ var benchPortCounter int32 = 15000
 
 // benchFrontier holds the in-process frontier addresses.
 type benchFrontier struct {
-	edgeAddr string
-	svcAddr  string
+	edgeAddr  string
+	svcAddr   string
+	edgeDials int64
+	svcDials  int64
 }
 
 // allocatePorts allocates two consecutive ports for a benchmark
@@ -102,7 +104,7 @@ func startFrontier(b *testing.B) *benchFrontier {
 // dialEdge opens a new Edge connection and registers cleanup.
 func (f *benchFrontier) dialEdge(b *testing.B, opts ...edge.EdgeOption) edge.Edge {
 	b.Helper()
-	dialer := func() (net.Conn, error) { return net.Dial("tcp", f.edgeAddr) }
+	dialer := func() (net.Conn, error) { atomic.AddInt64(&f.edgeDials, 1); return net.Dial("tcp", f.edgeAddr) }
 	e, err := edge.NewEdge(dialer, opts...)
 	require.NoError(b, err)
 	b.Cleanup(func() { e.Close() })
@@ -112,7 +114,7 @@ func (f *benchFrontier) dialEdge(b *testing.B, opts ...edge.EdgeOption) edge.Edg
 // dialService opens a new Service connection and registers cleanup.
 func (f *benchFrontier) dialService(b *testing.B, name string, opts ...service.ServiceOption) service.Service {
 	b.Helper()
-	dialer := func() (net.Conn, error) { return net.Dial("tcp", f.svcAddr) }
+	dialer := func() (net.Conn, error) { atomic.AddInt64(&f.svcDials, 1); return net.Dial("tcp", f.svcAddr) }
 	opts = append([]service.ServiceOption{service.OptionServiceName(name)}, opts...)
 	svc, err := service.NewService(dialer, opts...)
 	require.NoError(b, err)

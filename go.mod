@@ -1,8 +1,6 @@
 module github.com/singchia/frontier
 
-go 1.24.0
-
-toolchain go1.24.13
+go 1.25.0
 
 require (
 	github.com/IBM/sarama v1.43.0
@@ -16,7 +14,7 @@ require (
 	github.com/pion/transport/v2 v2.2.10
 	github.com/prometheus/client_golang v1.23.2
 	github.com/rabbitmq/amqp091-go v1.9.0
-	github.com/singchia/geminio v1.3.0-test.20261106.1.0.20261107010704-fc1b480a172e
+	github.com/singchia/geminio v1.3.0
 	github.com/singchia/go-timer/v2 v2.2.2
 	github.com/singchia/joy4 v0.0.0-20240621074108-53a2b0132ec6
 	github.com/soheilhy/cmux v0.1.5
@@ -98,12 +96,12 @@ require (
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/redis/go-redis/v9 v9.5.5
 	github.com/singchia/yafsm v1.0.1 // indirect
-	golang.org/x/crypto v0.45.0 // indirect
-	golang.org/x/net v0.47.0 // indirect
-	golang.org/x/sync v0.18.0 // indirect
-	golang.org/x/sys v0.38.0 // indirect
-	golang.org/x/text v0.31.0 // indirect
-	golang.org/x/tools v0.38.0 // indirect
+	golang.org/x/crypto v0.52.0 // indirect
+	golang.org/x/net v0.54.0 // indirect
+	golang.org/x/sync v0.20.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
+	golang.org/x/tools v0.44.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240228224816-df926f6c8641 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
