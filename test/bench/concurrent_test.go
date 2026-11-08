@@ -9,7 +9,10 @@ import (
 	"os"
 	"runtime"
 	"sort"
+	"strconv"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -17,21 +20,48 @@ import (
 	"github.com/singchia/frontier/api/dataplane/v1/service"
 	"github.com/singchia/geminio"
 	"github.com/stretchr/testify/require"
+	"k8s.io/klog/v2"
 )
 
 // BenchmarkFrontierConcurrent uses a fixed worker count, independently of
 // GOMAXPROCS. Every operation traverses Service -> Frontier -> Edge and verifies
 // the echo. All components run in one process, over real loopback TCP sockets.
 func BenchmarkFrontierConcurrent(b *testing.B) {
+	concurrencies := []int{1, 16, 64, 256}
+	if raw := os.Getenv("FRONTIER_BENCH_CONCURRENCY"); raw != "" {
+		concurrencies = nil
+		for _, part := range strings.Split(raw, ",") {
+			n, err := strconv.Atoi(strings.TrimSpace(part))
+			if err != nil || n < 1 || n > 4096 {
+				b.Fatalf("invalid concurrency %q (expected 1..4096)", part)
+			}
+			concurrencies = append(concurrencies, n)
+		}
+	}
 	for _, mode := range []string{"rpc", "reuse", "open"} {
 		b.Run(mode, func(b *testing.B) {
-			for _, concurrency := range []int{1, 16, 64, 256} {
+			for _, concurrency := range concurrencies {
 				b.Run(fmt.Sprintf("c%d", concurrency), func(b *testing.B) { benchConcurrent(b, mode, concurrency) })
 			}
 		})
 	}
 }
+
+// Expected reset completion is not a transport failure. Keep all other server
+// diagnostics, without writing gigabytes of normal short-stream teardown logs.
+type benchmarkLogWriter struct{}
+
+func (benchmarkLogWriter) Write(p []byte) (int, error) {
+	if bytes.Contains(p, []byte("stream forward raw, copy err: stream aborted")) {
+		return len(p), nil
+	}
+	return os.Stderr.Write(p)
+}
+
 func benchConcurrent(b *testing.B, mode string, concurrency int) {
+	if os.Getenv("FRONTIER_BENCH_MONITOR") == "1" {
+		klog.SetOutput(benchmarkLogWriter{})
+	}
 	if os.Getenv("FRONTIER_BENCH_DIAGNOSTICS") == "1" {
 		log.SetLevel(log.LevelError)
 		log.SetOutput(os.Stderr)
@@ -88,8 +118,30 @@ func benchConcurrent(b *testing.B, mode string, concurrency int) {
 	var wg sync.WaitGroup
 	b.ReportAllocs()
 	b.SetBytes(int64(len(payload) * 2))
-	b.ResetTimer()
+	var completed, failedLive atomic.Int64
+	monitorStop, monitorDone := make(chan struct{}), make(chan struct{})
+	monitor := os.Getenv("FRONTIER_BENCH_MONITOR") == "1"
 	started := time.Now()
+	if monitor {
+		go func() {
+			defer close(monitorDone)
+			ticker := time.NewTicker(15 * time.Second)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-monitorStop:
+					return
+				case <-ticker.C:
+					var ms runtime.MemStats
+					runtime.ReadMemStats(&ms)
+					fmt.Fprintf(os.Stderr, "PROGRESS mode=%s concurrency=%d elapsed=%.1fs completed=%d failed=%d edge_dials=%d service_dials=%d goroutines=%d heap_mib=%.1f heap_objects=%d num_gc=%d\n", mode, concurrency, time.Since(started).Seconds(), completed.Load(), failedLive.Load(), atomic.LoadInt64(&f.edgeDials), atomic.LoadInt64(&f.svcDials), runtime.NumGoroutine(), float64(ms.HeapAlloc)/(1024*1024), ms.HeapObjects, ms.NumGC)
+				}
+			}
+		}()
+	} else {
+		close(monitorDone)
+	}
+	b.ResetTimer()
 	for worker := 0; worker < concurrency; worker++ {
 		wg.Add(1)
 		go func(worker int) {
@@ -120,6 +172,12 @@ func benchConcurrent(b *testing.B, mode string, concurrency int) {
 					}
 				}
 				latencies[i] = time.Since(begin)
+				if monitor {
+					completed.Add(1)
+					if err != nil {
+						failedLive.Add(1)
+					}
+				}
 				if err != nil {
 					failures[worker]++
 					if samples[worker] == nil {
@@ -147,6 +205,11 @@ func benchConcurrent(b *testing.B, mode string, concurrency int) {
 	}
 	wg.Wait()
 	b.StopTimer()
+	close(monitorStop)
+	<-monitorDone
+	if monitor && b.N >= concurrency {
+		fmt.Fprintf(os.Stderr, "FINAL mode=%s concurrency=%d elapsed=%.3fs completed=%d failed=%d edge_dials=%d service_dials=%d edge_id_initial=%d edge_id_final=%d\n", mode, concurrency, b.Elapsed().Seconds(), completed.Load(), failedLive.Load(), atomic.LoadInt64(&f.edgeDials), atomic.LoadInt64(&f.svcDials), initialEdgeID, edge.EdgeID())
+	}
 	failed := 0
 	var first error
 	for i, n := range failures {
